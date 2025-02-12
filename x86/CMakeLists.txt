@@ -1,0 +1,1 @@
+message("start compiler x86...")
