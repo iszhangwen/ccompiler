@@ -57,6 +57,10 @@ enum class TokenKind {
 
     // constant
     Numeric_Constant_,
+    Int_Constant_,
+    Float_Constant,
+    /* Enum_Constant_, */
+
     // string-literal
     String_Constant_,
     Character_Constant_,
@@ -134,6 +138,9 @@ enum class TokenKind {
 
     // 错误Token
     Error_,
+
+    // 无效token
+    Invalid_,
 
     // \n eof
     NewLine,

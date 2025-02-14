@@ -95,6 +95,14 @@ void SourceBuffer::mark()
     location = buffer.pos();
 }
 
+char SourceBuffer::curch()
+{
+    if (segment.empty()) {
+        return EOF;
+    }
+    return segment.at(segment.size() - 1);
+}
+
 char SourceBuffer::nextch()
 {
     char ch = buffer.read();

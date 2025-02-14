@@ -7,7 +7,7 @@
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner {
 private:
-    SourceBuffer buffer;
+    SourceBuffer buf;
     std::vector<Token> tokenBuffer;
 
     static bool isLetter(char);
@@ -16,19 +16,31 @@ private:
     static bool isOctal(char);
     static bool isBinary(char);
     static bool isProcessMumberic(char);
+    static bool isEscapeChar(char);
+    
+    // 处理USN
+    bool isUCN(char);
+    bool skipUCN(int len);
+    // 处理转义字符
+    bool skipEscape(char);
 
     Token scanIdentifier();
     Token scanNumberLiteral();
     Token scanStringLiteral();
     Token scanCharLiter();
-    Token scanComment();
+
+    Token scanLineComment();
+    Token scanFullComment();
 
     Token scan();
     inline Token makeToken(TokenKind);
 public:
     explicit scanner(std::string filename):
-    buffer(filename){}
+    buf(filename){}
 
     Token nextToken();
     Token peek();
+
+    // 日志记录函数
+    void log(const std::string& val);
 };

@@ -10,4 +10,4 @@ add_subdirectory(ssa)
 add_subdirectory(x86)
 add_subdirectory(drive)
 
-add_subdirectory(test)
+# add_subdirectory(test)

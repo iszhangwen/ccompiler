@@ -53,9 +53,11 @@ private:
     std::string segment;
 public:
     explicit SourceBuffer(std::string filename, size_t buffserSize = 1024):
-    buffer(filename, buffserSize), location(filename){}
+    buffer(filename, buffserSize), location(filename) {}
     // get alphabet
     void mark();
+
+    char curch();
     char nextch();
     char peek(size_t n = 0);
     bool match(char);
