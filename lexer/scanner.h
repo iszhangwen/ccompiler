@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <deque>
 #include "token.h"
 #include "source.h"
 
@@ -8,7 +9,7 @@
 class scanner {
 private:
     SourceBuffer buf;
-    std::vector<Token> tokenBuffer;
+    std::deque<Token> TokenQue;
 
     static bool isLetter(char);
     static bool isDecimal(char);
@@ -35,11 +36,11 @@ private:
     Token scan();
     inline Token makeToken(TokenKind);
 public:
-    explicit scanner(std::string filename):
-    buf(filename){}
+    explicit scanner(std::string filename):buf(filename){}
 
-    Token nextToken();
+    Token next();
     Token peek();
+    bool match(const Token&);
 
     // 日志记录函数
     void log(const std::string& val);

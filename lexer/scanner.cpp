@@ -467,19 +467,36 @@ Token scanner::scan()
     }
 }
 
-Token scanner::nextToken()
+Token scanner::next()
 {
-    return scan();
+    if (TokenQue.empty()) {
+        TokenQue.push_back(scan());
+    }
+    Token res = TokenQue.front();
+    TokenQue.pop_front();
+    return res;
 }
 
 Token scanner::peek()
 {
-    return Token(TokenKind::Error_, buf.ObtainLocation());
+    if (TokenQue.empty()) {
+        TokenQue.push_back(scan());
+    }
+    return TokenQue.front();
+}
+
+bool scanner::match(const Token& tk)
+{
+    if (peek() == tk) {
+        next();
+        return true;
+    }
+    return false;
 }
 
 void scanner::log(const std::string& val)
 {
     SourceLocation loc = buf.ObtainLocation();
-    std::cout << "file: " << loc.filename <<". line: " << loc.line << ". coloum: " << loc.coloum << " happen error!\n";
+    std::cout << "file: " << loc.filename <<". line: " << loc.line << ". coloum: " << loc.column << " happen error!\n";
     std::cout << "lexer error: " << val  << "\n";
 }

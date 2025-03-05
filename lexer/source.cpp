@@ -56,10 +56,10 @@ char Source::read()
     char ch = peek();
     // read时更新locaiton位置
     if (ch == '\n') {
-        location.coloum = 1;
+        location.column = 1;
         location.line ++;
     }  else {
-        location.coloum++;
+        location.column++;
     }
 
     if (ch != std::char_traits<char>::eof()) {

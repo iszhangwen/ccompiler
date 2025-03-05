@@ -4,12 +4,12 @@
 int main()
 {
     scanner sc("/home/user/codehub/ccompiler/test/test.c");
-    Token tn = sc.nextToken();
+    Token tn = sc.next();
     while (tn.getKind() != TokenKind::EOF_) {
-        tn = sc.nextToken();
+        tn = sc.next();
         //std::cout << tn.getLocation().filename << " " 
         std::cout<< "line: " << tn.getLocation().line << "   " 
-        << "coloum: " << tn.getLocation().coloum << "   " 
+        << "coloum: " << tn.getLocation().column << "   " 
         << "TokenKind: " << (int)tn.getKind() << "   " 
         << "Value:  " << tn.getValue() << "\n"; 
     }

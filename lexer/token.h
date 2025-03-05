@@ -202,11 +202,27 @@ private:
     SourceLocation location;
 
 public:
-    explicit Token(TokenKind type, const std::string& value, SourceLocation loc):
-    kind(type), value(value), location(loc){}
+    explicit Token(TokenKind type, const std::string& value, SourceLocation loc)
+    : kind(type), value(value), location(loc){}
 
-    explicit Token(TokenKind type, SourceLocation loc):
-    kind(type), value(""), location(loc){}
+    explicit Token(TokenKind type, SourceLocation loc)
+    : kind(type), value(""), location(loc){}
+
+    Token(const Token& tk)
+    : kind(tk.kind), value(tk.value), location(tk.location){}
+
+    Token& operator=(const Token& tk) {
+        if (this != &tk) {
+            kind = tk.kind;
+            value = tk.value;
+            location = tk.location;
+        }
+        return *this;
+    }
+
+    friend bool operator==(const Token& t1, const Token& t2) {
+        return t1.getKind() == t2.getKind();
+    }
 
     TokenKind getKind() const {
         return kind;
@@ -218,4 +234,3 @@ public:
         return location;
     }
 };
-

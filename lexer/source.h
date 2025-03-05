@@ -5,18 +5,23 @@
 
 // 源码字符位置
 struct SourceLocation {
-    explicit SourceLocation(std::string filename):
-    filename(filename), line(1), coloum(1){}
+    explicit SourceLocation(std::string filename)
+    : filename(filename), line(1), column(1){}
 
-    SourceLocation(const SourceLocation& loc) {
-        filename = loc.filename;
-        line = loc.line;
-        coloum = loc.coloum;
+    SourceLocation(const SourceLocation& loc)
+    : filename(loc.filename), line(loc.line), column(loc.column) {}
+
+    SourceLocation& operator=(const SourceLocation& loc) {
+        if (this != &loc) {
+            filename = loc.filename;
+            line = loc.line;
+            column = loc.column;
+        }
+        return *this;
     }
-
     std::string filename;
     int line;
-    int coloum;
+    int column;
 };
 
 // 源码输入流管理
