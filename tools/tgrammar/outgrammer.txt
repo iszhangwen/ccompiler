@@ -1,0 +1,245 @@
+translation-unit:
+ translation-unit  external-declaration 
+
+external-declaration:
+ external-declaration 
+ function-definition 
+ declaration 
+
+function-definition:
+ declaration-specifiers  declarator  declaration-list  compound-statement 
+
+declaration-specifiers:
+ storage-class-specifier  declaration-specifiers 
+ type-specifier  declaration-specifiers 
+ type-qualifier  declaration-specifiers 
+ function-specifier  declaration-specifiers 
+ alignment-specifier  declaration-specifiers 
+
+declarator:
+ pointer  direct-declarator 
+
+declaration-list:
+ declaration 
+ declaration-list  declaration 
+
+compound-statement:
+ compound-statement 
+ {  block-item-list  } 
+
+storage-class-specifier:
+ typedef 
+ extern 
+ static 
+ _Thread_local 
+ auto 
+ register 
+
+type-specifier:
+ void 
+ char 
+ short 
+ int 
+ long 
+ float 
+ double 
+ signed 
+ unsigned 
+ _Bool 
+ _Complex 
+ atomic-type-specifier 
+ struct-or-union-specifier 
+ enum-specifier 
+ typedef-name 
+
+type-qualifier:
+ const 
+ restrict 
+ volatile 
+ _Atomic 
+
+function-specifier:
+ inline 
+ _Noreturn 
+
+alignment-specifier:
+ _Alignas  (  type-name  ) 
+ _Alignas  (  constant-expression  ) 
+
+pointer:
+ *  type-qualifier-list 
+ *  type-qualifier-list  pointer 
+
+direct-declarator:
+ identifier 
+ (  declarator  ) 
+ direct-declarator  [  type-qualifier-list  assignment-expression  ] 
+ direct-declarator  [  static  type-qualifier-list  assignment-expression  ] 
+ direct-declarator  [  type-qualifier-list  static  assignment-expression  ] 
+ direct-declarator  [  type-qualifier-list  *  ] 
+ direct-declarator  (  parameter-type-list  ) 
+ direct-declarator  (  identifier-list  ) 
+
+block-item-list:
+ block-item 
+ block-item-list  block-item 
+
+atomic-type-specifier:
+ _Atomic  (  type-name) 
+
+struct-or-union-specifier:
+ struct-or-union  identifier  {  struct-declaration-list  } 
+ struct-or-union  identifier 
+
+enum-specifier:
+ enum  identifier  {  enumerator-list  } 
+ enum  identifier  {  enumerator-list  ,  } 
+ enum  identifier 
+
+typedef-name:
+ identifier 
+
+type-name:
+ specifier-qualifier-list  abstract-declarator 
+
+type-qualifier-list:
+ type-qualifier 
+ type-qualifier-list  type-qualifier 
+
+assignment-expression:
+ conditional-expression 
+ unary-expression  assignment-operator  assignment-expression 
+
+parameter-type-list:
+ parameter-list 
+ parameter-list  ,  ... 
+
+identifier-list:
+ identifier 
+ identifier-list  ,  identifier 
+
+block-item:
+ declaration 
+ statement 
+
+struct-or-union:
+ struct 
+ union 
+
+struct-declaration-list:
+ struct-declaration 
+ struct-declaration-list  struct-declaration 
+
+enumerator-list:
+ enumerator 
+ enumerator-list  ,  enumerator 
+
+specifier-qualifier-list:
+ type-specifier  specifier-qualifier-list 
+ type-qualifier  specifier-qualifier-list 
+
+abstract-declarator:
+ pointer 
+ pointer  direct-abstract-declarator 
+
+conditional-expression:
+ logical-OR-expression  ?  expression  :  conditional-expression 
+ conditional-expression 
+
+unary-expression:
+ ++  unary-expression 
+ --  unary-expression 
+ unary-operator  cast-expression 
+ sizeof  unary-expression 
+ sizeof  (  type-name  ) 
+ alignof  (  type-name) 
+
+parameter-list:
+ parameter-declaration 
+ parameter-list  ,  parameter-declaration 
+
+struct-declaration:
+ specifier-qualifier-list  struct-declarator-list  ; 
+ static_assert-declaration 
+
+enumerator:
+ enumeration-constant 
+ enumeration-constant  =  constant-expression 
+
+direct-abstract-declarator:
+ (  abstract-declarator  ) 
+ direct-abstract-declarator  [  type-qualifier-list  assignment-expression  ] 
+ direct-abstract-declarator  [  static  type-qualifier-list  assignment-expression  ] 
+ direct-abstract-declarator  [  type-qualifier-list  static  assignment-expression  ] 
+ direct-abstract-declarator  [  *  ] 
+ direct-abstract-declarator  (  parameter-type-list  ) 
+
+logical-OR-expression:
+ logical-OR-expression  ||  logical-AND-expression 
+ logical-OR-expression 
+
+expression:
+ assignment-expression 
+ expression  ,  assignment-expression 
+
+cast-expression:
+ unary-expression 
+ (  type-name  )  cast-expression 
+ cast-expression 
+
+parameter-declaration:
+ declaration-specifiers  declarator 
+ declaration-specifiers  abstract-declarator 
+
+struct-declarator-list:
+ struct-declarator 
+ struct-declarator-list  ,  struct-declarator 
+
+logical-AND-expression:
+ logical-AND-expression  &&  inclusive-OR-expression 
+ logical-AND-expression 
+
+struct-declarator:
+ declarator 
+ declarator  :  constant-expression 
+
+inclusive-OR-expression:
+ inclusive-OR-expression  |  exclusive-OR-expression 
+ inclusive-OR-expression 
+
+exclusive-OR-expression:
+ exclusive-OR-expression  ^  AND-expression 
+ exclusive-OR-expression 
+
+AND-expression:
+ AND-expression  &  equality-expression 
+ AND-expression 
+
+equality-expression:
+ equality-expression  ==  relational-expression 
+ equality-expression  !=  relational-expression 
+ equality-expression 
+
+relational-expression:
+ relational-expression  <  shift-expression 
+ relational-expression  >  shift-expression 
+ relational-expression  <=  shift-expression 
+ relational-expression  >=  shift-expression 
+ relational-expression 
+
+shift-expression:
+ shift-expression  <<  additive-expression 
+ shift-expression  >>  additive-expression 
+ shift-expression 
+
+additive-expression:
+ additive-expression  +  multiplicative-expression 
+ additive-expression-  multiplicative-expression 
+ additive-expression 
+
+multiplicative-expression:
+ multiplicative-expression  *  cast-expression 
+ multiplicative-expression  /  cast-expression 
+ multiplicative-expression  %  cast-expression 
+ multiplicative-expression 
+

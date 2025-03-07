@@ -19,7 +19,8 @@ generic-association:
 postfix-expression:
  primary-expression
  postfix-expression [ expression ]
- postfix-expression ( argument-expression-listopt )
+ postfix-expression ( argument-expression-list )
+ postfix-expression ( )
  postfix-expression . identifier
  postfix-expression-> identifier
  postfix-expression ++
@@ -130,19 +131,24 @@ constant-expression:
 
 
 declaration:
- declaration-specifiers init-declarator-listopt ;
+ declaration-specifiers init-declarator-list ;
+  declaration-specifiers ;
  static_assert-declaration
 
 declaration-specifiers:
- storage-class-specifier declaration-specifiersopt
- type-specifier declaration-specifiersopt
- type-qualifier declaration-specifiersopt
- function-specifier declaration-specifiersopt
+ storage-class-specifier declaration-specifiers
+ storage-class-specifier
+ type-specifier declaration-specifiers
+ type-specifier
+ type-qualifier declaration-specifiers
+ type-qualifier 
+ function-specifier declaration-specifiers
+ function-specifier
  alignment-specifier declaration-specifiers
 
 init-declarator-list:
  init-declarator
- init-declarator-list , init-declaratoropt
+ init-declarator-list , init-declarator
 
 init-declarator:
  declarator
@@ -174,7 +180,8 @@ type-specifier:
  typedef-name
 
 struct-or-union-specifier:
- struct-or-union identifieropt { struct-declaration-list }
+ struct-or-union identifier { struct-declaration-list }
+  struct-or-union  { struct-declaration-list }
  struct-or-union identifier
 
 struct-or-union:
@@ -186,12 +193,15 @@ struct-declaration-list:
  struct-declaration-list struct-declaration
 
 struct-declaration:
- specifier-qualifier-list struct-declarator-listopt ;
+ specifier-qualifier-list struct-declarator-list ;
+  specifier-qualifier-list;
  static_assert-declaration
 
 specifier-qualifier-list:
- type-specifier specifier-qualifier-listopt
- type-qualifier specifier-qualifier-listopt
+ type-specifier specifier-qualifier-list
+ type-specifier 
+ type-qualifier specifier-qualifier-list
+ type-qualifier 
 
 struct-declarator-list:
  struct-declarator
@@ -199,11 +209,14 @@ struct-declarator-list:
 
 struct-declarator:
  declarator
- declaratoropt : constant-expression
+ declarator : constant-expression
+ : constant-expression
 
 enum-specifier:
- enum identifieropt { enumerator-list }
- enum identifieropt { enumerator-list , }
+ enum identifier { enumerator-list }
+ enum identifier { enumerator-list , }
+ enum  { enumerator-list }
+ enum  { enumerator-list , }
  enum identifier
 
 enumerator-list:
@@ -233,21 +246,32 @@ alignment-specifier:
  _Alignas ( constant-expression )
 
 declarator:
- pointeropt direct-declarator
+ pointer direct-declarator
+ direct-declarator
 
 direct-declarator:
  identifier
  ( declarator )
- direct-declarator [ type-qualifier-listopt assignment-expressionopt ]
- direct-declarator [ static type-qualifier-listopt assignment-expression ]
+ direct-declarator [ type-qualifier-list assignment-expression ]
+ direct-declarator [ static type-qualifier-list assignment-expression ]
  direct-declarator [ type-qualifier-list static assignment-expression ]
- direct-declarator [ type-qualifier-listopt * ]
+ direct-declarator [ type-qualifier-list * ]
  direct-declarator ( parameter-type-list )
- direct-declarator ( identifier-listopt )
+ direct-declarator ( identifier-list )
+ direct-declarator [  ]
+ direct-declarator [ assignment-expression ]
+ direct-declarator [ type-qualifier-list static assignment-expression ]
+ direct-declarator [ * ]
+ direct-declarator ( parameter-type-list )
+ direct-declarator (  )
+ direct-declarator [  assignment-expression ]
+ direct-declarator [ type-qualifier-list  ]
 
 pointer:
- * type-qualifier-listopt
- * type-qualifier-listopt pointer
+ *
+ * type-qualifier-list
+ * type-qualifier-list pointer
+ * pointer
 
 type-qualifier-list:
  type-qualifier
@@ -263,26 +287,44 @@ parameter-list:
 
 parameter-declaration:
  declaration-specifiers declarator
- declaration-specifiers abstract-declaratoropt
+ declaration-specifiers abstract-declarator
+ declaration-specifiers 
 
 identifier-list:
  identifier
  identifier-list , identifier
 
 type-name:
- specifier-qualifier-list abstract-declaratoropt
+ specifier-qualifier-list abstract-declarator
+  specifier-qualifier-list 
 
 abstract-declarator:
  pointer
- pointeropt direct-abstract-declarator
+ pointer direct-abstract-declarator
+ direct-abstract-declarator
 
 direct-abstract-declarator:
  ( abstract-declarator )
- direct-abstract-declaratoropt [ type-qualifier-listopt assignment-expressionopt ]
- direct-abstract-declaratoropt [ static type-qualifier-listopt assignment-expression ]
- direct-abstract-declaratoropt [ type-qualifier-list static assignment-expression ]
- direct-abstract-declaratoropt [ * ]
- direct-abstract-declaratoropt ( parameter-type-listopt )
+    direct-abstract-declarator [ type-qualifier-list assignment-expression ]
+    direct-abstract-declarator [ type-qualifier-list  ]
+    direct-abstract-declarator [  assignment-expression ]
+    direct-abstract-declarator [ ]
+    [ type-qualifier-list assignment-expression ]
+    [ type-qualifier-list  ]
+    [  assignment-expression ]
+    [ ]
+    direct-abstract-declarator [ static type-qualifier-list assignment-expression ]
+    direct-abstract-declarator [ assignment-expression ]
+    [ static type-qualifier-list assignment-expression ]
+    [ assignment-expression ]
+    direct-abstract-declarator [ type-qualifier-list static assignment-expression ]
+     [ type-qualifier-list static assignment-expression ]
+    direct-abstract-declarator [ * ]
+     [ * ]
+    direct-abstract-declarator ( parameter-type-list )
+    direct-abstract-declarator (  )
+    direct-abstract-declarator ( parameter-type-list )
+    direct-abstract-declarator (  )
 
 typedef-name:
  identifier
@@ -293,8 +335,10 @@ initializer:
  { initializer-list , }
 
 initializer-list:
- designationopt initializer
- initializer-list , designationopt initializer
+ designation initializer
+ initializer
+ initializer-list , designation initializer
+initializer-list ,  initializer
 
 designation:
  designator-list =
@@ -325,7 +369,8 @@ labeled-statement:
  default : statement
 
 compound-statement:
- { block-item-listopt }
+ { block-item-list }
+ {  }
 
 block-item-list:
  block-item
@@ -336,7 +381,8 @@ block-item:
  statement
 
 expression-statement:
- expressionopt ;
+ expression ;
+ ;
 
 selection-statement:
  if ( expression ) statement
@@ -344,16 +390,23 @@ selection-statement:
  switch ( expression ) statement
 
 iteration-statement:
- while ( expression ) statement
- do statement while ( expression ) ;
- for ( expressionopt ; expressionopt ; expressionopt ) statement
- for ( declaration expressionopt ; expressionopt ) statement
+    while ( expression ) statement
+    do statement while ( expression ) ;
+    for (  ; expression ; expression ) statement
+    for (  ;  ; expression ) statement
+    for (  ; expression ;  ) statement
+    for (  ;  ;  ) statement
+    for ( expression ; expression ; expression ) statement
+    for ( expression ;  ; expression ) statement
+    for ( expression ; expression ;  ) statement
+    for ( expression ;  ;  ) statement
 
 jump-statement:
  goto identifier ;
  continue ;
  break ;
- return expressionopt ;
+ return expression ;
+ return ;
 
 translation-unit:
  external-declaration
@@ -364,7 +417,8 @@ external-declaration:
  declaration
 
 function-definition:
- declaration-specifiers declarator declaration-listopt compound-statement
+ declaration-specifiers declarator declaration-list compound-statement
+ declaration-specifiers declarator compound-statement
 
 declaration-list:
  declaration
