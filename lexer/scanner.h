@@ -9,7 +9,7 @@
 class scanner {
 private:
     SourceBuffer buf;
-    std::deque<Token> TokenQue;
+    std::deque<Token> tokenQue;
 
     static bool isLetter(char);
     static bool isDecimal(char);
@@ -38,9 +38,9 @@ private:
 public:
     explicit scanner(std::string filename):buf(filename){}
 
+    // 辅助函数
     Token next();
-    Token peek();
-    bool match(const Token&);
+    Token peek(size_t);
 
     // 日志记录函数
     void log(const std::string& val);

@@ -3,7 +3,7 @@ primary-expression:
  constant
  string-literal
  ( expression )
- ge neric-selection
+ generic-selection
 
 generic-selection:
  _Generic ( assignment-expression , generic-assoc-list )
@@ -62,7 +62,7 @@ multiplicative-expression:
 additive-expression:
  multiplicative-expression
  additive-expression + multiplicative-expression
- additive-expression- multiplicative-expression
+ additive-expression - multiplicative-expression
 
 shift-expression:
  additive-expression
@@ -304,7 +304,7 @@ abstract-declarator:
  direct-abstract-declarator
 
 direct-abstract-declarator:
- ( abstract-declarator )
+    ( abstract-declarator )
     direct-abstract-declarator [ type-qualifier-list assignment-expression ]
     direct-abstract-declarator [ type-qualifier-list  ]
     direct-abstract-declarator [  assignment-expression ]
@@ -318,9 +318,9 @@ direct-abstract-declarator:
     [ static type-qualifier-list assignment-expression ]
     [ assignment-expression ]
     direct-abstract-declarator [ type-qualifier-list static assignment-expression ]
-     [ type-qualifier-list static assignment-expression ]
+    [ type-qualifier-list static assignment-expression ]
     direct-abstract-declarator [ * ]
-     [ * ]
+    [ * ]
     direct-abstract-declarator ( parameter-type-list )
     direct-abstract-declarator (  )
     direct-abstract-declarator ( parameter-type-list )

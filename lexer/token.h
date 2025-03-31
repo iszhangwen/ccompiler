@@ -144,7 +144,11 @@ enum class TokenKind {
 
     // \n eof
     NewLine,
-    EOF_
+    EOF_,
+
+    // test
+    Test_,
+    Test_1,
 };
 
 const std::unordered_map<std::string, TokenKind> KeyWordMap = {
@@ -232,5 +236,13 @@ public:
     }
     SourceLocation getLocation() const {
         return location;
+    }
+
+    bool is(TokenKind kd) const {
+        return kd == kind;
+    }
+
+    bool isEOF() const {
+        return is(TokenKind::EOF_);
     }
 };

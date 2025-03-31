@@ -1,4 +1,5 @@
 #include "transgram.h"
+#include "trie.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -184,9 +185,17 @@ void CFGGrammar::dumpLL1(const std::string& start)
     std::cout << ss.str();
 }
 
+// 使用间接左递归和直接左递归是时，必须要判断是否存在等价非终结符号
 bool CFGGrammar::CFG2LL1()
 {
+    std::cout << "-------start------- \n";
+    // 消除一切递归
+    std::cout << "start eliminateIndirectLR .\n";
     eliminateIndirectLR();
+    // 消除一切回溯
+    std::cout << "start eliminateBacktrace .\n";
+    eliminateBacktrace();
+    std::cout << "-------end------- \n";
     return true;
 }
 
@@ -206,7 +215,7 @@ void CFGGrammar::eliminateDirectLR(const std::string& name)
     int base =  CFGTree.generateKeySequence(name);
     std::string keyString = name + std::to_string(base - key->sequence);
     // 分隔产生式
-    for (auto& de: CFGTree[name]) {
+    for (auto de: CFGTree[name]) {
         if (de.front() == name) {
             de.pop_front();
             de.push_back(keyString);
@@ -216,10 +225,10 @@ void CFGGrammar::eliminateDirectLR(const std::string& name)
             pv2.push_back(de);
         }
     }
-    // A -> pv2A'
-    CFGTree[name] = pv2;
-    // A' -> aA'|e
     if (pv1.size() > 1) {
+        // A -> pv2A'
+        CFGTree[name] = pv2;
+        // A' -> aA'|e
         auto newKey = CFGTree.InsertNode(keyString, Node::mid);
         newKey->sequence = base;
         CFGTree[keyString] = pv1;
@@ -251,12 +260,10 @@ bool CFGGrammar::eliminateIndirectLR()
             vec.push_back(cur);
         }
     }
-    std::reverse(vec.begin(), vec.end());
 
     // 消除间接左递归
     for (int i = 0; i < vec.size(); i++) {
         std::vector<CFGProduct> pcv(CFGTree[vec[i]]);
-        std::cout << pcv.size() << "\n";
         for (int j = 0; j < i; j++) {
             // 对终结符i的每一个产生式，执行替换
             std::vector<CFGProduct> pcvj;
@@ -282,7 +289,33 @@ bool CFGGrammar::eliminateIndirectLR()
         CFGTree[vec[i]] = pcv;
         // 消除直接左递归
         eliminateDirectLR(vec[i]);
-        std::cout << i << "/" << vec.size() << "  name: " << vec[i] << "\n";
     }
     return true;
+}
+
+// 消除回溯, 使用前缀树消除
+void CFGGrammar::eliminateBacktrace()
+{
+    std::map<std::string, std::vector<std::deque<std::string>>> pmap;
+    for (auto& [key, val] : CFGTree.cfg) {
+        TrieGrammar tmp;
+        if (key->kind == Node::mid) {
+            tmp.buildTrie(key->name, val);
+            tmp.dumpTrie(pmap);
+        }
+    }
+    // 根据pmap更新数组
+    for (auto& [key, val] : pmap) {
+        auto keyNode = CFGTree.findNode(key);
+        if (keyNode->kind == Node::unknow) {
+            keyNode = CFGTree.InsertNode(key, Node::mid);
+        }
+        CFGTree[key] = val;
+    }
+}
+
+// 求取每个非终结符的select集合
+void CFGGrammar::getSelectCollection()
+{
+
 }

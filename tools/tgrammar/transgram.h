@@ -69,10 +69,16 @@ private:
 class CFGGrammar{
 private:
     CFGGrammarData CFGTree;
-
+    // 消除直接左递归
     void eliminateDirectLR(const std::string& name);
+    // 消除间接左递归
     bool eliminateIndirectLR();
+    // 消除回溯
+    void eliminateBacktrace();
+    // 文法规约
     bool CFG2LL1();
+    // 求取非终结符号的select集合
+    void getSelectCollection();
 
 public:
     bool buildCfg(const std::string& filename);

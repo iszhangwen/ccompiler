@@ -4,8 +4,8 @@ project(ccompiler LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 add_compile_options("-g")
 
-option(TOOL "set to switch to build tools..." ON)
-option(CCP "set to switch to build tools..." OFF)
+option(TOOL "set to switch to build tools..." OFF)
+option(CCP "set to switch to build SRC..." ON)
 
 if (CCP) 
     message("start build ccompiler...")

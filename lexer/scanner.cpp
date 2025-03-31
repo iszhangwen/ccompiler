@@ -469,20 +469,24 @@ Token scanner::scan()
 
 Token scanner::next()
 {
-    if (TokenQue.empty()) {
-        TokenQue.push_back(scan());
+    auto tk = peek();
+    if (tk.isEOF()) {
+        return tk;
     }
-    Token res = TokenQue.front();
-    TokenQue.pop_front();
-    return res;
+    tokenQue.pop_front();
+    return tk;
 }
 
-Token scanner::peek()
+Token scanner::peek(size_t step = 1)
 {
-    if (TokenQue.empty()) {
-        TokenQue.push_back(scan());
+    while (tokenQue.size() < step) {
+        tokenQue.emplace_back(scan());
+        auto tk = tokenQue.back();
+        if (tk.isEOF()) {
+            return tk;
+        }
     }
-    return TokenQue.front();
+    return tokenQue[step-1];
 }
 
 bool scanner::match(const Token& tk)
