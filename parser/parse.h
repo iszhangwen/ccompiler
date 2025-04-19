@@ -8,9 +8,14 @@ private:
     scanner lex;
     Token tok;
     Token nextToken();
-    // 中间辅助函数 
+    /*辅助函数 
+    * match: 匹配当前token类型，若匹配成功则移动到下一个，否则返回false
+    * expect: 期望下一个token匹配类型，匹配成功返回true,否则返回false
+    * test: 测试当前第几个token类型
+    */ 
     bool match(TokenKind); 
     bool expect(TokenKind);
+    bool peek(size_t, TokenKind);
 
     // 错误相关函数
     void reportError();
@@ -32,9 +37,9 @@ private:
 
     // 6.5.2
 
-
+    Expr parseExpr();
     //-----------------------------------------------------------------------
-    // 解析语句相关
+    // statement
     Stmt parseStmt();
 
     // 6.8.1 lable语句

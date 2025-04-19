@@ -16,16 +16,28 @@ bool Parse::match(TokenKind kind)
 
 bool Parse::expect(TokenKind kind)
 {
-    if (match(kind)) {
+    tok = nextToken();
+    if (tok.getKind() == kind) {
         return true;
     }
     reportError();
     return false;
 }
 
+bool Parse::peek(size_t num, TokenKind kind)
+{
+    if (num <= 0) {
+        return false;
+    }
+    if (lex.peek(num).getKind() != kind) {
+        return false;
+    }
+    return true;
+}
+
 Token Parse::nextToken()
 {
-    return lex.peek();
+    return lex.next();
 }
 
 bool Parse::parserTranslationUnit(AstNode* node)
@@ -85,6 +97,12 @@ bool Parse::parserPrimaryExpr(AstNode* node)
 }
 
 
+Expr Parse::parseExpr()
+{
+    return nullptr;
+}
+
+
 /*6.8
  statement:
     labeled-statement
@@ -126,10 +144,13 @@ Stmt Parse::parseStmt()
         return parseBreakStmt();
     case TokenKind::Return:
         return parseReturnStmt();
+    case TokenKind::identifier:
+        if (peek(1, TokenKind::Colon_)) {
+            return parseLableStmt();
+        }
+    default:
+        return parseExpr();
     }
-    // TODO: 缺少复杂表达式 lable
-    if (kind == TokenKind::identifier && nextToken().getKind() == Token)
-    return NULL;
 }
 
 LableStmt Parse::parseLableStmt()

@@ -11,6 +11,8 @@ struct SourceLocation {
     SourceLocation(const SourceLocation& loc)
     : filename(loc.filename), line(loc.line), column(loc.column) {}
 
+    SourceLocation(){}
+
     SourceLocation& operator=(const SourceLocation& loc) {
         if (this != &loc) {
             filename = loc.filename;

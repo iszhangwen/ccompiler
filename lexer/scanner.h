@@ -24,6 +24,7 @@ private:
     bool skipUCN(int len);
     // 处理转义字符
     bool skipEscape(char);
+    bool match(const Token& tk);
 
     Token scanIdentifier();
     Token scanNumberLiteral();

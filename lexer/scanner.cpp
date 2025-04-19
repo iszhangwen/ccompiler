@@ -469,7 +469,7 @@ Token scanner::scan()
 
 Token scanner::next()
 {
-    auto tk = peek();
+    auto tk = peek(1);
     if (tk.isEOF()) {
         return tk;
     }
@@ -491,7 +491,7 @@ Token scanner::peek(size_t step = 1)
 
 bool scanner::match(const Token& tk)
 {
-    if (peek() == tk) {
+    if (peek(1) == tk) {
         next();
         return true;
     }
