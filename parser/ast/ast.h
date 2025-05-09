@@ -1,6 +1,8 @@
 #pragma once
 #include <source.h>
 #include <memory>
+#include "token.h"
+#include "scope.h"
 
 class Vistor;
 
@@ -16,11 +18,8 @@ enum class NodeKind {
     FunctionDecl,
 
     // 声明: 声明由声明说明符，初始化声明符列表组成
-    Decl,
-    // 声明说明符
-    DeclSpec, 
-    TypenameSpec,
-    Object,
+    // 声明
+    LabelDecl,
 
 
     // 表达式
@@ -43,10 +42,32 @@ enum class NodeKind {
     CompoundStmt
 };
 
+// 链接属性
+enum class Linkage
+{
+    EXTERNAL,
+    INTERNAL,
+    NONE
+};
+
+// 存储说明符
+enum class storageSpec
+{
+    TYPEDEF,
+    EXTERN,
+    STATIC,
+    AUTO,
+    REGISTER
+};
+
 class AstNode {
 public:
+    AstNode(NodeKind nk): kind_(nk){}
     virtual ~AstNode() = default;
     virtual void accept(Vistor* vt) = 0;
+    virtual NodeKind getKind() const {
+        return kind_;
+    }
 
 private:
     NodeKind kind_;

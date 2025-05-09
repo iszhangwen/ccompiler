@@ -2,6 +2,11 @@
 #include "ast.h"
 #include "expr.h"
 
+enum class StmtKind
+{
+
+};
+
 /*
 (6.8) statement:
         labeled-statement
@@ -14,7 +19,7 @@
 class Stmt : public AstNode {
 public:
     virtual ~Stmt(){};
-    virtual void accept(std::shared_ptr<Vistor> vt) = 0;
+    virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
     Stmt(){}
