@@ -1,7 +1,10 @@
 #pragma once
 #include <string>
-#include "ast.h"
-#include "scanner.h"
+#include <scanner.h>
+#include <ast/decl.h>
+#include <ast/stmt.h>
+#include <ast/expr.h>
+#include <ast/type.h>
 
 class Parse {
 private:
@@ -36,14 +39,14 @@ private:
     bool parserPrimaryExpr(AstNode* node);
 
     // 6.5.2
-
-    Expr parseExpr();
+/*
+    ExprStmt parseExpr();
     //-----------------------------------------------------------------------
     // statement
     Stmt parseStmt();
 
     // 6.8.1 lable语句
-    LableStmt parseLableStmt();
+    LabelStmt parseLabelStmt();
     CaseStmt parseCaseStmt();
     DefaultStmt parseDefaultStmt();
     // 6.8.2 label语句
@@ -61,7 +64,7 @@ private:
     BreakStmt parseBreakStmt();
     ReturnStmt parseReturnStmt();
     //-----------------------------------------------------------------------
-
+*/
 public:
     explicit Parse(const std::string& filename);
     bool parserTranslationUnit(AstNode* node);

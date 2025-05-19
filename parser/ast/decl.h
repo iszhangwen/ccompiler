@@ -20,15 +20,14 @@
 */
 
 #pragma once
-#include "ast.h"
 #include "expr.h"
-#include "type.h"
+#include <scope.h>
 
 class Decl : public AstNode
 {
 public:
     virtual ~Decl(){};
-    virtual void accept(std::shared_ptr<Vistor> vt) = 0;
+    virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
     Decl(NodeKind nk): AstNode(nk) {}
@@ -65,6 +64,8 @@ public:
 protected:
     NamedDecl(NodeKind nk, IdentifierInfo tk)
     : Decl(nk), name_(tk) {}
+    NamedDecl()
+    : Decl(NodeKind::Expr){}
 
 private:
     IdentifierInfo name_;
@@ -100,7 +101,7 @@ public:
 
 protected:
     ValueDecl(Token tk, TypeSpec ts)
-    : NamedDecl(tk), ty_(ts) {}
+    :NamedDecl(){}
 
 private:
     TypeSpec ty_;
@@ -110,17 +111,16 @@ private:
 class DeclaratorDecl : public ValueDecl 
 {
 public:
-    static std::shared_ptr<DeclaratorDecl> NewObj(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq);
+    static std::shared_ptr<DeclaratorDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss);
     virtual ~DeclaratorDecl(){}
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    DeclaratorDecl(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq)
-    : ValueDecl(tk, ts), ss_(ss), tq_(tq) {}
+    DeclaratorDecl(Token tk, TypeSpec ts, StorageClass ss)
+    : ValueDecl(tk, ts), ss_(ss) {}
 
 private:
-    storageSpec ss_;
-    TypeQual tq_;
+    StorageClass ss_;
 };
 
 
@@ -128,13 +128,13 @@ private:
 class VarDecl : public DeclaratorDecl
 {
 public:
-    static std::shared_ptr<VarDecl> NewObj(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq, ExprStmt* ex = nullptr);
+    static std::shared_ptr<VarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr);
     virtual ~VarDecl(){}
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    VarDecl(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq, ExprStmt* ex = nullptr)
-    : DeclaratorDecl(tk, ts, ss, tq), initExpr_(ex){}
+    VarDecl(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr)
+    : DeclaratorDecl(tk, ts, ss), initExpr_(ex){}
 
 private:
     ExprStmt* initExpr_; // 初始化表达式
@@ -144,12 +144,12 @@ private:
 class ParmVarDecl final : public VarDecl 
 {
 public:
-    static std::shared_ptr<ParmVarDecl> NewObj(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq, ExprStmt* ex = nullptr);
+    static std::shared_ptr<ParmVarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr);
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    ParmVarDecl(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq, ExprStmt* ex = nullptr)
-    : VarDecl(tk, ts, ss, tq, ex){}
+    ParmVarDecl(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr)
+    : VarDecl(tk, ts, ss, ex){}
 
 };
 
@@ -159,12 +159,12 @@ protected:
 class FunctionDecl : public DeclaratorDecl
 {
 public:
-    static std::shared_ptr<FunctionDecl> NewObj(Token tk, TypeSpec ts, storageSpec ss, std::vector<ParmVarDecl*>& param, CompoundStmt* body = nullptr);
+    static std::shared_ptr<FunctionDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, std::vector<ParmVarDecl*>& param, CompoundStmt* body = nullptr);
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    FunctionDecl(Token tk, TypeSpec ts, storageSpec ss, TypeQual tq, std::vector<ParmVarDecl*>& param, CompoundStmt* body)
-    : DeclaratorDecl(tk, ts, ss, tq), parm_(param), body_(body){}
+    FunctionDecl(Token tk, TypeSpec ts, StorageClass ss, std::vector<ParmVarDecl*>& param, CompoundStmt* body)
+    : DeclaratorDecl(tk, ts, ss), parm_(param), body_(body){}
 
 private:
     std::vector<ParmVarDecl*> parm_;

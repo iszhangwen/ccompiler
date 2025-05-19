@@ -82,7 +82,6 @@ bool scanner::skipUCN(int len)
     bool flag = true;
     for (int i = 0; i < len; i++) {
         if (!isHexacimal(buf.nextch())) {
-            log("UCN value error!");
             flag = false;
         }
     }
@@ -104,7 +103,6 @@ bool scanner::skipEscape(char ch)
     case 'U':
         return skipUCN(8);
     default:
-        log("illegal escape character.");
         return false;
     }
 }
@@ -498,9 +496,7 @@ bool scanner::match(const Token& tk)
     return false;
 }
 
-void scanner::log(const std::string& val)
+void scanner::error(Token tk)
 {
-    SourceLocation loc = buf.ObtainLocation();
-    std::cout << "file: " << loc.filename <<". line: " << loc.line << ". coloum: " << loc.column << " happen error!\n";
-    std::cout << "lexer error: " << val  << "\n";
+    fprintf(stderr, "%s: hanppen error\n", tk.getLocation().filename.c_str());
 }

@@ -5,11 +5,12 @@
 #include <iostream>
 #include "token.h"
 
-// 标识符信息： 标识符有两个重要属性：作用域和声明周期
+// 标识符信息： 标识符有两个重要属性：作用域和生命周期
 struct IdentifierInfo
 {
     std::string name;
     TokenKind kind;
+    IdentifierInfo(){}
     IdentifierInfo(Token tk): name(tk.getValue()), kind(tk.getKind()){}
 };
 

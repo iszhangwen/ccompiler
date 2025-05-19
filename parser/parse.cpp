@@ -96,12 +96,12 @@ bool Parse::parserPrimaryExpr(AstNode* node)
     return true;
 }
 
-
-Expr Parse::parseExpr()
+/*
+ExprStmt Parse::parseExpr()
 {
-    return nullptr;
+    return ExprStmt();
 }
-
+*/
 
 /*6.8
  statement:
@@ -112,7 +112,7 @@ Expr Parse::parseExpr()
     iteration-statement
     jump-statement
 依次解析stmt
-*/
+*//*
 Stmt Parse::parseStmt()
 {
     TokenKind kind = tok.getKind();
@@ -146,16 +146,16 @@ Stmt Parse::parseStmt()
         return parseReturnStmt();
     case TokenKind::identifier:
         if (peek(1, TokenKind::Colon_)) {
-            return parseLableStmt();
+            return parseLabelStmt();
         }
     default:
         return parseExpr();
     }
 }
 
-LableStmt Parse::parseLableStmt()
+LabelStmt Parse::parseLabelStmt()
 {
-    return LableStmt();
+    return LabelStmt();
 }
 
 CaseStmt Parse::parseCaseStmt()
@@ -221,3 +221,4 @@ ReturnStmt Parse::parseReturnStmt()
 {
     return ReturnStmt();
 }
+*/

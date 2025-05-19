@@ -2,10 +2,7 @@
 #include "ast.h"
 #include "expr.h"
 
-enum class StmtKind
-{
-
-};
+class ExprStmt;
 
 /*
 (6.8) statement:
@@ -18,11 +15,12 @@ enum class StmtKind
 */
 class Stmt : public AstNode {
 public:
+    Stmt():AstNode(NodeKind::Expr){}
     virtual ~Stmt(){};
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    Stmt(){}
+    Stmt(NodeKind kd):AstNode(kd){}
 };
 
 //  identifier : statement
@@ -40,14 +38,14 @@ private:
 //  case constant-expression : statement
 class CaseStmt final : public Stmt {
     public:    
-    static std::shared_ptr<CaseStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+    static std::shared_ptr<CaseStmt> NewObj(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt);
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    CaseStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
+    CaseStmt(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt)
     : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
     SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // constant-expression
+    std::shared_ptr<ExprStmt> expr_; // constant-expression
     std::shared_ptr<Stmt> stmt_; // statement
 };
 
@@ -94,10 +92,10 @@ public:
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    IfStmt(SourceLocation loc,  std::shared_ptr<Expr> cond, std::shared_ptr<Stmt> then, std::shared_ptr<Stmt> els)
+    IfStmt(SourceLocation loc,  std::shared_ptr<ExprStmt> cond, std::shared_ptr<Stmt> then, std::shared_ptr<Stmt> els)
     : Stmt(), loc_(loc), cond_(cond), then_(then), else_(els){}
     SourceLocation loc_;
-    std::shared_ptr<Expr> cond_;
+    std::shared_ptr<ExprStmt> cond_;
     std::shared_ptr<Stmt> then_;
     std::shared_ptr<Stmt> else_;
 };
@@ -105,42 +103,42 @@ private:
 //  switch ( expression ) statement
 class SwitchStmt : public Stmt {
 public:    
-    static std::shared_ptr<SwitchStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+    static std::shared_ptr<SwitchStmt> NewObj(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt);
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    SwitchStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
+    SwitchStmt(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt)
     : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
     SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // expression
+    std::shared_ptr<ExprStmt> expr_; // expression
     std::shared_ptr<Stmt> stmt_; // statement
 };
 
 // while ( expression ) statement
 class WhileStmt : public Stmt {
 public:    
-    static std::shared_ptr<WhileStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+    static std::shared_ptr<WhileStmt> NewObj(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt);
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    WhileStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
+    WhileStmt(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt)
     : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
     SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // expression
+    std::shared_ptr<ExprStmt> expr_; // expression
     std::shared_ptr<Stmt> stmt_; // statement
 };
 
 // do statement while ( expression );
 class DoStmt : public Stmt {
 public:    
-    static std::shared_ptr<DoStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+    static std::shared_ptr<DoStmt> NewObj(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt);
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    DoStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
+    DoStmt(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt)
     : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
     SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // expression
+    std::shared_ptr<ExprStmt> expr_; // expression
     std::shared_ptr<Stmt> stmt_; // statement
 };
 
@@ -148,7 +146,7 @@ private:
 //  for ( declaration expressionopt ; expressionopt ) statement 
 class ForStmt : public Stmt {
 public:    
-    static std::shared_ptr<ForStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+    static std::shared_ptr<ForStmt> NewObj(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt);
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
@@ -168,7 +166,7 @@ public:
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    GotoStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
+    GotoStmt(SourceLocation loc, std::shared_ptr<ExprStmt> expr, std::shared_ptr<Stmt> stmt)
     : Stmt(), loc_(loc), label_(stmt){}
     SourceLocation loc_;
     std::shared_ptr<Stmt> label_; // expression
@@ -201,14 +199,14 @@ private:
 //  return expressionopt ;
 class ReturnStmt final : public Stmt {
 public:    
-    static std::shared_ptr<ReturnStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr);
+    static std::shared_ptr<ReturnStmt> NewObj(SourceLocation loc, std::shared_ptr<ExprStmt> expr);
     virtual void accept(std::shared_ptr<Vistor> vt);
 
 private:
-    ReturnStmt(SourceLocation loc, std::shared_ptr<Expr> expr)
+    ReturnStmt(SourceLocation loc, std::shared_ptr<ExprStmt> expr)
     : Stmt(), loc_(loc), expr_(expr){}
     SourceLocation loc_;
-    std::shared_ptr<Expr> expr_;
+    std::shared_ptr<ExprStmt> expr_;
 };
 
 // ;
@@ -225,5 +223,15 @@ private:
 
 // 声明语句
 class DeclStmt : Stmt {
+
+};
+
+// 表达式也是继承于语句
+class ExprStmt : public Stmt
+{
+public:
+    virtual void accept(std::shared_ptr<Vistor> vt){}
+    ExprStmt(){}
+private:
 
 };

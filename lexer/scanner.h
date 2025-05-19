@@ -43,6 +43,6 @@ public:
     Token next();
     Token peek(size_t);
 
-    // 日志记录函数
-    void log(const std::string& val);
+    // 错误打印函数
+    void error(Token);
 };

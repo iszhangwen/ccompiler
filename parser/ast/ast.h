@@ -2,9 +2,6 @@
 #include <source.h>
 #include <memory>
 #include "token.h"
-#include "scope.h"
-
-class Vistor;
 
 // AST上下文
 class AstContext {
@@ -50,21 +47,46 @@ enum class Linkage
     NONE
 };
 
-// 存储说明符
-enum class storageSpec
+// 存储限定符
+enum class StorageClass
 {
-    TYPEDEF,
-    EXTERN,
-    STATIC,
-    AUTO,
-    REGISTER
+    TYPEDEF = 0X1,
+    EXTERN = 0X2,
+    STATIC = 0X4,
+    AUTO = 0X8,
+    REGISTER = 0x10
+};
+
+// 类型说明符
+enum class TypeSpec
+{
+    VOID,
+    CHAR,
+    SHORT,
+    INT,
+    LONG,
+    FLOAT,
+    DOUBLE,
+    SIGNAED,
+    UNSIGNED,
+    _BOOL,
+    _COMPLEX,
+    // 自定义类型
+    STRUCT_OR_UNION,
+    ENUM,
+    TYPEDEF_NAME
+};
+
+class Vistor
+{
+
 };
 
 class AstNode {
 public:
     AstNode(NodeKind nk): kind_(nk){}
     virtual ~AstNode() = default;
-    virtual void accept(Vistor* vt) = 0;
+    virtual void accept(Vistor* vt) {}
     virtual NodeKind getKind() const {
         return kind_;
     }

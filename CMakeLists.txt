@@ -21,4 +21,5 @@ if (TOOL)
     add_subdirectory(tools)
 endif()
 
-# add_subdirectory(test)
+enable_testing()
+add_subdirectory(test)
