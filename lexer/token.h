@@ -57,7 +57,6 @@ enum class TokenKind {
 
     // constant
     Numeric_Constant_,
-    Int_Constant_,
     Float_Constant,
     /* Enum_Constant_, */
 
@@ -144,11 +143,7 @@ enum class TokenKind {
 
     // \n eof
     NewLine,
-    EOF_,
-
-    // test
-    Test_,
-    Test_1,
+    EOF_
 };
 
 const std::unordered_map<std::string, TokenKind> KeyWordMap = {
