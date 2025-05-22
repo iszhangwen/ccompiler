@@ -1,43 +1,27 @@
 #include "parse.h"
 
 Parse::Parse(const std::string& filename)
-: lex(filename), tok(lex.next())
-{
-}
+: lex(filename) {}
 
 bool Parse::match(TokenKind kind)
 {
-    if (tok.getKind() == kind) {
-        tok = nextToken();
-        return true;
-    }
     return false;
 }
 
 bool Parse::expect(TokenKind kind)
 {
-    tok = nextToken();
-    if (tok.getKind() == kind) {
-        return true;
-    }
-    reportError();
     return false;
 }
 
 bool Parse::peek(size_t num, TokenKind kind)
 {
-    if (num <= 0) {
-        return false;
-    }
-    if (lex.peek(num).getKind() != kind) {
-        return false;
-    }
+
     return true;
 }
 
 Token Parse::nextToken()
 {
-    return lex.next();
+    return Token::newObj(TokenKind::EOF_, SourceLocation());
 }
 
 bool Parse::parserTranslationUnit(AstNode* node)
@@ -47,16 +31,6 @@ bool Parse::parserTranslationUnit(AstNode* node)
 
 bool Parse::parserExternalDeclaration(AstNode* node)
 {
-    Token tk = nextToken();
-    switch (tk.getKind())
-    {
-    case TokenKind::Test_:
-        return parserFunctionDeclaration(node);
-    case TokenKind::Test_1:
-        return parserDeclaration(node);
-    default:
-        break;
-    }
     return true;
 }
 
@@ -73,26 +47,6 @@ bool Parse::parserFunctionDeclaration(AstNode* node)
 /*-----------------------------parse expression---------------------------------*/
 bool Parse::parserPrimaryExpr(AstNode* node)
 {
-    Token tk = nextToken();
-    switch (tk.getKind())
-    {
-    case TokenKind::identifier:
-        /* code */
-        break;
-    case TokenKind::Int_Constant_:
-    case TokenKind::Float_Constant:
-        break;
-    case TokenKind::String_Constant_:
-        break;
-    case TokenKind::LParent_:
-        expect(TokenKind::RParent_);
-        break;
-    case TokenKind::T_Generic:
-        break;
-    default:
-        reportError();
-        break;
-    }
     return true;
 }
 

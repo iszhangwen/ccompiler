@@ -119,8 +119,8 @@ Token scanner::scanIdentifier()
     }
     
     // 关键字查找
-    auto iter = KeyWordMap.find(buf.ObtainSegment());
-    TokenKind kind = (iter != KeyWordMap.end()) ? iter->second : TokenKind::identifier;
+    auto iter = Token::KeyWordMap.find(buf.seg());
+    TokenKind kind = (iter != Token::KeyWordMap.end()) ? iter->second : TokenKind::identifier;
     return makeToken(kind);   
 }
 
@@ -129,32 +129,38 @@ Token scanner::scanNumberLiteral()
 {
     char ch = buf.nextch();
     // 若下一个字符是预处理数字，则移动指针。
-    while (isProcessMumberic(buf.peek())) {
+    while (isProcessMumberic(ch)) {
         ch = buf.nextch();
     }
 
     if (ch == 'e' || ch == 'E') {
-        if (buf.match('+')) {
-            return scanNumberLiteral();
-        } else if (buf.match('-')) {
+        if (buf.match('+') || buf.match('-') || isProcessMumberic(buf.peek())) {
             return scanNumberLiteral();
         }
+         return makeToken(TokenKind::Error_);
     }
     return makeToken(TokenKind::Numeric_Constant_);
 }
 
 Token scanner::scanStringLiteral()
 {
+    std::cout << "scanStringLiteral: " << (int)buf.curch() << "  " << (int)buf.peek() <<  " " << buf.segline() << "\n";
     do {
-        if (buf.match('\"')) 
-            return makeToken(TokenKind::String_Constant_);
-        else if (buf.match('\n'))
-            return makeToken(TokenKind::Error_);
-        else if (buf.match(EOF)) 
-            return makeToken(TokenKind::EOF_);
-        else 
+        if (buf.match('\"')) {
             buf.nextch();
+            return makeToken(TokenKind::String_Constant_);
+        }
+        else if (buf.match('\n')) {
+            return makeToken(TokenKind::Error_);
+        }
+        else if (buf.match(EOF)) {
+            return makeToken(TokenKind::Error_);
+        }
+        else {
+            buf.nextch();
+        }
     } while (true);
+    std::cout << "------------------4--\n";
     return makeToken(TokenKind::Error_);
 }
 
@@ -164,23 +170,28 @@ Token scanner::scanCharLiter()
     switch (ch)
     {
     case '\'':
-        return makeToken(TokenKind::Invalid_);
+        buf.nextch();
+        return makeToken(TokenKind::Error_);
     case '\\':
         if (buf.match('\'')) {
-            return makeToken(TokenKind::Invalid_);
+            buf.nextch();
+            return makeToken(TokenKind::Error_);
         } else {
             skipEscape(ch);
             if (buf.match('\'')) {
+                buf.nextch();
                 return makeToken(TokenKind::Character_Constant_);
             } else {
-                return makeToken(TokenKind::Invalid_);
+                buf.nextch();
+                return makeToken(TokenKind::Error_);
             }
         }
     case '\n':
-        return makeToken(TokenKind::Invalid_);
-    default:
         buf.nextch();
+        return makeToken(TokenKind::Error_);
+    default:
         if (buf.match('\'')) {
+            buf.nextch();
             return makeToken(TokenKind::Character_Constant_);
         } else {
             return makeToken(TokenKind::Error_);
@@ -202,6 +213,7 @@ Token scanner::scanFullComment()
     char ch = buf.nextch();
     while (ch != EOF) {
         if (ch == '*' && buf.match('/')) {
+            buf.nextch();
             return makeToken(TokenKind::Comment_);
         }
         ch = buf.nextch();
@@ -211,19 +223,18 @@ Token scanner::scanFullComment()
 
 Token scanner::makeToken(TokenKind kind)
 {
-    return Token(kind, buf.ObtainSegment(), buf.ObtainLocation());
+    return Token::newObj(kind, buf.loc(), buf.seg());
 }
 
 Token scanner::scan()
 {
     // 跳过空白行
-    while (isspace(buf.peek())) {
+    while (isspace(buf.curch())) {
         buf.nextch();
     }
 
     buf.mark();
-    char ch = buf.peek();
-
+    char ch = buf.curch();
     switch (ch)
     {
     case 'a'...'z': 
@@ -241,7 +252,6 @@ Token scanner::scan()
         return scanCharLiter();
 
     case '/':
-        buf.nextch();
         if (buf.match('/')) {
             return scanLineComment();
         } 
@@ -249,19 +259,20 @@ Token scanner::scan()
             return scanFullComment();
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Div_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Division_);
         }
     
     case '\\':
-        buf.nextch();
         if (isUCN(ch)) {
             return scanIdentifier();
         } 
         else {
-            return makeToken(TokenKind::Invalid_);
+            return makeToken(TokenKind::Error_);
         }
 
     case '{':
@@ -289,12 +300,12 @@ Token scanner::scan()
         return makeToken(TokenKind::RParent_);
 
     case '.':
-        buf.nextch();
         if (isDecimal(buf.peek())) {
             return scanNumberLiteral();
         } 
         else if (buf.match('.')) {
             if (buf.match('.')) {
+                buf.nextch();
                 return makeToken(TokenKind::Ellipsis_);
             } 
             else {
@@ -302,54 +313,63 @@ Token scanner::scan()
             }
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Dot_);
         }
 
     case '-':
-        buf.nextch();
         if (buf.match('>')) {
+            buf.nextch();
             return makeToken(TokenKind::Arrow_);
         } 
         else if (buf.match('-')) {
+            buf.nextch();
             return makeToken(TokenKind::Decrement_);
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Sub_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Subtraction_);
         }
             
     case '+':
-        buf.nextch();
         if (buf.match('+')) {
+            buf.nextch();
             return makeToken(TokenKind::Increment_);
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Add_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Addition_);
         }
 
     case '&':
-        buf.nextch();
         if (buf.match('&')) {
+            buf.nextch();            
             return makeToken(TokenKind::Logical_AND_);
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::BitWise_AND__Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::BitWise_AND_);
         }
 
     case '*':
-        buf.nextch();
         if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Mult_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Multiplication_);
         }
 
@@ -358,84 +378,96 @@ Token scanner::scan()
         return makeToken(TokenKind::RParent_);
 
     case '!':
-        buf.nextch();
         if (buf.match('=')) {
+            buf.nextch();            
             return makeToken(TokenKind::Inequality_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::RParent_);
         }
 
     case '%':
-        buf.nextch();
         if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Mod_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Modulus_);
         }
 
     case '<':
-        buf.nextch();
         if (buf.match('<')) {
             if (buf.match('=')) {
+                buf.nextch();
                 return makeToken(TokenKind::LShift_Assign_);
             } 
             else {
+                buf.nextch();
                 return makeToken(TokenKind::LShift_);
             } 
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Less_Equal_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Less_);
         }
 
     case '>':
-        buf.nextch();
         if (buf.match('>')) {
             if (buf.match('=')) {
+                buf.nextch();
                 return makeToken(TokenKind::RShift_Assign_);
             } 
             else {
+                buf.nextch();
                 return makeToken(TokenKind::RShift_);
             }
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Greater_Equal_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Greater_);
         }
     
     case '=':
-        buf.nextch();
         if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::Equality_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Assign_);
         }
     
     case '^':
-        buf.nextch();
         if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::BitWise_XOR_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::BitWise_XOR_);
         }
 
     case '|':
-        buf.nextch();
         if (buf.match('|')) {
+            buf.nextch();
             return makeToken(TokenKind::Logical_OR_);
         } 
         else if (buf.match('=')) {
+            buf.nextch();
             return makeToken(TokenKind::BitWise_OR_Assign_);
         } 
         else {
+            buf.nextch();
             return makeToken(TokenKind::Error_);
         }
     
@@ -465,38 +497,20 @@ Token scanner::scan()
     }
 }
 
-Token scanner::next()
-{
-    auto tk = peek(1);
-    if (tk.isEOF()) {
-        return tk;
-    }
-    tokenQue.pop_front();
-    return tk;
-}
-
-Token scanner::peek(size_t step = 1)
-{
-    while (tokenQue.size() < step) {
-        tokenQue.emplace_back(scan());
-        auto tk = tokenQue.back();
-        if (tk.isEOF()) {
-            return tk;
-        }
-    }
-    return tokenQue[step-1];
-}
-
-bool scanner::match(const Token& tk)
-{
-    if (peek(1) == tk) {
-        next();
-        return true;
-    }
-    return false;
-}
-
 void scanner::error(Token tk)
 {
-    fprintf(stderr, "%s: hanppen error\n", tk.getLocation().filename.c_str());
+    fprintf(stderr, "%s: hanppen error\n", tk.loc_.filename.c_str());
+}
+
+TokenSequence scanner::tokenize()
+{
+    TokenSequence seq;
+    Token tk = scan();
+    while (!tk.isEOF())
+    {
+        seq.push_back(tk);
+        tk = scan();
+    }
+    std::cout << "Token size: " << seq.size() << "\n";
+    return seq;
 }

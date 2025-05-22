@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
+#include <vector>
 #include <unordered_map>
+#include <iostream>
 #include "source.h"
 
 // token 类型
@@ -146,98 +148,54 @@ enum class TokenKind {
     EOF_
 };
 
-const std::unordered_map<std::string, TokenKind> KeyWordMap = {
-    {"alignof",       TokenKind::Alignof,	   },
-    {"auto",          TokenKind::Auto,	       },
-    {"break",         TokenKind::Break,	       },
-    {"case",          TokenKind::Case,	       },
-    {"char",          TokenKind::Char,	       },
-    {"const",         TokenKind::Const,	       },
-    {"continue",      TokenKind::Continue,     },
-    {"default",       TokenKind::Default,	   },
-    {"do",            TokenKind::Do,	       },
-    {"double",        TokenKind::Double,	   },
-    {"else",          TokenKind::Else,	       },
-    {"enum",          TokenKind::Enum,	       },
-    {"extern",        TokenKind::Extern,	   },
-    {"float",         TokenKind::Float,	       },
-    {"for",           TokenKind::For,	       },
-    {"Semantics",     TokenKind::Semantics,    },
-    {"goto",          TokenKind::Goto,	       },
-    {"if",            TokenKind::If,	       },
-    {"inline",        TokenKind::Inline,	   },
-    {"int",           TokenKind::Int,	       },
-    {"long",          TokenKind::Long,	       },
-    {"register",      TokenKind::Register,     },
-    {"restrict",      TokenKind::Restrict,     },
-    {"return",        TokenKind::Return,	   },
-    {"short",         TokenKind::Short,	       },
-    {"signed",        TokenKind::Signed,	   },
-    {"sizeof",        TokenKind::Sizeof,	   },
-    {"static",        TokenKind::Static,	   },
-    {"struct",        TokenKind::Struct,	   },
-    {"switch",        TokenKind::Switch,	   },
-    {"typedef",       TokenKind::Typedef,	   },
-    {"union",         TokenKind::Union,	       },
-    {"unsigned",      TokenKind::Unsigned,     },
-    {"void",          TokenKind::Void,	       },
-    {"volatile",      TokenKind::Volatile,     },
-    {"while",         TokenKind::While,	       },
-    {"_Alignas",      TokenKind::T_Alignas,    },
-    {"_Atomic",       TokenKind::T_Atomic,	   },
-    {"_Bool",         TokenKind::T_Bool,	   },
-    {"_Complex",      TokenKind::T_Complex,    },
-    {"_Generic",      TokenKind::T_Generic,    },
-    {"_Imaginary",    TokenKind::T_Imaginary,  },
-    {"_Noreturn",     TokenKind::T_Noreturn,   },
-    {"_Static_assert",TokenKind::T_Static_assert,	},
-    {"_Thread_local", TokenKind::T_Thread_local,	}
-};
 
 class Token {
+public:
+    // token kind
+    TokenKind kind_;
+
+    // token value
+    std::string value_;
+
+    // loc
+    SourceLocation loc_;
+
+    // creat a new Token
+    static Token newObj(TokenKind type, SourceLocation loc);
+    static Token newObj(TokenKind type, SourceLocation loc, const std::string& value);
+
+    // static member 
+    static const std::unordered_map<std::string, TokenKind> KeyWordMap;
+
+    // func
+    bool isEOF() const;
+
 private:
-    TokenKind kind;
-    std::string value;
-    SourceLocation location;
+    Token(TokenKind type, SourceLocation loc, const std::string& value)
+    : kind_(type), loc_(loc), value_(value){}
+
+    Token(TokenKind type, SourceLocation loc)
+    : Token(type, loc, ""){}
+};
+
+class TokenSequence 
+{
+private:
+    int curPos_{-1};
+    std::vector<Token> seq_;
 
 public:
-    explicit Token(TokenKind type, const std::string& value, SourceLocation loc)
-    : kind(type), value(value), location(loc){}
+    void push_back(const Token& tk) {seq_.push_back(tk);}
 
-    explicit Token(TokenKind type, SourceLocation loc)
-    : kind(type), value(""), location(loc){}
+    // 辅助函数
+    size_t size() const {return seq_.size();}
+    Token next() { return seq_[++curPos_];}
 
-    Token(const Token& tk)
-    : kind(tk.kind), value(tk.value), location(tk.location){}
-
-    Token& operator=(const Token& tk) {
-        if (this != &tk) {
-            kind = tk.kind;
-            value = tk.value;
-            location = tk.location;
+    void dump() {
+        for (int i = 0; i < seq_.size(); i++)
+        {
+            std::cout << "kind: " << (int)seq_[i].kind_ << " value: " << seq_[i].value_ <<"\n";
         }
-        return *this;
-    }
-
-    friend bool operator==(const Token& t1, const Token& t2) {
-        return t1.getKind() == t2.getKind();
-    }
-
-    TokenKind getKind() const {
-        return kind;
-    }
-    std::string getValue() const {
-        return value;
-    }
-    SourceLocation getLocation() const {
-        return location;
-    }
-
-    bool is(TokenKind kd) const {
-        return kd == kind;
-    }
-
-    bool isEOF() const {
-        return is(TokenKind::EOF_);
+        std::cout << "------------------------------\n";
     }
 };

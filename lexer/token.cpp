@@ -1,0 +1,65 @@
+#include "token.h"
+#include "scanner.h"
+
+Token Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
+{
+    return Token(type, loc, value);
+}
+
+Token Token::newObj(TokenKind type, SourceLocation loc)
+{
+    return Token::newObj(type, loc, "");
+}
+
+const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
+    {"alignof",       TokenKind::Alignof,	   },
+    {"auto",          TokenKind::Auto,	       },
+    {"break",         TokenKind::Break,	       },
+    {"case",          TokenKind::Case,	       },
+    {"char",          TokenKind::Char,	       },
+    {"const",         TokenKind::Const,	       },
+    {"continue",      TokenKind::Continue,     },
+    {"default",       TokenKind::Default,	   },
+    {"do",            TokenKind::Do,	       },
+    {"double",        TokenKind::Double,	   },
+    {"else",          TokenKind::Else,	       },
+    {"enum",          TokenKind::Enum,	       },
+    {"extern",        TokenKind::Extern,	   },
+    {"float",         TokenKind::Float,	       },
+    {"for",           TokenKind::For,	       },
+    {"Semantics",     TokenKind::Semantics,    },
+    {"goto",          TokenKind::Goto,	       },
+    {"if",            TokenKind::If,	       },
+    {"inline",        TokenKind::Inline,	   },
+    {"int",           TokenKind::Int,	       },
+    {"long",          TokenKind::Long,	       },
+    {"register",      TokenKind::Register,     },
+    {"restrict",      TokenKind::Restrict,     },
+    {"return",        TokenKind::Return,	   },
+    {"short",         TokenKind::Short,	       },
+    {"signed",        TokenKind::Signed,	   },
+    {"sizeof",        TokenKind::Sizeof,	   },
+    {"static",        TokenKind::Static,	   },
+    {"struct",        TokenKind::Struct,	   },
+    {"switch",        TokenKind::Switch,	   },
+    {"typedef",       TokenKind::Typedef,	   },
+    {"union",         TokenKind::Union,	       },
+    {"unsigned",      TokenKind::Unsigned,     },
+    {"void",          TokenKind::Void,	       },
+    {"volatile",      TokenKind::Volatile,     },
+    {"while",         TokenKind::While,	       },
+    {"_Alignas",      TokenKind::T_Alignas,    },
+    {"_Atomic",       TokenKind::T_Atomic,	   },
+    {"_Bool",         TokenKind::T_Bool,	   },
+    {"_Complex",      TokenKind::T_Complex,    },
+    {"_Generic",      TokenKind::T_Generic,    },
+    {"_Imaginary",    TokenKind::T_Imaginary,  },
+    {"_Noreturn",     TokenKind::T_Noreturn,   },
+    {"_Static_assert",TokenKind::T_Static_assert,	},
+    {"_Thread_local", TokenKind::T_Thread_local,	}
+};
+
+bool Token::isEOF() const
+{
+    return kind_ == TokenKind::EOF_;
+}

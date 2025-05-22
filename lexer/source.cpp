@@ -1,135 +1,149 @@
 #include "source.h"
+#include <fstream>
+#include <iostream>
 
-Source::Source(std::string filename, size_t buffserSize = 1024):
-location(filename), file(filename, std::ios::binary), is_eof(false), curPos(0),endPos(0), streamPos(0)
-{
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file " + filename);
-    }
-    buffer.resize(buffserSize);
-    fillBuffer(0);
-}
-
-Source::~Source()
-{
-    if (file.is_open()) {
-        file.close();
-    }
-}
-
-void Source::fillBuffer(size_t offset)
-{
-    size_t requiredPos = curPos + offset;
-    if (requiredPos < endPos) {
-        return;
-    }
-    // 计算需要读多少个字节
-    size_t need = requiredPos - endPos + 1;
-    // 计算当前可用的空间，若空间不足则移动数据到首，若再不足则扩展空间。
-    size_t availableSpace = buffer.size() - endPos;
-    if (availableSpace < need) {
-        size_t remainPos = endPos - curPos;
-        std::copy(buffer.begin() + curPos, buffer.begin() + endPos, buffer.begin());
-        
-        streamPos += curPos;
-        curPos = 0;
-        endPos = remainPos;
-        availableSpace = buffer.size() - endPos;
-        if (availableSpace < need) {
-            buffer.resize(buffer.size() + (need - availableSpace));
-            availableSpace = buffer.size() - endPos;
-        }
-    }
-    // 从文件读取数据到缓冲区
-    file.seekg(streamPos + endPos);
-    file.read(buffer.data() + endPos, availableSpace);
-    size_t readBytes = file.gcount();
-    endPos += readBytes;
-
-    if (readBytes == 0) {
-        is_eof = true;
-    }
-}
-
-char Source::read()
-{
-    char ch = peek();
-    // read时更新locaiton位置
-    if (ch == '\n') {
-        location.column = 1;
-        location.line ++;
-    }  else {
-        location.column++;
-    }
-
-    if (ch != std::char_traits<char>::eof()) {
-        curPos++;
-        // 优化项： 当curPos到达buffer一半时
-        if (curPos >= buffer.size() / 2) {
-            size_t remainPos = endPos - curPos;
-            std::copy(buffer.begin() + curPos, buffer.begin() + endPos, buffer.begin());
-
-            streamPos += curPos;
-            curPos = 0;
-            endPos = remainPos;
-        }
-    }
-    return ch;
-}
-
-char Source::peek(size_t n)
-{
-    if (eof()) {
-        return std::char_traits<char>::eof();
-    }
-    fillBuffer(n);
-    if (curPos + n >= endPos) {
-        return std::char_traits<char>::eof();
-    }
-    return buffer[curPos+n];
-}
-
-void SourceBuffer::mark()
+Source::Source(const std::string& fileName)
 {
     segment.clear();
-    location = buffer.pos();
+    loc_.first.line = 0;
+    loc_.first.column = 0;
+    loc_.first.filename = fileName;
+    loc_.second.line = 0;
+    loc_.second.column = 0;
+    loc_.second.filename = fileName;
+    load(fileName);
+    std::cout << "load sources successful\n";
 }
 
-char SourceBuffer::curch()
+SourceLocation Source::loc() const
 {
-    if (segment.empty()) {
-        return EOF;
+    return loc_.first;
+}
+// 标记开始读取位置
+void Source::mark()
+{
+    segment.clear();
+    segment.push_back(curch());
+    loc_.first = loc_.second;
+}
+// 读取当前字符
+char Source::curch() const
+{
+    int row = loc_.second.line;
+    int col = loc_.second.column;
+    return src_[row]->at(col);
+}
+// 读取下一个字符
+char Source::nextch()
+{
+    char ch = curch();
+    switch (ch)
+    {
+    case '\n':
+        loc_.second.line++;
+        loc_.second.column = 0;
+        break;
+    case EOF:
+        break;
+    default:
+        loc_.second.column++;
+        break;
     }
-    return segment.at(segment.size() - 1);
-}
-
-char SourceBuffer::nextch()
-{
-    char ch = buffer.read();
+    ch = curch();
     segment.push_back(ch);
     return ch;
 }
-
-char SourceBuffer::peek(size_t n)
+// 预读前n个字符， 不移动指针
+char Source::peek(size_t n)
 {
-    return buffer.peek(n);
+    int row = loc_.second.line;
+    int col = loc_.second.column;
+
+    while (n > 0)
+    {
+        char ch = src_[row]->at(col);
+        if (ch == '\n')
+        {
+            row++;
+            col = 0;
+        }
+        else if (ch == EOF)
+        {
+            return EOF;
+        }
+        else
+        {
+            col++;
+        }
+        n--;
+    }
+    return src_[row]->at(col);
 }
-
-bool SourceBuffer::match(char ch)
+// 匹配下一个字符，若相同则移动指针并返回true
+bool Source::match(char ch)
 {
-    if (peek() == ch) {
+    if (peek() == ch)
+    {
         nextch();
         return true;
     }
     return false;
 }
-
-std::string SourceBuffer::ObtainSegment() const
+// 返回文件是否已读取完毕
+bool Source::is_end() const
 {
-    return segment;
+    return curch() == EOF;
+}
+// 返回当前标记的行字符串, 主要是为了输出错误信息
+std::string Source::segline() const
+{
+    int row = loc_.second.line;
+    return *src_[row];
+}
+// 返回对当前标记的字符串，主要是为了Token分词，会重置mark标记, 最后一个字符属于Tokend
+std::string Source::seg() const
+{
+    std::string res;
+    for (int i = 0; i < segment.size() - 1; i++)
+    {
+        res.push_back(segment.at(i));
+    }
+    return res;
 }
 
-SourceLocation SourceBuffer::ObtainLocation() const
+bool Source::load(const std::string& filePath)
 {
-    return location;
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open())
+    {
+        throw ("文件不存在");
+        return false;
+    }
+
+    char ch;
+    std::string *line = new std::string;
+    while (file.get(ch))
+    {
+        line->push_back(ch);
+        if (ch == '\n')
+        {
+            src_.push_back(line);
+            line = new std::string;
+        }
+    }
+
+    if (file.eof())
+    {
+        if (line->empty())
+        {
+            delete line;
+        }
+        else
+        {
+            src_.push_back(line);
+        }
+        src_.push_back(new std::string{EOF});
+    }
+    return true;
 }
+

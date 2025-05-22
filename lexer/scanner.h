@@ -8,9 +8,7 @@
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner {
 private:
-    SourceBuffer buf;
-    std::deque<Token> tokenQue;
-
+    Source buf;
     static bool isLetter(char);
     static bool isDecimal(char);
     static bool isHexacimal(char);
@@ -34,15 +32,14 @@ private:
     Token scanLineComment();
     Token scanFullComment();
 
-    Token scan();
     inline Token makeToken(TokenKind);
-public:
-    explicit scanner(std::string filename):buf(filename){}
-
-    // 辅助函数
-    Token next();
-    Token peek(size_t);
 
     // 错误打印函数
     void error(Token);
+
+public:
+    explicit scanner(std::string filename):buf(filename){}
+    // 核心扫描函数
+    Token scan();
+    TokenSequence tokenize();
 };

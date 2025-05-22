@@ -11,7 +11,7 @@ struct IdentifierInfo
     std::string name;
     TokenKind kind;
     IdentifierInfo(){}
-    IdentifierInfo(Token tk): name(tk.getValue()), kind(tk.getKind()){}
+    IdentifierInfo(Token tk): name(tk.value_), kind(tk.kind_){}
 };
 
 // 标识符要么具有不同的名称空间，要么具有不同的作用域。

@@ -1,18 +1,41 @@
 #include <iostream>
 #include "scanner.h"
 
-int main()
+int main(int argc, char **argv)
 {
-    scanner sc("/home/user/codehub/ccompiler/test/test.c");
-    Token tn = sc.next();
-    while (tn.getKind() != TokenKind::EOF_) {
-        tn = sc.next();
-        //std::cout << tn.getLocation().filename << " " 
-        std::cout<< "line: " << tn.getLocation().line << "   " 
-        << "coloum: " << tn.getLocation().column << "   " 
-        << "TokenKind: " << (int)tn.getKind() << "   " 
-        << "Value:  " << tn.getValue() << "\n"; 
+    if (argc != 2) {
+    fprintf(stderr, "%s: invalid number of arguments\n", argv[0]);
+    return 1;
     }
-    std::cout << "hello LoxCompiler" << std::endl;
+
+    // 分词
+    scanner sc(argv[1]);
+    TokenSequence seq = sc.tokenize();
+    seq.dump();
+    return 0;
+    // 代码生成
+    Token tk = seq.next();
+
+    printf("  .globl main\n");
+    printf("main:\n");
+    printf("  mov $%d, %%rax\n", atoi((tk.value_).c_str()));
+    tk = seq.next();
+    while (!tk.isEOF())
+    {
+        if (tk.kind_ == TokenKind::Addition_)
+        {
+            tk = seq.next();
+            printf(" add $%d, %%rax\n", atoi(tk.value_.c_str()));
+            tk = seq.next();
+        }
+        else if (tk.kind_ == TokenKind::Subtraction_)
+        {
+            tk = seq.next();
+            printf(" sub $%d, %%rax\n", atoi(tk.value_.c_str()));
+            tk = seq.next();
+        }
+
+    }
+    printf("  ret\n");
     return 0;
 }

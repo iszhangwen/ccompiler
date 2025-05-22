@@ -9,7 +9,6 @@
 class Parse {
 private:
     scanner lex;
-    Token tok;
     Token nextToken();
     /*辅助函数 
     * match: 匹配当前token类型，若匹配成功则移动到下一个，否则返回false
