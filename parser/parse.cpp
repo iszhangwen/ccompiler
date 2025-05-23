@@ -1,61 +1,42 @@
 #include "parse.h"
 
-Parse::Parse(const std::string& filename)
-: lex(filename) {}
-
-bool Parse::match(TokenKind kind)
-{
-    return false;
+Parser::Parser(const std::string& filename)
+: buf_(filename) {
+    scanner sc(&buf_);
+    seq_ = sc.tokenize();
 }
 
-bool Parse::expect(TokenKind kind)
-{
-    return false;
-}
-
-bool Parse::peek(size_t num, TokenKind kind)
-{
-
-    return true;
-}
-
-Token Parse::nextToken()
-{
-    return Token::newObj(TokenKind::EOF_, SourceLocation());
-}
-
-bool Parse::parserTranslationUnit(AstNode* node)
+bool Parser::parserTranslationUnit(AstNode* node)
 {
     return parserExternalDeclaration(node);
 }
 
-bool Parse::parserExternalDeclaration(AstNode* node)
+bool Parser::parserExternalDeclaration(AstNode* node)
 {
     return true;
 }
 
-bool Parse::parserDeclaration(AstNode* node)
+bool Parser::parserDeclaration(AstNode* node)
 {
     return false;
 }
 
-bool Parse::parserFunctionDeclaration(AstNode* node)
+bool Parser::parserFunctionDeclaration(AstNode* node)
 {
     return false;
 }
 
 /*-----------------------------parse expression---------------------------------*/
-bool Parse::parserPrimaryExpr(AstNode* node)
+bool Parser::parserPrimaryExpr(AstNode* node)
 {
     return true;
 }
 
-/*
-ExprStmt Parse::parseExpr()
+
+Expr *Parser::parseExpr()
 {
-    return ExprStmt();
+    return nullptr;
 }
-*/
 
 /*6.8
  statement:
@@ -65,12 +46,10 @@ ExprStmt Parse::parseExpr()
     selection-statement
     iteration-statement
     jump-statement
-依次解析stmt
-*//*
-Stmt Parse::parseStmt()
+依次解析stmt*/
+Stmt *Parser::parseStmt()
 {
-    TokenKind kind = tok.getKind();
-    switch (kind)
+    switch (TokenKind::Case)
     {
     case TokenKind::Case:
         return parseCaseStmt();
@@ -79,7 +58,7 @@ Stmt Parse::parseStmt()
     case TokenKind::RCurly_Brackets_:
         return parseCompoundStmt();
     case TokenKind::Semicolon_:
-        return Stmt();
+        return nullptr;
     case TokenKind::If:
         return parseIfStmt();
     case TokenKind::Switch:
@@ -99,80 +78,83 @@ Stmt Parse::parseStmt()
     case TokenKind::Return:
         return parseReturnStmt();
     case TokenKind::identifier:
-        if (peek(1, TokenKind::Colon_)) {
-            return parseLabelStmt();
-        }
+        return parseLabelStmt();
     default:
         return parseExpr();
     }
 }
 
-LabelStmt Parse::parseLabelStmt()
+LabelStmt *Parser::parseLabelStmt()
 {
-    return LabelStmt();
+    return nullptr;
 }
 
-CaseStmt Parse::parseCaseStmt()
+CaseStmt *Parser::parseCaseStmt()
 {
-    return CaseStmt();
+    return nullptr;
 }
 
-DefaultStmt Parse::parseDefaultStmt()
+DefaultStmt *Parser::parseDefaultStmt()
 {
-    return DefaultStmt();
+    return nullptr;
 }
 
 // 6.8.2 label语句
-CompoundStmt Parse::parseCompoundStmt()
+CompoundStmt *Parser::parseCompoundStmt()
 {
-    return CompoundStmt();
+    return nullptr;
 }
 
 // 6.8.4 selection语句
-IfStmt Parse::parseIfStmt()
+IfStmt *Parser::parseIfStmt()
 {
-    return IfStmt();
+    return nullptr;
 }
 
-SwitchStmt Parse::parseSwitchStmt()
+SwitchStmt *Parser::parseSwitchStmt()
 {
-    return SwitchStmt();
+    return nullptr;
 }
 
 // 6.8.5 Iteration语句
-WhileStmt Parse::parseWhileStmt()
+WhileStmt *Parser::parseWhileStmt()
 {
-    return WhileStmt();
+    return nullptr;
 }
 
-DoStmt Parse::parseDoStmt()
+DoStmt *Parser::parseDoStmt()
 {
-    return DoStmt();
+    return nullptr;
 }
 
-ForStmt Parse::parseForStmt()
+ForStmt *Parser::parseForStmt()
 {
-    return ForStmt();
+    return nullptr;
 }
 
 // 6.6.6 jump 语句
-GotoStmt Parse::parseGotoStmt()
+GotoStmt *Parser::parseGotoStmt()
 {
-    return GotoStmt();
+    return nullptr;
 }
 
-ContinueStmt Parse::parseContinueStmt()
+ContinueStmt *Parser::parseContinueStmt()
 {
-    return ContinueStmt();
+    return nullptr;
 }
 
-BreakStmt Parse::parseBreakStmt()
+BreakStmt *Parser::parseBreakStmt()
 {
-    return BreakStmt();
+    return nullptr;
 }
 
-ReturnStmt Parse::parseReturnStmt()
+ReturnStmt *Parser::parseReturnStmt()
 {
-    return ReturnStmt();
+    return nullptr;
 }
-*/
+
+
+bool Parser::parse(AstNode* node)
+{
+    return true;
+}

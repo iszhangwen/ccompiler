@@ -152,17 +152,18 @@ enum class TokenKind {
 class Token {
 public:
     // token kind
-    TokenKind kind_;
+    const TokenKind kind_;
 
     // token value
-    std::string value_;
+    const std::string value_;
 
     // loc
-    SourceLocation loc_;
+    const SourceLocation loc_;
 
     // creat a new Token
-    static Token newObj(TokenKind type, SourceLocation loc);
-    static Token newObj(TokenKind type, SourceLocation loc, const std::string& value);
+    static Token *newObj(TokenKind type);
+    static Token *newObj(TokenKind type, SourceLocation loc);
+    static Token *newObj(TokenKind type, SourceLocation loc, const std::string& value);
 
     // static member 
     static const std::unordered_map<std::string, TokenKind> KeyWordMap;
@@ -181,21 +182,18 @@ private:
 class TokenSequence 
 {
 private:
-    int curPos_{-1};
-    std::vector<Token> seq_;
+    int pos_{0};
+    std::vector<Token*> seq_;
 
 public:
-    void push_back(const Token& tk) {seq_.push_back(tk);}
+    void push_back(Token* tk) {seq_.push_back(tk);}
 
     // 辅助函数
     size_t size() const {return seq_.size();}
-    Token next() { return seq_[++curPos_];}
-
-    void dump() {
-        for (int i = 0; i < seq_.size(); i++)
-        {
-            std::cout << "kind: " << (int)seq_[i].kind_ << " value: " << seq_[i].value_ <<"\n";
-        }
-        std::cout << "------------------------------\n";
-    }
+    void dump() const;
+    // 提供给语法分析器的辅助函数
+    Token* next();
+    Token* cur() const;
+    Token* peek(size_t n = 1) const; 
+    bool match(TokenKind);
 };

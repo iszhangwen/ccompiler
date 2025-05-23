@@ -1,14 +1,19 @@
 #include "token.h"
 #include "scanner.h"
 
-Token Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
+Token *Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
 {
-    return Token(type, loc, value);
+    return new Token(type, loc, value);
 }
 
-Token Token::newObj(TokenKind type, SourceLocation loc)
+Token *Token::newObj(TokenKind type, SourceLocation loc)
 {
     return Token::newObj(type, loc, "");
+}
+
+Token *Token::newObj(TokenKind type)
+{
+    return Token::newObj(TokenKind::EOF_, SourceLocation());
 }
 
 const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
@@ -62,4 +67,43 @@ const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
 bool Token::isEOF() const
 {
     return kind_ == TokenKind::EOF_;
+}
+
+void TokenSequence::dump() const {
+    std::cout << "------------------------------\n";
+    for (int i = 0; i < seq_.size(); i++)
+    {
+        std::cout << "kind: " << (int)seq_[i]->kind_ << " value: " << seq_[i]->value_ <<"\n";
+    }
+    std::cout << "------------------------------\n";
+}
+
+Token *TokenSequence::peek(size_t n) const
+{
+    if (pos_ + n >= size())
+    {
+        return Token::newObj(TokenKind::EOF_);
+    }
+    return seq_[pos_ + n];
+}
+
+Token *TokenSequence::next()
+{
+    pos_++;
+    return cur();
+}
+
+Token *TokenSequence::cur() const
+{
+    return peek(0);
+}
+
+bool TokenSequence::match(TokenKind tk)
+{
+    if (peek()->kind_ == tk)
+    {
+        next();
+        return true;
+    }
+    return false;
 }

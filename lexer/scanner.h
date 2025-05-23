@@ -8,7 +8,7 @@
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner {
 private:
-    Source buf;
+    Source *buf_;
     static bool isLetter(char);
     static bool isDecimal(char);
     static bool isHexacimal(char);
@@ -24,22 +24,23 @@ private:
     bool skipEscape(char);
     bool match(const Token& tk);
 
-    Token scanIdentifier();
-    Token scanNumberLiteral();
-    Token scanStringLiteral();
-    Token scanCharLiter();
+    Token *scanIdentifier();
+    Token *scanNumberLiteral();
+    Token *scanStringLiteral();
+    Token *scanCharLiter();
 
-    Token scanLineComment();
-    Token scanFullComment();
+    Token *scanLineComment();
+    Token *scanFullComment();
 
-    inline Token makeToken(TokenKind);
+    inline Token *makeToken(TokenKind);
 
     // 错误打印函数
-    void error(Token);
+    void error(const std::string& val);
+    void error(Token *tk, const std::string& val);
 
 public:
-    explicit scanner(std::string filename):buf(filename){}
+    explicit scanner(Source* buf);
     // 核心扫描函数
-    Token scan();
+    Token *scan();
     TokenSequence tokenize();
 };

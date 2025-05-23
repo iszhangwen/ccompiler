@@ -1,10 +1,12 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <memory>
 
 // 源码字符位置
 struct SourceLocation {
-    SourceLocation(){}
+    SourceLocation()
+    : SourceLocation(""){}
 
     explicit SourceLocation(std::string filename)
     : filename(filename), line(0), column(0){}
@@ -31,7 +33,12 @@ struct SourceLocation {
 class Source 
 {
 public:
+    // 资源控制函数
     explicit Source(const std::string& fileName);
+    Source(const Source&);
+    Source& operator=(const Source&);
+    Source(Source&&);
+    Source& operator=(Source&&);
     // 获取当前的读取的开始位置
     SourceLocation loc() const;
     // 标记开始读取位置
@@ -48,15 +55,17 @@ public:
     bool is_end() const;
     // 返回当前标记的行字符串, 主要是为了输出错误信息
     std::string segline() const;
+    std::string segline(SourceLocation loc) const;
     // 返回对当前标记的字符串，主要是为了Token分词，会重置mark标记
     std::string seg() const;
 
 private:
+    using Line = std::shared_ptr<std::string>;
     // 缓存当前的Token词
     std::string segment;
     // 当前mark标记的位置，和读取到的位置
     std::pair<SourceLocation, SourceLocation> loc_; 
-    std::vector<std::string*> src_; // 源码
+    std::vector<Line> src_; // 源码
     // 读取当前文件
     bool load(const std::string& filePath);
 };

@@ -9,29 +9,30 @@ int main(int argc, char **argv)
     }
 
     // 分词
-    scanner sc(argv[1]);
+    Source buf(argv[1]);
+    scanner sc(&buf);
     TokenSequence seq = sc.tokenize();
-    seq.dump();
-    return 0;
+    //seq.dump();
+    //return 0;
     // 代码生成
-    Token tk = seq.next();
+    Token *tk = seq.next();
 
     printf("  .globl main\n");
     printf("main:\n");
-    printf("  mov $%d, %%rax\n", atoi((tk.value_).c_str()));
+    printf("  mov $%d, %%rax\n", atoi((tk->value_).c_str()));
     tk = seq.next();
-    while (!tk.isEOF())
+    while (!tk->isEOF())
     {
-        if (tk.kind_ == TokenKind::Addition_)
+        if (tk->kind_ == TokenKind::Addition_)
         {
             tk = seq.next();
-            printf(" add $%d, %%rax\n", atoi(tk.value_.c_str()));
+            printf(" add $%d, %%rax\n", atoi(tk->value_.c_str()));
             tk = seq.next();
         }
-        else if (tk.kind_ == TokenKind::Subtraction_)
+        else if (tk->kind_ == TokenKind::Subtraction_)
         {
             tk = seq.next();
-            printf(" sub $%d, %%rax\n", atoi(tk.value_.c_str()));
+            printf(" sub $%d, %%rax\n", atoi(tk->value_.c_str()));
             tk = seq.next();
         }
 

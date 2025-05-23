@@ -12,7 +12,34 @@ Source::Source(const std::string& fileName)
     loc_.second.column = 0;
     loc_.second.filename = fileName;
     load(fileName);
-    std::cout << "load sources successful\n";
+}
+
+Source::Source(const Source& other)
+{
+    segment = other.segment;
+    loc_ = other.loc_;
+    src_ = other.src_;
+}
+
+Source& Source::operator=(const Source& other)
+{
+    segment = other.segment;
+    loc_ = other.loc_;
+    src_ = other.src_;
+}
+
+Source::Source(Source&& other)
+{
+    segment = other.segment;
+    loc_ = other.loc_;
+    src_ = other.src_;
+}
+
+Source& Source::operator=(Source&& other)
+{
+    segment = other.segment;
+    loc_ = other.loc_;
+    src_ = other.src_;
 }
 
 SourceLocation Source::loc() const
@@ -94,10 +121,17 @@ bool Source::is_end() const
 {
     return curch() == EOF;
 }
-// 返回当前标记的行字符串, 主要是为了输出错误信息
+
 std::string Source::segline() const
 {
-    int row = loc_.second.line;
+    int row = loc_.first.line;
+    return *src_[row];
+}
+
+// 返回当前标记的行字符串, 主要是为了输出错误信息
+std::string Source::segline(SourceLocation loc) const
+{
+    int row = loc.line;
     return *src_[row];
 }
 // 返回对当前标记的字符串，主要是为了Token分词，会重置mark标记, 最后一个字符属于Tokend
@@ -116,33 +150,34 @@ bool Source::load(const std::string& filePath)
     std::ifstream file(filePath, std::ios::binary);
     if (!file.is_open())
     {
-        throw ("文件不存在");
+        throw ("the file isn't exist!");
         return false;
     }
 
     char ch;
-    std::string *line = new std::string;
+    auto line = std::make_shared<std::string>();
     while (file.get(ch))
     {
         line->push_back(ch);
         if (ch == '\n')
         {
             src_.push_back(line);
-            line = new std::string;
+            line = std::make_shared<std::string>();
         }
     }
 
     if (file.eof())
     {
-        if (line->empty())
+        if (!line->empty())
         {
-            delete line;
-        }
-        else
-        {
+            // 最后一行可能没有换行符，手动添加
+            if (line->back() != '\n')
+            {
+                line->push_back('\n');
+            }
             src_.push_back(line);
         }
-        src_.push_back(new std::string{EOF});
+        src_.push_back(std::make_shared<std::string>(1, EOF));
     }
     return true;
 }

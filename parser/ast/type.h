@@ -14,6 +14,7 @@
 #pragma once
 #include <string>
 #include <assert.h>
+#include "ast.h"
 #include "decl.h"
 #include "stmt.h"
 #include "expr.h"
@@ -208,12 +209,12 @@ public:
     */
 private:
     int len_;
-    const ExprStmt* lenExpr_;
+    const Expr* lenExpr_;
 
 protected:
     ArrayType(QualType can, int len)
     : DerivedType(Type::ARRAY, can), len_(len) {}
-    ArrayType(QualType can, ExprStmt* lenExpr)
+    ArrayType(QualType can, Expr* lenExpr)
     : DerivedType(Type::ARRAY, can), lenExpr_(lenExpr) {}
 
 public:

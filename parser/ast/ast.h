@@ -13,7 +13,6 @@ enum class NodeKind {
     FunctionDecl,
 
     // 声明: 声明由声明说明符，初始化声明符列表组成
-    // 声明
     LabelDecl,
 
 

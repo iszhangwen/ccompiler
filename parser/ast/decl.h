@@ -20,6 +20,7 @@
 */
 
 #pragma once
+#include "ast.h"
 #include "expr.h"
 #include <scope.h>
 
@@ -128,27 +129,27 @@ private:
 class VarDecl : public DeclaratorDecl
 {
 public:
-    static std::shared_ptr<VarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr);
+    static std::shared_ptr<VarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr);
     virtual ~VarDecl(){}
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    VarDecl(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr)
+    VarDecl(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr)
     : DeclaratorDecl(tk, ts, ss), initExpr_(ex){}
 
 private:
-    ExprStmt* initExpr_; // 初始化表达式
+    Expr* initExpr_; // 初始化表达式
 };
 
 /// 函数参数声明，需要默认值
 class ParmVarDecl final : public VarDecl 
 {
 public:
-    static std::shared_ptr<ParmVarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr);
+    static std::shared_ptr<ParmVarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr);
     virtual void accept(std::shared_ptr<Vistor> vt) {}
 
 protected:
-    ParmVarDecl(Token tk, TypeSpec ts, StorageClass ss, ExprStmt* ex = nullptr)
+    ParmVarDecl(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr)
     : VarDecl(tk, ts, ss, ex){}
 
 };
