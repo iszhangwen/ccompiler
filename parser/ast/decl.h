@@ -21,8 +21,28 @@
 
 #pragma once
 #include "ast.h"
-#include "expr.h"
-#include <scope.h>
+#include "type.h"
+#include "../lexer/token.h"
+
+class Expr;
+class CompoundStmt;
+class IdentifierInfo;
+
+// 声明说明符
+struct DeclSpec
+{
+    int /*StorageClass*/ sc_;
+    int /*TypeSpecifier*/ ts_;
+    int /*TypeQualifier*/ tq_;
+    int /*FuncSpecifier*/ fs_;
+};
+
+// 声明符
+class Declarator
+{
+public:
+
+};
 
 class Decl : public AstNode
 {
@@ -34,6 +54,7 @@ protected:
     Decl(NodeKind nk): AstNode(nk) {}
 };
 
+
 /*
 (6.9) translation-unit:
         external-declaration
@@ -42,34 +63,32 @@ protected:
         function-definition
         declaration
 */
+// 文件作用域
 class TranslationUnitDecl final : public Decl
 {
+private:
+    std::vector<Decl*> decl_;
 public:
-    static std::shared_ptr<TranslationUnitDecl> NewObj(std::vector<Decl> exDecl);
-    virtual ~TranslationUnitDecl(){}
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    TranslationUnitDecl(const std::vector<Decl*>& exDecl)
+    : Decl(NK_TranslationUnitDecl), decl_(exDecl){}
 
-protected:
-    TranslationUnitDecl(std::vector<Decl> exDecl)
-    : Decl(NodeKind::TranslationUnitDecl), exDeclList_(exDecl){}
-    std::vector<Decl> exDeclList_;
+    TranslationUnitDecl()
+    : Decl(NK_TranslationUnitDecl){}
+
+    void addDecl(std::vector<Decl*>&);
 };
 
 // 所有具有名称的基类, 命名实体具备链接属性
 class NamedDecl : public Decl
 {
-public:
-    virtual ~NamedDecl(){}
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
-
 protected:
-    NamedDecl(NodeKind nk, IdentifierInfo tk)
-    : Decl(nk), name_(tk) {}
+    NamedDecl(NodeKind nk, IdentifierInfo* id)
+    : Decl(nk), name(id){}
     NamedDecl()
-    : Decl(NodeKind::Expr){}
+    : Decl(NK_Expr){}
 
 private:
-    IdentifierInfo name_;
+    IdentifierInfo* name;
 };
 
 // 标签声明:需要记录标签的名称和位置
@@ -77,65 +96,62 @@ private:
 labeled-statement:
  identifier : statement
 */
-class LabelDecl final : public NamedDecl 
+class LabelDecl final : public NamedDecl
 {
 public:
-    static std::shared_ptr<LabelDecl> NewObj(IdentifierInfo tk, LabelStmt* ls);
-    virtual ~LabelDecl(){}
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    static LabelDecl* NewObj(IdentifierInfo* id);
 
 protected:
-    LabelDecl(IdentifierInfo tk, LabelStmt* ls)
-    : NamedDecl(NodeKind::LabelDecl, tk), label_(ls) {}
-
-private:
-    LabelStmt* label_;
+    LabelDecl(IdentifierInfo* id)
+    : NamedDecl(NK_LabelDecl, id){}
 };
 
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
 class ValueDecl : public NamedDecl 
 {
 public:
-    static std::shared_ptr<ValueDecl> NewObj(Token tk, TypeSpec ts);
-    virtual ~ValueDecl(){}
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    static ValueDecl* NewObj(IdentifierInfo* id, QualType ty);
 
 protected:
-    ValueDecl(Token tk, TypeSpec ts)
-    :NamedDecl(){}
+    ValueDecl(NodeKind nk, IdentifierInfo* id, QualType ty)
+    :NamedDecl(nk, id), ty_(ty){}
+
+    ValueDecl(IdentifierInfo* id, QualType ty)
+    :NamedDecl(NK_ValueDecl, id), ty_(ty){}
 
 private:
-    TypeSpec ty_;
+    QualType ty_;
 };
 
 // 带有声明说明符的声明，声明说明符包括：存储说明符，类型限定符，类型说明符，比如变量，函数，参数等，
 class DeclaratorDecl : public ValueDecl 
 {
 public:
-    static std::shared_ptr<DeclaratorDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss);
-    virtual ~DeclaratorDecl(){}
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    static DeclaratorDecl* NewObj(IdentifierInfo* id, QualType ty);
 
 protected:
-    DeclaratorDecl(Token tk, TypeSpec ts, StorageClass ss)
-    : ValueDecl(tk, ts), ss_(ss) {}
+    DeclaratorDecl(NodeKind nk, IdentifierInfo* id, QualType ty)
+    : ValueDecl(nk, id, ty){}
+
+    DeclaratorDecl(IdentifierInfo* id, QualType ty)
+    : ValueDecl(NK_DeclaratorDecl, id, ty){}
 
 private:
-    StorageClass ss_;
+    int sc_;
 };
-
 
 // 变量声明：需要包含存储类，作用域，初始化表达式等
 class VarDecl : public DeclaratorDecl
 {
 public:
-    static std::shared_ptr<VarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr);
-    virtual ~VarDecl(){}
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    static VarDecl NewObj(IdentifierInfo* id, QualType ty, Expr* ex=nullptr);
 
 protected:
-    VarDecl(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr)
-    : DeclaratorDecl(tk, ts, ss), initExpr_(ex){}
+    VarDecl(NodeKind nk, IdentifierInfo* id, QualType ty, Expr* ex=nullptr)
+    : DeclaratorDecl(nk, id, ty), initExpr_(ex){}
+
+    VarDecl(IdentifierInfo* id, QualType ty, Expr* ex=nullptr)
+    : DeclaratorDecl(NK_ValueDecl, id, ty), initExpr_(ex){}
 
 private:
     Expr* initExpr_; // 初始化表达式
@@ -145,12 +161,11 @@ private:
 class ParmVarDecl final : public VarDecl 
 {
 public:
-    static std::shared_ptr<ParmVarDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr);
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    static ParmVarDecl* NewObj(IdentifierInfo* id, QualType ty, Expr* ex=nullptr);
 
 protected:
-    ParmVarDecl(Token tk, TypeSpec ts, StorageClass ss, Expr* ex = nullptr)
-    : VarDecl(tk, ts, ss, ex){}
+    ParmVarDecl(IdentifierInfo* id, QualType ty, Expr* ex=nullptr)
+    : VarDecl(id, ty, ex){}
 
 };
 
@@ -160,14 +175,15 @@ protected:
 class FunctionDecl : public DeclaratorDecl
 {
 public:
-    static std::shared_ptr<FunctionDecl> NewObj(Token tk, TypeSpec ts, StorageClass ss, std::vector<ParmVarDecl*>& param, CompoundStmt* body = nullptr);
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    static FunctionDecl* NewObj(IdentifierInfo* id, QualType ty, std::vector<ParmVarDecl*>& param, CompoundStmt* body);
 
 protected:
-    FunctionDecl(Token tk, TypeSpec ts, StorageClass ss, std::vector<ParmVarDecl*>& param, CompoundStmt* body)
-    : DeclaratorDecl(tk, ts, ss), parm_(param), body_(body){}
+    FunctionDecl(IdentifierInfo* id, QualType ty, std::vector<ParmVarDecl*>& param, CompoundStmt* body)
+    : DeclaratorDecl(id, ty), parm_(param), body_(body){}
 
 private:
+    int fs_;
+    Type* ty_;
     std::vector<ParmVarDecl*> parm_;
     CompoundStmt* body_;
 };

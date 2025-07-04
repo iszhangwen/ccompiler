@@ -1,5 +1,7 @@
 #include "token.h"
 #include "scanner.h"
+#include <sstream>
+#include "../base/error.h"
 
 Token *Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
 {
@@ -64,6 +66,13 @@ const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
     {"_Thread_local", TokenKind::T_Thread_local,	}
 };
 
+const std::unordered_map<TokenKind, std::string> Token::TokenKindMap = 
+{
+    #define X_MACROS(a, b) {TokenKind::a, b},
+    MACROS_TABLE
+    #undef X_MACROS
+};
+
 bool Token::isEOF() const
 {
     return kind_ == TokenKind::EOF_;
@@ -106,4 +115,16 @@ bool TokenSequence::match(TokenKind tk)
         return true;
     }
     return false;
+}
+
+void TokenSequence::expect(TokenKind tk)
+{
+    if (peek()->kind_ == tk)
+    {
+        next();
+        return;
+    }
+    std::stringstream ss;
+    ss << "Expect " << Token::TokenKindMap.at(tk) << " but " << Token::TokenKindMap.at(peek()->kind_);
+    throw CCError(ss.str());
 }

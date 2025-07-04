@@ -1,5 +1,5 @@
 #include "scanner.h"
-#include <iostream>
+#include <sstream>
 
 bool scanner::isLetter(char ch)
 {
@@ -151,18 +151,15 @@ Token *scanner::scanStringLiteral()
         }
         else if (buf_->match('\n')) {
             error("unExpect stringLiteral!");
-            return makeToken(TokenKind::Error_);
         }
         else if (buf_->match(EOF)) {
-            error("unExpect stringLiteral!");
-            return makeToken(TokenKind::Error_);
+            throw ("unExpect stringLiteral!");
         }
         else {
             buf_->nextch();
         }
     } while (true);
     error("unExpect stringLiteral!");
-    return makeToken(TokenKind::Error_);
 }
 
 Token *scanner::scanCharLiter()
@@ -224,52 +221,35 @@ Token *scanner::scanFullComment()
 
 void scanner::error(const std::string& val)
 {
-    #define RED "\033[31m"
-    #define CANCEL "\033[0m"
-    std::cout << buf_->loc().filename 
-            << ":" 
-            << buf_->loc().line 
-            << ":" << buf_->loc().column 
-            << ": "
-            << RED 
-            << "error: " 
-            << CANCEL 
-            << val 
-            << std::endl;
-    std::cout << buf_->segline();
-    std::cout << std::string(buf_->loc().column, ' ') 
-            << RED << "^ " 
-            << std::string(buf_->segline().size() - buf_->loc().column - 2, '~')  
-            << CANCEL 
-            << std::endl;
-    #undef RED
-    #undef CANCEL
+   error(buf_->loc(), val);
 }
 
-void scanner::error(Token *tk, const std::string& val)
+void scanner::error(SourceLocation loc, const std::string& val)
 {
     #define RED "\033[31m"
     #define CANCEL "\033[0m"
-    std::cout << tk->loc_.filename 
-            << ":" 
-            << tk->loc_.line 
-            << ":" 
-            << tk->loc_.column 
-            << ": "
-            << RED 
-            << "error: " 
-            << CANCEL
-            << val 
-            << std::endl;
-    std::cout << buf_->segline(tk->loc_);
-    std::cout << std::string(tk->loc_.column, ' ') 
-            << "^ "  
-            << RED 
-            << std::string(buf_->segline(tk->loc_).size() - tk->loc_.column - 2, '~') 
-            << CANCEL 
-            << std::endl;
+    std::stringstream ss;
+    ss << loc.filename 
+        << ":" 
+        << loc.line 
+        << ":" 
+        << loc.column 
+        << ": "
+        << RED 
+        << "error: " 
+        << CANCEL
+        << val 
+        << std::endl
+        << buf_->segline(loc)
+        << std::string(loc.column, ' ') 
+        << "^ "  
+        << RED 
+        << std::string(buf_->segline(loc).size() - loc.column - 2, '~') 
+        << CANCEL 
+        << std::endl;
     #undef RED
     #undef CANCEL
+    throw CCError(ss.str());
 }
 
 Token *scanner::makeToken(TokenKind kind)
@@ -282,7 +262,7 @@ scanner::scanner(Source* buf)
 {
     if (buf_ == nullptr)
     {
-        throw ("error: SourceBuffer is nullptr");
+        error("SourceBuffer is nullptr");
     }
 }
 

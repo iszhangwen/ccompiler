@@ -9,10 +9,12 @@ option(CCP "set to switch to build SRC..." ON)
 
 if (CCP) 
     message("start build ccompiler...")
+    add_subdirectory(base)
     add_subdirectory(lexer)
     add_subdirectory(parser)
+    add_subdirectory(sema)
     add_subdirectory(ssa)
-    add_subdirectory(x86)
+    add_subdirectory(codegen)
     add_subdirectory(drive)
 endif()
 

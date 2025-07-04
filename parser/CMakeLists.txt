@@ -1,8 +1,8 @@
 file(GLOB SRC "*")
 
-include_directories(${CMAKE_SOURCE_DIR}/lexer)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-link_directories(${CMAKE_BINARY_DIR}/lexer)
-
 add_library(parser ${SRC})
-target_link_libraries(parser lexer)
+target_link_libraries(parser lexer sema)
+target_include_directories(parser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_library(parser_interface INTERFACE)
+target_include_directories(parser_interface INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

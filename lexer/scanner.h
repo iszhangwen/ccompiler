@@ -3,7 +3,7 @@
 #include <deque>
 #include "token.h"
 #include "source.h"
-
+#include "../base/error.h"
 
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner {
@@ -36,7 +36,7 @@ private:
 
     // 错误打印函数
     void error(const std::string& val);
-    void error(Token *tk, const std::string& val);
+    void error(SourceLocation loc, const std::string& val);
 
 public:
     explicit scanner(Source* buf);

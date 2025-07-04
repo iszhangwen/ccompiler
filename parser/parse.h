@@ -1,33 +1,63 @@
 #pragma once
 #include <string>
-#include <scanner.h>
 #include <ast/decl.h>
 #include <ast/stmt.h>
 #include <ast/expr.h>
 #include <ast/type.h>
+#include <scanner.h>
+#include <scope.h>
+#include <sema.h>
+
+class ParseTypeSpec {
+public:
+    enum TSState {
+        START,
+        FOUND_SIGNED_UNSIGNED,
+        FOUND_SHORT,
+        FOUND_LONG,
+        FOUND_LONG2,
+        FOUND_TYPE,
+        ERROR
+    };
+    static void accept(TSState& curState, TokenKind cond, int& ts);
+};
 
 class Parser {
 private:
-    Source buf_;
-    TokenSequence seq_;
-    // 错误相关函数
-    void reportError();
-    
-    // 解析根节点
-    bool parserTranslationUnit(AstNode* node);
+    using DeclList = std::vector<Decl*>;
+    Scope *curScope_;
+    Source *buf_;
+    TokenSequence *seq_;
+    TranslationUnitDecl* unit_;
+    sema* sema_;
+
+    // token串访问函数
+    bool Expect(TokenKind);
+
+    /*
+    错误处理策略，遇到错误是中止编译程序
+    */
+    void error(const std::string& val);
+    void error(Token *tk, const std::string& val);
+
+        // 作用域栈函数
+    void enterScope(Scope::ScopeType);
+    void exitScope();
 
     // 解析声明
-    bool parserExternalDeclaration(AstNode* node);
-    bool parserDeclaration(AstNode* node);
-    bool parserFunctionDeclaration(AstNode* node);
+    std::vector<Decl*> parseExternalDeclaration();
+    bool parseDeclaration();
 
-    // 解析函数声明
-    bool parserDeclarationSpecifiers(AstNode* node);
-    bool parserDeclarationList(AstNode* node);
+    // 解析声明
+    QualType parseDeclarationSpecifiers(int *StorageClass, int *funSpec);
+    DeclaratorDecl* parseDeclarator(Declarator&);
+    void parseInitializer();
+    void parseInitDeclarator();
+
 
     //-----------------------------------------------------------------------
     // 6.5.1
-    Expr *parserPrimaryExpr(AstNode* node);
+    Expr *parsePrimaryExpr();
 
     // 6.5.2
 
@@ -58,6 +88,11 @@ private:
 
 public:
     explicit Parser(const std::string& filename);
-    virtual ~Parser() {}
-    bool parse(AstNode* node);
+    virtual ~Parser();
+    // 解析根节点
+    void parseTranslationUnit();
+
+    // 调试打印
+    void dumpAST();
+    void dumpTokens();
 };

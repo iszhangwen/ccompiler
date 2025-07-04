@@ -26,6 +26,7 @@ Source& Source::operator=(const Source& other)
     segment = other.segment;
     loc_ = other.loc_;
     src_ = other.src_;
+    return *this;
 }
 
 Source::Source(Source&& other)
@@ -40,6 +41,7 @@ Source& Source::operator=(Source&& other)
     segment = other.segment;
     loc_ = other.loc_;
     src_ = other.src_;
+    return *this;
 }
 
 SourceLocation Source::loc() const

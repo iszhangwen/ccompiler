@@ -15,36 +15,34 @@
 #include <string>
 #include <assert.h>
 #include "ast.h"
-#include "decl.h"
-#include "stmt.h"
-#include "expr.h"
 
 // 前置类型声明
+class Expr;
 class Type;
+class Decl;
+class TagDecl;
+class RecordDecl;
+class EnumDecl;
+class ParmVarDecl;
+class TypedefDecl;
 
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
 class QualType {
     intptr_t ptr_; // 存储类型指针
 public:
-    enum Qualifier{
-        CONST = 0X01,
-        RESTRICT = 0X02,
-        VOLATILE = 0X04,
-        MASK = CONST | RESTRICT | VOLATILE
-    };
     // 构造函数
     QualType() {}
     QualType(const Type *ptr, unsigned qual=0x00)
         :ptr_(reinterpret_cast<intptr_t>(ptr)) {
         // 校验类型限定符的合法性
-        assert((qual & ~MASK) == 0);
+        assert((qual & ~TypeQualifier::TQ_MASK) == 0);
         ptr_ |= qual;
     }
 
     // 获取类型指针
     bool isNull() const {return getPtr() == nullptr;}
-    Type *getPtr() {return reinterpret_cast<Type*>(ptr_ & ~MASK);}
-    const Type *getPtr() const {return reinterpret_cast<const Type*>(ptr_ & ~MASK);}
+    Type *getPtr() {return reinterpret_cast<Type*>(ptr_ & ~TypeQualifier::TQ_MASK);}
+    const Type *getPtr() const {return reinterpret_cast<const Type*>(ptr_ & ~TypeQualifier::TQ_MASK);}
     
     // 运算符重载: 
     // 隐式类型转换: 用于在布尔上下文环境中表达
@@ -65,9 +63,9 @@ public:
 
     // 获取是否有类型限定符
     unsigned getQual() const {return ptr_ & 0x07;}
-    bool isConstQual() const {return ptr_ & CONST;}
-    bool isRestrictQual() const {return ptr_ & RESTRICT;}
-    bool isVolatileQual() const {return ptr_ & VOLATILE;}
+    bool isConstQual() const {return ptr_ & TypeQualifier::CONST;}
+    bool isRestrictQual() const {return ptr_ & TypeQualifier::RESTRICT;}
+    bool isVolatileQual() const {return ptr_ & TypeQualifier::VOLATILE;}
 };
 
 // 对类型系统而言：存储限定符是针对变量，类型限定符是针对类型
@@ -75,17 +73,35 @@ public:
 class Type {
 public:
     enum Classof{
-        BUILTIN, // 内建基本类型：char, 整型，浮点型
-        COMPLEX, // 复杂类型：float_Complex, double_Complex, long double_Complex
-        VOID, // 空类型 属于不完整类
-        RECORD,
-        STRUCT,
-        UNION,
-        ENUM,
-        // 派生类型：从对象，函数和不完整类型可以构造任意数量派生类型; 数组，函数，指针
-        ARRAY, // 数组类型从元素类型派生，数组的特征是元素类型和元素数量
-        FUNCION, // 函数类型派生自他的返回值类型
-        POINTER
+    // bool类型
+    BOOL,    
+    // 无符号整型
+    UCHAR,    
+    USHORT,
+    UINT,
+    ULONG,
+    ULONGLONG,
+    // 有符号整型
+    CHAR,    
+    SHORT,
+    INT,
+    LONG,
+    LONGLONG,
+    // 浮点类型
+    FlOAT, DOUBLE, LONGDOUBLE,
+    // 复杂类型：float_Complex, double_Complex, long double_Complex
+    FLOAT_COMPLEX,
+    DOUBLE_COMPLEX,
+    LONGDOUBLE_COMPLEX,
+    VOID, // 空类型 属于不完整类
+    RECORD,
+    STRUCT,
+    UNION,
+    ENUM,
+    // 派生类型：从对象，函数和不完整类型可以构造任意数量派生类型; 数组，函数，指针
+    ARRAY, // 数组类型从元素类型派生，数组的特征是元素类型和元素数量
+    FUNCION, // 函数类型派生自他的返回值类型
+    POINTER
     };
 private: 
     Classof classof_;  // 类型域标识
@@ -126,33 +142,9 @@ public:
 /*---------------------------------基本类型----------------------------------------------*/
 class BuiltinType : public Type {
 public:
-    // 6.2.5.p18:算术类型：整数类型和浮点类型
-  enum Kind {
-    // bool类型
-    BOOL,    
-    // 无符号整型
-    UCHAR,    
-    USHORT,
-    UINT,
-    ULONG,
-    ULONGLONG,
-    // 有符号整型
-    CHAR,    
-    SHORT,
-    INT,
-    LONG,
-    LONGLONG,
-    // 浮点类型
-    FlOAT, DOUBLE, LONGDOUBLE,
-  };
-private:
-  Kind kind_;
-public:
-  BuiltinType(Kind K) 
-    : Type(BUILTIN, QualType()), 
-      kind_(K) {}
+  BuiltinType(Classof co) 
+    : Type(co, QualType()){}
   
-  Kind getKind() const { return kind_; }
   std::string getName() const {return "";}
 };
 
@@ -160,9 +152,7 @@ public:
 class ComplexType : public Type {
 public:
     enum Kind {
-        FLOAT_COMPLEX,
-        DOUBLE_COMPLEX,
-        LONGDOUBLE_COMPLEX
+
     };
     Kind getKind() const {return kind_;}
 private:
@@ -225,10 +215,10 @@ public:
 class FunctionType : public DerivedType {
     bool inline_;
     bool noReturn;
-    std::vector<ParmVarDecl> params_;
+    std::vector<ParmVarDecl*> params_;
   
 protected:
-    FunctionType(QualType res, bool isInline, bool isNoReturn, std::vector<ParmVarDecl>& params)
+    FunctionType(QualType res, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params)
     : DerivedType(Type::FUNCION, res), inline_(isInline), noReturn(isNoReturn), params_(params){}
 
 public:
@@ -253,13 +243,12 @@ public:
 
 class RecordType : public TagType {
 protected:
-  explicit RecordType(RecordDecl *D)
-    : TagType(Type::RECORD, reinterpret_cast<TagDecl*>(D), QualType()) { }
-  explicit RecordType(Classof co, RecordDecl *D)
-    : TagType(co, reinterpret_cast<TagDecl*>(D), QualType()) { }
+    RecordType(RecordDecl *D)
+    : TagType(Type::RECORD, reinterpret_cast<TagDecl*>(D), QualType()) {}
+    RecordType(Classof co, RecordDecl *D)
+    : TagType(co, reinterpret_cast<TagDecl*>(D), QualType()) {}
 
 public:
-    
   RecordDecl *getDecl() const {
     return reinterpret_cast<RecordDecl*>(TagType::getDecl());
   }
