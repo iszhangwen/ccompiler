@@ -146,6 +146,9 @@ public:
     // func
     bool isEOF() const;
 
+    // typespecifier
+    bool isTypeSpecifier() const;
+
 private:
     Token(TokenKind type, SourceLocation loc, const std::string& value)
     : kind_(type), loc_(loc), value_(value){}

@@ -31,9 +31,6 @@ private:
     TranslationUnitDecl* unit_;
     sema* sema_;
 
-    // token串访问函数
-    bool Expect(TokenKind);
-
     /*
     错误处理策略，遇到错误是中止编译程序
     */
@@ -50,10 +47,22 @@ private:
 
     // 解析声明
     QualType parseDeclarationSpecifiers(int *StorageClass, int *funSpec);
-    DeclaratorDecl* parseDeclarator(Declarator&);
+    DeclaratorDecl* parseDeclarator(QualType& qt, int storageClass, int funSpec);
+    void parseDirectDeclarator();
     void parseInitializer();
     void parseInitDeclarator();
 
+    // 解析结构体
+    QualType parseStructOrUnionSpecifier();
+    QualType parseEnumSpecifier();
+    QualType parseTypedefName();
+
+    /*
+    (6.7.5) pointer:
+        * type-qualifier-listopt
+        * type-qualifier-listopt pointer
+    */
+    void parsePoiner(QualType&);
 
     //-----------------------------------------------------------------------
     // 6.5.1
