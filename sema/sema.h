@@ -6,8 +6,10 @@
 class Scope; 
 class Decl;
 class TranslationUnitDecl;
-class NamedDecl;
+class FunctionDecl;
+class VarDecl;
 class Type;
+class QualType;
 
 // 使用语法制导翻译方案，翻译过程即完成语义检查过程
 // 语义分析主要有两个作用：AST构建，和语义分析
@@ -15,8 +17,10 @@ class sema
 {
 public:
     TranslationUnitDecl* onActTranslationUnit(Scope*, std::vector<Decl*>&);
-    NamedDecl* onActFunctionDecl();
-    NamedDecl* onActNamedDecl();
+    FunctionDecl* onActFunctionDecl();
+    VarDecl* onActVarDecl();
+    VarDecl* onActArrayDecl();
 
-    Type* onActType(int ts);
+    Type* onActBuiltinType(int ts);
+    Type* onActPointerType(QualType&);
 };

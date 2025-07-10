@@ -9,25 +9,28 @@ TranslationUnitDecl* sema::onActTranslationUnit(Scope* sc, std::vector<Decl*>& v
     return new TranslationUnitDecl(vec);
 }
 
-NamedDecl* sema::onActFunctionDecl()
+FunctionDecl* sema::onActFunctionDecl()
 {
     return nullptr;
 }
 
-NamedDecl* sema::onActNamedDecl()
+VarDecl* sema::onActVarDecl()
+{
+    return nullptr;
+}
+
+VarDecl* sema::onActArrayDecl()
 {
     return nullptr;
 }
 
 // create a qual Type
-Type* sema::onActType(int ts)
+Type* sema::onActBuiltinType(int ts)
 {
-    switch (ts)
-    {
-    case TypeSpecifier::VOID:
-        VoidTy
-    
-    default:
-        break;
-    }
+    return nullptr;
+}
+
+Type* sema::onActPointerType(QualType& qt)
+{
+    return PointerType::newObj(qt);
 }

@@ -274,16 +274,12 @@ QualType Parser::parseDeclarationSpecifiers(int *storageClass, int *funSpec)
             // (6.7.2) struct-or-union-specifier
             case TokenKind::Struct:
             case TokenKind::Union:
-<<<<<<< Updated upstream
-            // (6.7.2) enum-specifier
-            case TokenKind::Enum:
-=======
             return parseStructOrUnionSpecifier();
 
             // (6.7.2) enum-specifier
             case TokenKind::Enum:
             return parseEnumSpecifier();
->>>>>>> Stashed changes
+
 
              //(6.7.3) type-qualifier:
             case TokenKind::Const:   tq |= TypeQualifier::CONST;break;
@@ -295,23 +291,15 @@ QualType Parser::parseDeclarationSpecifiers(int *storageClass, int *funSpec)
             if (tss == ParseTypeSpec::START) {
                 curScope_->lookup(nullptr, nullptr);
                 tss = ParseTypeSpec::FOUND_TYPE;
-            } else {
-<<<<<<< Updated upstream
-                QualType qty(nullptr);
-                
-                return QualType(nullptr);
-=======
-                // 通过typespecifier获取类型指针
-                return QualType(sema_->onActBuiltinType(ts), tq);
->>>>>>> Stashed changes
-            }
-                
-            default:
-                error(tk, "unexpect " + std::string(tk->value_) + " !");
                 break;
+            }  
+            default:
+             // 通过typespecifier获取类型指针
+            Type* ty = sema_->onActBuiltinType(ts);
+            return QualType(ty, tq);
         }
     }
-<<<<<<< Updated upstream
+    return QualType(nullptr);
 }
 
 /*
@@ -325,26 +313,7 @@ direct-declarator:
     direct-declarator [ type-qualifier-list static assignment-expression ]
     direct-declarator [ type-qualifier-listopt *]
     direct-declarator ( parameter-type-list )
-    direct-declarator ( identifier-listopt 
-*/
-DeclaratorDecl* Parser::parseDeclarator(Declarator&)
-{
-    return nullptr;
-=======
-}
-
-/*
-declarator:
-    pointeropt direct-declarator
-direct-declarator:
-    identifier
-    ( declarator )
-    direct-declarator [ type-qualifier-listopt assignment-expressionopt ]
-    direct-declarator [static type-qualifier-listopt assignment-expression ]
-    direct-declarator [ type-qualifier-list static assignment-expression ]
-    direct-declarator [ type-qualifier-listopt *]
-    direct-declarator ( parameter-type-list )
-    direct-declarator ( identifier-listopt )
+    direct-declarator ( identifier-listopt ) // C99不支持
  对文法做改写，消除左递归：
  declarator：
     pointeropt (identifier | "( declarator )") type-suffix
@@ -354,48 +323,70 @@ direct-declarator:
     [ type-qualifier-list static assignment-expression ] type-suffix
     [ type-qualifier-listopt *] type-suffix
     ( parameter-type-list ) type-suffix
-    ( identifier-listopt ) type-suffix
     e
 */
-DeclaratorDecl* Parser::parseDeclarator(QualType& qt, int storageClass, int funSpec)
+DeclaratorDecl* Parser::parseDeclarator(QualType qt, int storageClass, int funSpec)
 {
+    // 解析pointeropt (identifier | "( declarator )")
     parsePoiner(qt);
     IdentifierInfo id;
     if (seq_->match(TokenKind::identifier)) {
         id.name = seq_->cur()->value_;
     } else if (seq_->match(TokenKind::LParent_)) {
-        //parseDeclarator()
-        seq_->expect(TokenKind::RSquare_Brackets_);
-    }
-
-    if (seq_->match(TokenKind::LSquare_Brackets_)) {
-        parseArray();
-        return sema_->onActFunctionDecl();
-    }
-    if (seq_->match(TokenKind::LParent_)) {
-        parseFuncParam();
+        parseDeclarator(qt, storageClass, funSpec);
         seq_->expect(TokenKind::RParent_);
-        return sema_->onActFunctionDecl();
+    } else {
+        error(seq_->peek(), "unexpect declarator!");
     }
+    // 生成数据
+    return parseTypeSuffix();
 }
 
-void Parser::parseDirectDeclarator()
+void Parser::parseArraySubcriptSpecifier()
 {
-    if (seq_->match(TokenKind::identifier)) {
-        
-    } else if (seq_->match(TokenKind::LParent_)) {
-        parseDeclarator();
-        seq_->expect(TokenKind::RParent_);
-        
-    }
-    while (true) {
-        if (seq_->match(TokenKind::LCurly_Brackets_)) {
-            if (seq_->peek()->isTypeSpecifier()) {
-                parseTypeQualifier();
+    // [static type-qualifier-listopt assignment-expression ] type-suffix
+    if (seq_->match(TokenKind::Static)) 
+    {
+        int tq = parseTypeQualifier();
+        //Expr* ex = parsePrimaryExpr();
+    } else {
+        int tq = parseTypeQualifier();
+        // [ type-qualifier-list static assignment-expression ] type-suffix
+        if (seq_->match(TokenKind::Static)) {
+            //Expr* ex = parsePrimaryExpr();
+        }
+        // [ type-qualifier-listopt *] type-suffix
+        else if (seq_->match(TokenKind::Multiplication_)) {
+            // 记录参数
+        } 
+        else {
+        // [ type-qualifier-listopt assignment-expressionopt ] type-suffix
+            if (seq_->peek()->kind_ != TokenKind::RSquare_Brackets_) {
+                //Expr* ex = parsePrimaryExpr();
             }
         }
     }
->>>>>>> Stashed changes
+}
+
+DeclaratorDecl* Parser::parseTypeSuffix()
+{
+    /*数组*/
+    if (seq_->match(TokenKind::LSquare_Brackets_)) 
+    {
+        parseArraySubcriptSpecifier();
+        seq_->expect(TokenKind::RSquare_Brackets_);
+        parseTypeSuffix();
+        return sema_->onActArrayDecl();
+    }
+    /*函数*/
+    else if (seq_->match(TokenKind::LParent_)) 
+    {
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RParent_);
+        parseTypeSuffix();
+        return sema_->onActFunctionDecl();
+    }
+    return nullptr;
 }
 
 void Parser::parseInitDeclarator()
@@ -408,8 +399,6 @@ void Parser::parseInitializer()
 
 }
 
-<<<<<<< Updated upstream
-=======
 QualType Parser::parseStructOrUnionSpecifier()
 {
     return QualType(nullptr);
@@ -425,6 +414,32 @@ QualType Parser::parseTypedefName()
     return QualType(nullptr);
 }
 
+int Parser::parseTypeQualifier()
+{
+    int res = 0;
+    while (seq_->peek()->isTypeSpecifier())
+    {
+        switch (seq_->next()->kind_)
+        {
+        case TokenKind::Const:
+            res |= TypeQualifier::CONST;
+            break;
+        case TokenKind::Volatile:
+            res |= TypeQualifier::VOLATILE;
+            break;
+        case TokenKind::Restrict:
+            res |= TypeQualifier::RESTRICT;
+            break;
+        }
+    }
+    return res;
+}
+
+void Parser::parseParameterTypeList()
+{
+
+}
+
 /*
 (6.7.5) pointer:
  * type-qualifier-listopt
@@ -433,25 +448,12 @@ QualType Parser::parseTypedefName()
 void Parser::parsePoiner(QualType& qt)
 {
     while (seq_->match(TokenKind::Multiplication_)) {
-        int tq = 0;
-        while (seq_->peek()->isTypeSpecifier())
-        {
-            if (seq_->match(TokenKind::Const)) {
-                tq |= TypeQualifier::CONST;
-            } else if (seq_->match(TokenKind::Volatile)) {
-                tq |= TypeQualifier::VOLATILE;
-            } else if (seq_->match(TokenKind::Restrict)) {
-                tq |= TypeQualifier::RESTRICT;
-            } else {
-                break;
-            }
-        }
+        int tq = parseTypeQualifier();
         Type* ty = sema_->onActPointerType(qt);
         qt = QualType(ty, tq);
     }
 }
 
->>>>>>> Stashed changes
 /*
  (6.9) external-declaration:
     function-definition
@@ -492,21 +494,12 @@ std::vector<Decl*> Parser::parseExternalDeclaration()
     QualType ty = parseDeclarationSpecifiers(&storageClass, &funSpec);
 
     // 解析第一个声明符
-<<<<<<< Updated upstream
-    Declarator dl;
-    parseDeclarator(dl);
-
-    if (seq_->peek()->kind_ == TokenKind::LCurly_Brackets_)
-    {/*function-definition: declaration-specifiers declarator declaration-listopt[ignore] compound-statement*/
-        parseCompoundStmt();
-=======
     DeclaratorDecl* dc = parseDeclarator(ty, storageClass, funSpec);
 
     if (dc->getKind() == AstNode::NK_FunctionDecl
         && seq_->peek()->kind_ == TokenKind::LCurly_Brackets_)
     {/*function-definition: declaration-specifiers declarator declaration-listopt[ignore] compound-statement*/
         CompoundStmt* cs = parseCompoundStmt();
->>>>>>> Stashed changes
         sema_->onActFunctionDecl();
     }
     else if (seq_->match(TokenKind::Assign_))
@@ -516,7 +509,7 @@ std::vector<Decl*> Parser::parseExternalDeclaration()
         {
             parseInitDeclarator();
         }
-        sema_->onActNamedDecl();
+        //sema_->onActNamedDecl();
     }
     else if (seq_->match(TokenKind::Comma_))
     {
@@ -525,7 +518,7 @@ std::vector<Decl*> Parser::parseExternalDeclaration()
         {
             parseInitDeclarator();
         }
-        sema_->onActNamedDecl();
+        //sema_->onActNamedDecl();
     }
     else if (!seq_->match(TokenKind::Semicolon_))
     {
@@ -695,15 +688,9 @@ ReturnStmt *Parser::parseReturnStmt()
 
 void Parser::dumpAST()
 {
-<<<<<<< Updated upstream
 
 } 
 
-=======
-
-} 
-
->>>>>>> Stashed changes
 void Parser::dumpTokens()
 {
 

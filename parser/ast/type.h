@@ -186,6 +186,7 @@ protected:
 
 public:
     std::string getName() const {return "";}
+    static PointerType* newObj(QualType);
 };
 
 // 数组派生类型

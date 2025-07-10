@@ -47,8 +47,9 @@ private:
 
     // 解析声明
     QualType parseDeclarationSpecifiers(int *StorageClass, int *funSpec);
-    DeclaratorDecl* parseDeclarator(QualType& qt, int storageClass, int funSpec);
-    void parseDirectDeclarator();
+    DeclaratorDecl* parseDeclarator(QualType qt, int storageClass, int funSpec);
+    DeclaratorDecl* parseTypeSuffix();
+    void parseArraySubcriptSpecifier();
     void parseInitializer();
     void parseInitDeclarator();
 
@@ -56,6 +57,12 @@ private:
     QualType parseStructOrUnionSpecifier();
     QualType parseEnumSpecifier();
     QualType parseTypedefName();
+
+    // 解析typeQualifier
+    int parseTypeQualifier();
+
+    // 解析函数参数列表
+    void parseParameterTypeList();
 
     /*
     (6.7.5) pointer:
