@@ -2,214 +2,277 @@
 #include "ast.h"
 #include <token.h>
 
-class Expr;
-
-/*
-(6.8) statement:
-        labeled-statement
-        compound-statement
-        expression-statement
-        selection-statement
-        iteration-statement
-        jump-statement
+/* (6.8) statement:
+ labeled-statement
+ compound-statement
+ expression-statement
+ selection-statement
+ iteration-statement
+ jump-statement
+ 按照C99文法定义，按照以上语句类型划分AST节点类型
 */
+
+class Expr;
+class Decl;
+class NamedDecl;
+
+/*------------------------------基类--------------------------------------------------*/
 class Stmt : public AstNode {
 public:
-    Stmt():AstNode(NK_Expr){}
+    Stmt(NodeKind kd)
+    : AstNode(kd){}
     virtual ~Stmt(){};
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
-
-protected:
-    Stmt(NodeKind kd):AstNode(kd){}
 };
 
-//  identifier : statement
-class LabelStmt final : public Stmt {
-public:    
-    static LabelStmt* NewObj(Token* tk);
+/*------------------------------labeled-statement---------------------------------------------*/
+class LabelStmt : public Stmt 
+{
+    NamedDecl* key_;
+    Stmt* val_;
+public:
+    LabelStmt(NamedDecl* key, Stmt* val)
+    : Stmt(NodeKind::NK_LabelStmt), key_(key), val_(val) {}
 
-private:
-    LabelStmt(SourceLocation loc, const std::string& name): Stmt(), labelVal(name), loc_(loc){}
-    SourceLocation loc_;
-    std::string labelVal;
+    NamedDecl* getLabel() {
+        return key_;
+    }
+    void setLabel(NamedDecl* key) {
+        key_ = key;
+    }
+
+    Stmt* getStmt() {
+        return val_;
+    }
+    void setLabel(Stmt* val) {
+        val_ = val;
+    }
 };
 
-//  case constant-expression : statement
-class CaseStmt final : public Stmt {
-public:    
-    static CaseStmt* NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
-    virtual void accept(std::shared_ptr<Vistor> vt);
+class CaseStmt : public Stmt 
+{
+    Expr* cond_;
+    Stmt* val_;
+public:
+    CaseStmt(Expr* cond, Stmt* val)
+    : Stmt(NodeKind::NK_CaseStmt), cond_(cond), val_(val) {}
 
-private:
-    CaseStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
-    : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
-    SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // constant-expression
-    std::shared_ptr<Stmt> stmt_; // statement
+    Expr* getCond() {
+        return cond_;
+    }
+    void setCond(Expr* cond) {
+        cond_ = cond;
+    }
+
+    Stmt* getStmt() {
+        return val_;
+    }
+    void setLabel(Stmt* val) {
+        val_ = val;
+    }
 };
 
-// default : statement
-class DefaultStmt : public Stmt {
-    public:    
-    static std::shared_ptr<DefaultStmt> NewObj(SourceLocation loc, std::shared_ptr<Stmt> stmt);
-    virtual void accept(std::shared_ptr<Vistor> vt);
+class DefaultStmt : public Stmt 
+{
+    Stmt* val_;
+public:
+    DefaultStmt(Expr* cond, Stmt* val)
+    : Stmt(NodeKind::NK_DefaultStmt), val_(val) {}
 
-private:
-    DefaultStmt(SourceLocation loc, std::shared_ptr<Stmt> stmt)
-    : Stmt(), loc_(loc), stmt_(stmt){}
-    SourceLocation loc_;
-    std::shared_ptr<Stmt> stmt_; // statement
+    Stmt* getStmt() {
+        return val_;
+    }
+    void setLabel(Stmt* val) {
+        val_ = val;
+    }
 };
 
-/*
-(6.8.2) compound-statement:
-            { block-item-listopt }
- (6.8.2) block-item-list:
-            block-item
-            block-item-list block-item
- (6.8.2) block-item:
-            declaration
-            statement
-*/ 
-class CompoundStmt final : public Stmt {
-public:    
-    static std::shared_ptr<CompoundStmt> NewObj(SourceLocation loc, std::vector<std::shared_ptr<Stmt>>& arrayStmt);
+/*------------------------------compound-statement---------------------------------------------*/
+class CompoundStmt : public Stmt
+{
+    std::vector<Stmt*> vals_;
+public:
+    CompoundStmt()
+    : Stmt(NodeKind::NK_CompoundStmt) {}
 
-private:
-    CompoundStmt(SourceLocation loc,  std::vector<std::shared_ptr<Stmt>>& arrayStmt)
-    : Stmt(), loc_(loc), arrayStmt_(arrayStmt){}
-    SourceLocation loc_;
-    std::vector<std::shared_ptr<Stmt>> arrayStmt_;
+    CompoundStmt(const std::vector<Stmt*>& vals)
+    : Stmt(NodeKind::NK_CompoundStmt), vals_(vals) {}
 };
 
-//  if ( expression ) statement
-//  if ( expression ) statement else statement
-class IfStmt : public Stmt {
-public:    
-    static std::shared_ptr<IfStmt> NewObj(SourceLocation loc, std::shared_ptr<Stmt> cond, std::shared_ptr<Stmt> then, std::shared_ptr<Stmt> els);
+class DeclStmt : public Stmt {
+    Decl* dc_;
+public:
+    DeclStmt(Decl* dc)
+    : Stmt(NodeKind::NK_DeclStmt), dc_(dc) {}
 
-private:
-    IfStmt(SourceLocation loc,  std::shared_ptr<Expr> cond, std::shared_ptr<Stmt> then, std::shared_ptr<Stmt> els)
-    : Stmt(), loc_(loc), cond_(cond), then_(then), else_(els){}
-    SourceLocation loc_;
-    std::shared_ptr<Expr> cond_;
-    std::shared_ptr<Stmt> then_;
-    std::shared_ptr<Stmt> else_;
+    Decl* getDecl() {
+        return dc_;
+    }
+    void setDecl(Decl* dc) {
+        dc_ = dc;
+    }
 };
 
-//  switch ( expression ) statement
-class SwitchStmt : public Stmt {
-public:    
-    static std::shared_ptr<SwitchStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+/*------------------------------表达式语句------------------------------------------------*/
+class ExprStmt : public Stmt {
+    Expr* ex_;
+public:
+    ExprStmt(Expr* ex)
+    : Stmt(NodeKind::NK_ExprStmt), ex_(ex){}
 
-private:
-    SwitchStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
-    : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
-    SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // expression
-    std::shared_ptr<Stmt> stmt_; // statement
+    Expr* getExpr() {
+        return ex_;
+    }
+    void setExpr(Expr* ex) {
+        ex_ = ex;
+    }
 };
 
-// while ( expression ) statement
-class WhileStmt : public Stmt {
-public:    
-    static std::shared_ptr<WhileStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+/*------------------------------控制流-条件语句---------------------------------------------*/
+class IFStmt : public Stmt 
+{
+    Expr* cond_;
+    Stmt* then_;
+    Stmt* else_;
+public:
+    IFStmt(Expr* cond, Stmt* th, Stmt* el = nullptr)
+    : Stmt(NodeKind::NK_IfStmt), cond_(cond), then_(th), else_(el) {}
 
-private:
-    WhileStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
-    : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
-    SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // expression
-    std::shared_ptr<Stmt> stmt_; // statement
+    Expr* getCond() {
+        return cond_;
+    }
+    void setCond(Expr* co) {
+        cond_ = co;
+    }
+    Stmt* getThen() {
+        return then_;
+    }
+    void setThen(Stmt* th) {
+        then_ = th;
+    }
+    Stmt* getElse() {
+        return else_;
+    }
+    void setElse(Stmt* el) {
+        else_ = el;
+    }
 };
 
-// do statement while ( expression );
-class DoStmt : public Stmt {
-public:    
-    static std::shared_ptr<DoStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
+class SwitchStmt : public Stmt 
+{
+    Expr* cond_;
+    Stmt* val_;
+public:
+    SwitchStmt(Expr* cond, Stmt* val)
+    : Stmt(NodeKind::NK_SwitchStmt), cond_(cond), val_(val) {}
 
-private:
-    DoStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
-    : Stmt(), loc_(loc), expr_(expr), stmt_(stmt){}
-    SourceLocation loc_;
-    std::shared_ptr<Expr> expr_; // expression
-    std::shared_ptr<Stmt> stmt_; // statement
+     Expr* getCond() {
+        return cond_;
+    }
+    void setCond(Expr* co) {
+        cond_ = co;
+    }
+    Stmt* getStmt() {
+        return val_;
+    }
+    void setStmt(Stmt* val) {
+        val_ = val;
+    }
 };
 
-//  for ( expressionopt ; expressionopt ; expressionopt ) statement
-//  for ( declaration expressionopt ; expressionopt ) statement 
-class ForStmt : public Stmt {
-public:    
-    static std::shared_ptr<ForStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt);
 
-private:
-    ForStmt(SourceLocation loc, std::shared_ptr<Stmt> init, std::shared_ptr<Stmt> cond, std::shared_ptr<Stmt> inc, std::shared_ptr<Stmt> body)
-    : Stmt(), loc_(loc), init_(init), cond_(cond), inc_(inc), body_(body){}
-    SourceLocation loc_;
-    std::shared_ptr<Stmt> init_;  // init statement
-    std::shared_ptr<Stmt> cond_;  // cond statement
-    std::shared_ptr<Stmt> inc_;   // inc statement
-    std::shared_ptr<Stmt> body_;  // body statement
+/*------------------------------控制流-迭代语句---------------------------------------------*/
+class WhileStmt : public Stmt 
+{
+    Expr* cond_;
+    Stmt* val_;
+public:
+    WhileStmt(Expr* cond, Stmt* val)
+    : Stmt(NodeKind::NK_WhileStmt), cond_(cond), val_(val) {}
+
+     Expr* getCond() {
+        return cond_;
+    }
+    void setCond(Expr* co) {
+        cond_ = co;
+    }
+    Stmt* getStmt() {
+        return val_;
+    }
+    void setStmt(Stmt* val) {
+        val_ = val;
+    }
 };
 
-// goto identifier ;
-class GotoStmt final : public Stmt {
-public:    
-    static std::shared_ptr<GotoStmt> NewObj(SourceLocation loc, std::shared_ptr<Stmt> label);
+class DoStmt : public Stmt 
+{
+    Expr* cond_;
+    Stmt* val_;
+public:
+    DoStmt(Expr* cond, Stmt* val)
+    : Stmt(NodeKind::NK_DoStmt), cond_(cond), val_(val) {}
 
-private:
-    GotoStmt(SourceLocation loc, std::shared_ptr<Expr> expr, std::shared_ptr<Stmt> stmt)
-    : Stmt(), loc_(loc), label_(stmt){}
-    SourceLocation loc_;
-    std::shared_ptr<Stmt> label_; // expression
+     Expr* getCond() {
+        return cond_;
+    }
+    void setCond(Expr* co) {
+        cond_ = co;
+    }
+    Stmt* getStmt() {
+        return val_;
+    }
+    void setStmt(Stmt* val) {
+        val_ = val;
+    }
 };
 
-// continue ;
-class ContinueStmt final : public Stmt {
-public:    
-    static std::shared_ptr<ContinueStmt> NewObj(SourceLocation loc);
-
-private:
-    ContinueStmt(SourceLocation loc)
-    : Stmt(), loc_(loc){}
-    SourceLocation loc_;
+class ForStmt : public Stmt 
+{
+    Expr* init_;
+    Expr* cond_;
+    Expr* update_;
+    Stmt* val_;
+public:
+    ForStmt(Expr* init, Expr* cond, Expr* update, Stmt* val)
+    : Stmt(NodeKind::NK_ForStmt), init_(init), cond_(cond), update_(update), val_(val) {}
 };
 
-//  break ;
-class BreakStmt final : public Stmt {
-public:    
-    static std::shared_ptr<BreakStmt> NewObj(SourceLocation loc);
 
-private:
-    BreakStmt(SourceLocation loc)
-    : Stmt(), loc_(loc){}
-    SourceLocation loc_;
+/*------------------------------控制流-跳转语句---------------------------------------------*/
+class GotoStmt : public Stmt 
+{
+    Stmt* label_;
+public:
+    GotoStmt(Stmt* label)
+    : Stmt(NodeKind::NK_GotoStmt), label_(label) {}
+
+    Stmt* getLabel() {
+        return label_;
+    }
+    void setLabel(Stmt* lb) {
+        label_ = lb;
+    }
 };
 
-//  return expressionopt ;
-class ReturnStmt final : public Stmt {
-public:    
-    static std::shared_ptr<ReturnStmt> NewObj(SourceLocation loc, std::shared_ptr<Expr> expr);
-
-private:
-    ReturnStmt(SourceLocation loc, std::shared_ptr<Expr> expr)
-    : Stmt(), loc_(loc), expr_(expr){}
-    SourceLocation loc_;
-    std::shared_ptr<Expr> expr_;
+class ContinueStmt : public Stmt 
+{
+    Stmt* label_;
+public:
+    ContinueStmt(Stmt* label)
+    : Stmt(NodeKind::NK_ContinueStmt), label_(label) {}
 };
 
-// ;
-class EmptyStmt final : public Stmt {
-public:    
-    static std::shared_ptr<EmptyStmt> NewObj(SourceLocation loc);
-
-private:
-    EmptyStmt(SourceLocation loc)
-    : Stmt(), loc_(loc){}
-    SourceLocation loc_;
+class BreakStmt : public Stmt 
+{
+    Stmt* label_;
+public:
+    BreakStmt(Stmt* label)
+    : Stmt(NodeKind::NK_BreakStmt), label_(label) {}
 };
 
-// 声明语句
-class DeclStmt : Stmt {
-
+class ReturnStmt : public Stmt 
+{
+    Stmt* label_;
+public:
+    ReturnStmt(Stmt* label)
+    : Stmt(NodeKind::NK_ReturnStmt), label_(label) {}
 };

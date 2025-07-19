@@ -9,8 +9,13 @@ int call()
 int b = 8
 ;
 
+typedef struct {int a; int b} point;
+
+point* p = &(point){.a = 3, .b = 4};
+
 int 特殊钢 = 0;
 
+int a10, b(int), d;
 int accc()
 {
     return 23;

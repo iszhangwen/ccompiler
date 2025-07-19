@@ -52,7 +52,7 @@
     X_MACROS(T_Noreturn, "_Noreturn")\
     X_MACROS(T_Static_assert, "_Static-assert")\
     X_MACROS(T_Thread_local, "_Thread_local")\
-    X_MACROS(identifier, "identifier")\
+    X_MACROS(Identifier, "identifier")\
     X_MACROS(Numeric_Constant_, "Numeric_Constant_")\
     X_MACROS(Float_Constant, "Float_Constant")\
     X_MACROS(String_Constant_, "String_Constant_")\
@@ -67,12 +67,9 @@
     X_MACROS(Arrow_, "->")\
     X_MACROS(Increment_, "++")\
     X_MACROS(Decrement_, "--")\
-    X_MACROS(BitWise_AND_, "&")\
     X_MACROS(Multiplication_, "*")\
     X_MACROS(Addition_, "+")\
     X_MACROS(Subtraction_, "-")\
-    X_MACROS(BitWise_NOT_, "~")\
-    X_MACROS(Logical_NOT_, "!")\
     X_MACROS(Division_, "/")\
     X_MACROS(Modulus_, "%")\
     X_MACROS(LShift_, "<<")\
@@ -83,9 +80,13 @@
     X_MACROS(Greater_Equal_, ">=")\
     X_MACROS(Equality_, "==")\
     X_MACROS(Inequality_, "!=")\
+    X_MACROS(BitWise_AND_, "&")\
     X_MACROS(BitWise_XOR_, "^")\
+    X_MACROS(BitWise_OR_, "|")\
+    X_MACROS(BitWise_NOT_, "~")\
     X_MACROS(Logical_AND_, "&&")\
     X_MACROS(Logical_OR_, "||")\
+    X_MACROS(Logical_NOT_, "!")\
     X_MACROS(Conditional_, "\?")\
     X_MACROS(Colon_, ":")\
     X_MACROS(Semicolon_, ";")\
@@ -98,7 +99,7 @@
     X_MACROS(Sub_Assign_, "-=")\
     X_MACROS(LShift_Assign_, "<<=")\
     X_MACROS(RShift_Assign_, ">>=")\
-    X_MACROS(BitWise_AND__Assign_, "&=")\
+    X_MACROS(BitWise_AND_Assign_, "&=")\
     X_MACROS(BitWise_XOR_Assign_, "^=")\
     X_MACROS(BitWise_OR_Assign_, "|=")\
     X_MACROS(Comma_, ",")\
@@ -145,6 +146,9 @@ public:
 
     // func
     bool isEOF() const;
+
+    // typespecifier
+    bool isTypeSpecifier() const;
 
 private:
     Token(TokenKind type, SourceLocation loc, const std::string& value)

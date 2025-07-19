@@ -32,46 +32,51 @@ public:
         NK_CapturedDecl,
         NK_EmptyDecl,
 
-        // 表达式
-        NK_Expr,
+        /* 表达式*/
+        // 基本表达式
         NK_DeclRefExpr,
-        NK_PredefinedExpr,
         NK_IntegerLiteral,
         NK_CharacterLiteral,
         NK_FloatingLiteral,
         NK_ImaginaryLiteral,
         NK_StringLiteral,
         NK_ParenExpr,
-        NK_UnaryOperator,
-        NK_SizeOfAlignOfExpr,
+        // 后缀表达式
         NK_ArraySubscriptExpr,
         NK_CallExpr,
         NK_MemberExpr,
         NK_CompoundLiteralExpr,
+        // 一元表达式
+        NK_UnaryOperator,
+        // 类型转换
         NK_CastExpr,
-        NK_ImplicitCastExpr,
-        NK_ExplicitCastExpr,
-        NK_CStyleCastExpr,
+        // 二元表达式
         NK_BinaryOperator,
-        NK_CompoundAssignOperator,
+        // 条件表达式
         NK_ConditionalOperator,
-        NK_AddrLabelExpr,
 
-        // 语句
-        NK_ExprStmt,
+        /*语句 NODE类型*/
+        // 标签语句
         NK_LabelStmt,
         NK_CaseStmt,
         NK_DefaultStmt,
+        // 复合语句
+        NK_CompoundStmt,
+        NK_DeclStmt,
+        // 表达式语句
+        NK_ExprStmt,
+        // 控制流-选择语句
         NK_IfStmt,
         NK_SwitchStmt,
+        // 控制流-迭代语句
         NK_WhileStmt,
         NK_DoStmt,
         NK_ForStmt,
+        // 控制流-跳转语句
         NK_GotoStmt,
         NK_ContinueStmt,
         NK_BreakStmt,
-        NK_ReturnStmt,
-        NK_CompoundStmt
+        NK_ReturnStmt
     };
 
     AstNode(NodeKind nk): kind_(nk){}
@@ -139,5 +144,7 @@ enum FuncSpecifier
     INLINE = (1 << 1),
     FS_MASK = INLINE
 };
+
+using DeclGroup = std::vector<Decl*>;
 
 

@@ -78,6 +78,16 @@ bool Token::isEOF() const
     return kind_ == TokenKind::EOF_;
 }
 
+bool Token::isTypeSpecifier() const
+{
+    if (kind_ == TokenKind::Const
+    || kind_ == TokenKind::Volatile
+    || kind_ == TokenKind::Restrict) {
+        return true;
+    }
+    return false;
+}
+
 void TokenSequence::dump() const {
     std::cout << "------------------------------\n";
     for (int i = 0; i < seq_.size(); i++)

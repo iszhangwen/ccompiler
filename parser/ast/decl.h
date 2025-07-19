@@ -54,19 +54,9 @@ protected:
     Decl(NodeKind nk): AstNode(nk) {}
 };
 
-
-/*
-(6.9) translation-unit:
-        external-declaration
-        translation-unit external-declaration
- (6.9) external-declaration:
-        function-definition
-        declaration
-*/
-// 文件作用域
+// 翻译单元
 class TranslationUnitDecl final : public Decl
 {
-private:
     std::vector<Decl*> decl_;
 public:
     TranslationUnitDecl(const std::vector<Decl*>& exDecl)
@@ -81,27 +71,23 @@ public:
 // 所有具有名称的基类, 命名实体具备链接属性
 class NamedDecl : public Decl
 {
-protected:
+    IdentifierInfo* name_;
+public:
     NamedDecl(NodeKind nk, IdentifierInfo* id)
-    : Decl(nk), name(id){}
-    NamedDecl()
-    : Decl(NK_Expr){}
+    : Decl(nk), name_(id){}
 
-private:
-    IdentifierInfo* name;
+    IdentifierInfo* getName() {
+        return name_;
+    }
+    void setName(IdentifierInfo* id) {
+        name_ = id;
+    }
 };
 
 // 标签声明:需要记录标签的名称和位置
-/*
-labeled-statement:
- identifier : statement
-*/
 class LabelDecl final : public NamedDecl
 {
 public:
-    static LabelDecl* NewObj(IdentifierInfo* id);
-
-protected:
     LabelDecl(IdentifierInfo* id)
     : NamedDecl(NK_LabelDecl, id){}
 };
@@ -109,18 +95,14 @@ protected:
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
 class ValueDecl : public NamedDecl 
 {
+    QualType ty_;
 public:
-    static ValueDecl* NewObj(IdentifierInfo* id, QualType ty);
-
-protected:
     ValueDecl(NodeKind nk, IdentifierInfo* id, QualType ty)
     :NamedDecl(nk, id), ty_(ty){}
 
     ValueDecl(IdentifierInfo* id, QualType ty)
     :NamedDecl(NK_ValueDecl, id), ty_(ty){}
 
-private:
-    QualType ty_;
 };
 
 // 带有声明说明符的声明，声明说明符包括：存储说明符，类型限定符，类型说明符，比如变量，函数，参数等，
@@ -234,31 +216,8 @@ class EnumDecl : public TagDecl
 
 class RecordDecl : public TagDecl 
 {
-
-};
-
-//
-class FileScopeAsmDecl : public Decl 
-{
-
-};
-
-class TopLevelStmtDecl : public Decl
-{
-
-};
-
-class BlockDecl : public Decl
-{
-
-};
-
-class CapturedDecl final : public Decl
-{
-
-};
-
-class EmptyDecl : public Decl 
-{
-
+    std::vector<Decl*> members_;
+public:
+    RecordDecl(NodeKind nk, IdentifierInfo id, const std::vector<Decl*>& member)
+    : TagDecl(){}
 };

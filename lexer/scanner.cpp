@@ -120,7 +120,7 @@ Token *scanner::scanIdentifier()
     
     // 关键字查找
     auto iter = Token::KeyWordMap.find(buf_->seg());
-    TokenKind kind = (iter != Token::KeyWordMap.end()) ? iter->second : TokenKind::identifier;
+    TokenKind kind = (iter != Token::KeyWordMap.end()) ? iter->second : TokenKind::Identifier;
     return makeToken(kind);   
 }
 
@@ -396,7 +396,7 @@ Token *scanner::scan()
         } 
         else if (buf_->match('=')) {
             buf_->nextch();
-            return makeToken(TokenKind::BitWise_AND__Assign_);
+            return makeToken(TokenKind::BitWise_AND_Assign_);
         } 
         else {
             buf_->nextch();

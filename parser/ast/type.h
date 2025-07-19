@@ -72,7 +72,7 @@ public:
 // 类型系统基类,存储了规范类型
 class Type {
 public:
-    enum Classof{
+    enum TypeKind{
     // bool类型
     BOOL,    
     // 无符号整型
@@ -104,20 +104,20 @@ public:
     POINTER
     };
 private: 
-    Classof classof_;  // 类型域标识
+    TypeKind kind_;  // 类型域标识
     QualType canonicalType_; // 规范类型
     int align; // 对齐方式
     int size;  // 类型要占用多大空间
     bool complete_; // 是否是完整类型
 
 protected:
-    Type(Classof co, QualType canonical)
-    : classof_(co), canonicalType_(canonical.isNull() ? QualType(this, 0) : canonical) {}
+    Type(TypeKind tk, QualType canonical)
+    : kind_(tk), canonicalType_(canonical.isNull() ? QualType(this, 0) : canonical) {}
     virtual ~Type() {}
   
 public:
     // 类型基本属性
-    Classof getClassof() const { return classof_;}
+    TypeKind getKind() const { return kind_;}
     int getAlign() const {return align;}
     int getSize() const {return size;}
     virtual std::string getName() const {return "";}
@@ -136,13 +136,18 @@ public:
 
     // 判断是否是可变类型：（1）变长数组 （2）基于变长数组的符合类型 Note:注意区分可变数组和不完整类型
     bool isVariablyModifiedType() const;
+
+    // 判断是否是类型定义
+    bool isTypeName() const {return true;}
+    // 获取类型关联的Decl
+    Decl* getDecl() {return nullptr;}
 };
 
 // 内建基本类型
 /*---------------------------------基本类型----------------------------------------------*/
 class BuiltinType : public Type {
 public:
-  BuiltinType(Classof co) 
+  BuiltinType(TypeKind co) 
     : Type(co, QualType()){}
   
   std::string getName() const {return "";}
@@ -159,7 +164,7 @@ private:
     Kind kind_;
 
 protected:
-    ComplexType(Classof co, QualType derived, Kind kd) :
+    ComplexType(TypeKind co, QualType derived, Kind kd) :
     Type(co, derived), kind_(kd){}
 };
 
@@ -171,7 +176,7 @@ protected:
 class DerivedType : public Type
 {
 protected:
-    DerivedType(Classof co, QualType derived)
+    DerivedType(TypeKind co, QualType derived)
     : Type(co, derived){}
 };
 
@@ -186,6 +191,7 @@ protected:
 
 public:
     std::string getName() const {return "";}
+    static PointerType* newObj(QualType);
 };
 
 // 数组派生类型
@@ -233,8 +239,8 @@ class TagType : public Type {
     bool process_;
 
 protected:
-    TagType(Classof co, TagDecl *decl, QualType can)
-    : Type(co, can), decl_(decl){}
+    TagType(TypeKind tk, TagDecl *decl, QualType can)
+    : Type(tk, can), decl_(decl){}
 
 public:   
     TagDecl *getDecl() const { return nullptr; }
@@ -245,8 +251,8 @@ class RecordType : public TagType {
 protected:
     RecordType(RecordDecl *D)
     : TagType(Type::RECORD, reinterpret_cast<TagDecl*>(D), QualType()) {}
-    RecordType(Classof co, RecordDecl *D)
-    : TagType(co, reinterpret_cast<TagDecl*>(D), QualType()) {}
+    RecordType(TypeKind tk, RecordDecl *D)
+    : TagType(tk, reinterpret_cast<TagDecl*>(D), QualType()) {}
 
 public:
   RecordDecl *getDecl() const {
@@ -276,7 +282,7 @@ public:
 class TypedefType : public Type {
   TypedefDecl *decl_;
 protected:
-  TypedefType(Classof tc, TypedefDecl *decl, QualType can) 
+  TypedefType(TypeKind tc, TypedefDecl *decl, QualType can) 
     : Type(tc, can), decl_(decl) {}
 
 public:

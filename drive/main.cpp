@@ -14,7 +14,6 @@ int main(int argc, char **argv)
     try {
         Parser parse(argv[1]);
         parse.parseTranslationUnit();
-        parse.dumpAST();
     }
     catch(std::exception& e)
     {
