@@ -5,8 +5,9 @@
 #include <ast/expr.h>
 #include <ast/type.h>
 #include <scanner.h>
-#include <scope.h>
 #include <sema.h>
+
+class Parse;
 
 // 状态机解析type specifier
 class ParseTypeSpec {
@@ -18,33 +19,43 @@ public:
         FOUND_LONG,
         FOUND_LONG2,
         FOUND_TYPE,
+        FOUND_UDT_TYPE,
         ERROR
     };
-    void operator()(TSState& curState, TokenKind cond, int& ts);
+    void operator()(TSState& curState, int* ts, TokenKind cond);
+};
+
+// RAII实现作用域管理
+class ScopeManager {
+    Parser* parent_;
+public:
+    ScopeManager(Parser* p, Scope::ScopeType st) 
+    : parent_(p) {
+        static_assert((p != nullptr), "ScopeManager do not initialize by nullptr!");
+        parent_->sys_->enterScope(st);
+    }
+    ~ScopeManager() {
+        parent_->sys_->exitScope();
+    }
 };
 
 class Parser {
 private:
-    using DeclList = std::vector<Decl*>;
-    Scope *curScope_;
+    friend ScopeManager;
     Source *buf_;
     TokenSequence *seq_;
     TranslationUnitDecl* unit_;
-    sema* sema_;
+    SemaAnalyzer* sema_;
+    SymbolTableContext* sys_;
 
-    /*
-    错误处理策略，遇到错误是中止编译程序
-    */
+    // 错误处理策略，遇到错误时中止编译程序
     void error(const std::string& val);
     void error(Token *tk, const std::string& val);
 
-    // 作用域栈函数
-    void enterScope(Scope::ScopeType);
-    void exitScope();
-    bool isTypeName(Token*);
-
     /*-----------------------------Expressions-----------------------------------------*/
     Expr* parsePrimaryExpr();
+    Expr* parseGenericSelection();
+    Expr* parseGenericAssociation();
     Expr* parsePostfixExpr();
     Expr* parseArgListExpr();
     Expr* parseUnaryExpr();
@@ -66,7 +77,6 @@ private:
     // 该表达式不是文法符号，是为了简化分析歧义
     Expr* parseParenExpr(); 
     /*-------------------------------Declarations--------------------------------------*/
-    using DeclaratorGroup = std::vector<Declarator>;
     // 6.7 declaration
     DeclGroup parseDeclaration();
     QualType parseDeclarationSpec(int* sc, int* fs);
@@ -75,21 +85,21 @@ private:
     void parseStorageClassSpec(int* sc, TokenKind);
     // 6.7.2 type-specifier
     void parseTypeSpec(int*, TokenKind, ParseTypeSpec::TSState);
-    QualType parseStructOrUnionSpec(TokenKind);
-    DeclGroup parseStructDeclarationList();
+    Type* parseStructOrUnionSpec(bool isStruct);
+    Type* parseStructDeclarationList(Symbol*);
     QualType parseSpecQualList();
     DeclGroup parseStructDeclaratorList(QualType qt);
     Decl* parseStructDeclarator(QualType qt);
-    QualType parseEnumSpec();
+    Type* parseEnumSpec();
     void parseEnumerator();
     // 6.7.3 type-qualifier
-    void parseTypeQualList(int*, TokenKind);
+    int parseTypeQualList();
     // 6.7.4 function-specifier
     void parseFunctionSpec(int* fs, TokenKind);
     // 6.7.5 declarator
     Decl* parseDeclarator(QualType qt, int sc, int fs);
     void parseDirectDeclarator();
-    void parsePointer();
+    QualType parsePointer(QualType);
     void parseParameterTypeList();
     void parseParameterList();
     void parseParameterDeclaration();
@@ -114,7 +124,7 @@ private:
     Stmt* parseIterationStmt();
     Stmt* parseJumpStmt();
     /*-------------------------------External definitions-------------------------------*/
-    std::vector<Decl*> parseExternalDeclaration();
+    Decl* parseFunctionDefinitionBody(Decl*);
 
 public:
     explicit Parser(const std::string& filename);

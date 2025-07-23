@@ -27,7 +27,8 @@ class ParmVarDecl;
 class TypedefDecl;
 
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
-class QualType {
+class QualType 
+{
     intptr_t ptr_; // 存储类型指针
 public:
     // 构造函数
@@ -70,30 +71,16 @@ public:
 
 // 对类型系统而言：存储限定符是针对变量，类型限定符是针对类型
 // 类型系统基类,存储了规范类型
-class Type {
+class Type 
+{
 public:
     enum TypeKind{
-    // bool类型
-    BOOL,    
-    // 无符号整型
-    UCHAR,    
-    USHORT,
-    UINT,
-    ULONG,
-    ULONGLONG,
-    // 有符号整型
-    CHAR,    
-    SHORT,
-    INT,
-    LONG,
-    LONGLONG,
-    // 浮点类型
-    FlOAT, DOUBLE, LONGDOUBLE,
+    VOID, // 空类型 属于不完整类
+    BUILTIN, // 算术类型
     // 复杂类型：float_Complex, double_Complex, long double_Complex
     FLOAT_COMPLEX,
     DOUBLE_COMPLEX,
     LONGDOUBLE_COMPLEX,
-    VOID, // 空类型 属于不完整类
     RECORD,
     STRUCT,
     UNION,
@@ -141,20 +128,26 @@ public:
     bool isTypeName() const {return true;}
     // 获取类型关联的Decl
     Decl* getDecl() {return nullptr;}
+
+    // 判断类别
+    bool isStruct() const {return kind_ == TypeKind::STRUCT;}
+    bool isUnion() const {return kind_ == TypeKind::UNION;}
 };
 
 // 内建基本类型
 /*---------------------------------基本类型----------------------------------------------*/
-class BuiltinType : public Type {
+class BuiltinType : public Type 
+{
+    bool isSigned_;
+    int width_;
+    int kind_;
 public:
-  BuiltinType(TypeKind co) 
-    : Type(co, QualType()){}
-  
-  std::string getName() const {return "";}
+    BuiltinType(int tq);
 };
 
 // 复数类型
-class ComplexType : public Type {
+class ComplexType : public Type 
+{
 public:
     enum Kind {
 
@@ -167,7 +160,6 @@ protected:
     ComplexType(TypeKind co, QualType derived, Kind kd) :
     Type(co, derived), kind_(kd){}
 };
-
 
 /*---------------------------------派生类型---------------------------------------------------*/
 /*
@@ -184,7 +176,8 @@ protected:
 // 指针类型的标识方法未 cont int* const*
 /*
 */
-class PointerType : public DerivedType {
+class PointerType : public DerivedType 
+{
 protected:
     PointerType(QualType pointee) 
     :DerivedType(Type::POINTER, pointee){}
@@ -195,7 +188,8 @@ public:
 };
 
 // 数组派生类型
-class ArrayType : public DerivedType {
+class ArrayType : public DerivedType 
+{
 public:
     /*
     数组大小修饰符：
@@ -220,17 +214,17 @@ public:
 
 class FunctionType : public DerivedType {
     bool inline_;
-    bool noReturn;
+    bool noReturn_;
     std::vector<ParmVarDecl*> params_;
   
 protected:
-    FunctionType(QualType res, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params)
-    : DerivedType(Type::FUNCION, res), inline_(isInline), noReturn(isNoReturn), params_(params){}
+    FunctionType(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params)
+    : DerivedType(Type::FUNCION, qt), inline_(isInline), noReturn_(isNoReturn), params_(params){}
 
 public:
     QualType getResultType() const { return QualType(); }
     bool isInline() const {return inline_;}
-    bool isNoReturn() const {return noReturn;}
+    bool isNoReturn() const {return noReturn_;}
 };
 
 /*------------------------------结构体和枚举类型----------------------------------------------*/
@@ -248,16 +242,18 @@ public:
 };
 
 class RecordType : public TagType {
-protected:
+public:
     RecordType(RecordDecl *D)
     : TagType(Type::RECORD, reinterpret_cast<TagDecl*>(D), QualType()) {}
     RecordType(TypeKind tk, RecordDecl *D)
     : TagType(tk, reinterpret_cast<TagDecl*>(D), QualType()) {}
 
-public:
-  RecordDecl *getDecl() const {
+   RecordDecl *getDecl() const {
     return reinterpret_cast<RecordDecl*>(TagType::getDecl());
-  }
+   }
+   void setDecl(Decl* dc) {
+        decl_ = dynamic_cast<TagDecl*>(dc);
+   }
   
   // FIXME: This predicate is a helper to QualType/Type. It needs to 
   // recursively check all fields for const-ness. If any field is declared

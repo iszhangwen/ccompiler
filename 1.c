@@ -21,6 +21,8 @@ int accc()
     return 23;
 };
 
+typedef enum {INT} a;
+
 int main()
 {
     int b, *b1, **b2;

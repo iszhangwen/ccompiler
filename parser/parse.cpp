@@ -2,102 +2,106 @@
 #include <sema.h>
 #include <sstream>
 
-void ParseTypeSpec::operator()(TSState& curState, TokenKind cond, int& ts)
+void ParseTypeSpec::operator()(TSState& curState, int* ts, TokenKind cond)
 {
     switch (cond)
     {
-        case TokenKind::Void:
+    case TokenKind::Void:
         if (curState == TSState::START) {
             curState = TSState::FOUND_TYPE;
-            ts |= TypeSpecifier::VOID;
+            *ts |= TypeSpecifier::VOID;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Char:
+    case TokenKind::Char:
         if (curState == TSState::START 
             || curState == TSState::FOUND_SIGNED_UNSIGNED) {
             curState = TSState::FOUND_TYPE;
-            ts |= TypeSpecifier::CHAR;
+            *ts |= TypeSpecifier::CHAR;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Int:
+    case TokenKind::Int:
         if (curState == TSState::START
             || curState == TSState::FOUND_SIGNED_UNSIGNED
             ||curState == TSState::FOUND_SHORT
             ||curState == TSState::FOUND_LONG
             ||curState == TSState::FOUND_LONG2) {
             curState = TSState::FOUND_TYPE;
-            ts |= TypeSpecifier::INT;
+            *ts |= TypeSpecifier::INT;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Float:
+    case TokenKind::Float:
         if (curState == TSState::START) {
             curState = TSState::FOUND_TYPE;
-            ts |= TypeSpecifier::FLOAT;
+            *ts |= TypeSpecifier::FLOAT;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Double:
-        if (curState == TSState::START
-            || curState == TSState::FOUND_LONG) {
-            curState = TSState::FOUND_TYPE;
-            ts |= TypeSpecifier::DOUBLE;
-        } else {
+    case TokenKind::Double:
+        if (curState == TSState::START) {
+            *ts |= TypeSpecifier::DOUBLE;
+        }
+        else if (curState == TSState::FOUND_LONG) {
+            *ts &= ~(TypeSpecifier::LONG);
+            *ts |= TypeSpecifier::LONGDOUBLE;
+        }
+        else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Signed:
+    case TokenKind::Signed:
         if (curState == TSState::START) {
             curState = TSState::FOUND_SIGNED_UNSIGNED;
-            ts |= TypeSpecifier::SIGNED;
+            *ts |= TypeSpecifier::SIGNED;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Unsigned:
+    case TokenKind::Unsigned:
         if (curState == TSState::START) {
             curState = TSState::FOUND_SIGNED_UNSIGNED;
-            ts |= TypeSpecifier::UNSIGNED;
+            *ts |= TypeSpecifier::UNSIGNED;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Short:
+    case TokenKind::Short:
         if (curState == TSState::START) {
             curState = TSState::FOUND_SHORT;
-            ts |= TypeSpecifier::SHORT;
+            *ts |= TypeSpecifier::SHORT;
         } else {
             curState = TSState::ERROR;
         }
         break;
 
-        case TokenKind::Long:
+    case TokenKind::Long:
         if (curState == TSState::START
             || curState == FOUND_SIGNED_UNSIGNED) {
             curState = TSState::FOUND_LONG;
-            ts |= TypeSpecifier::LONG;
+            *ts |= TypeSpecifier::LONG;
         } else if (curState == TSState::FOUND_LONG) {
             curState = FOUND_LONG2;
-            ts |= TypeSpecifier::LONG;
+            *ts &= ~(TypeSpecifier::LONG);
+            *ts |= TypeSpecifier::LONGLONG;
         } else {
             curState = TSState::ERROR;
         }
         break;
-    
-        default:
+
+    default:
         curState = TSState::ERROR;
         break;
     }
@@ -148,27 +152,13 @@ void Parser::error(Token *tk, const std::string& val)
     throw CCError(ss.str());
 }
 
-void Parser::enterScope(Scope::ScopeType st)
-{
-    curScope_ = new Scope(st, curScope_);
-}
-
-void Parser::exitScope()
-{
-    curScope_ = curScope_->getParent();
-}
-
-bool Parser::isTypeName(Token*)
-{
-    return true;
-}
-
 //---------------------------------------------------------Expressions------------------------------------------------------------------------
 /* primary-expression:
  identifier
  constant
  string-literal
  ( expression )
+  generic-selection
 */
 Expr* Parser::parsePrimaryExpr()
 {
@@ -197,6 +187,42 @@ Expr* Parser::parsePrimaryExpr()
         break;
     }
     return node;
+}
+
+/* (6.5.1.1) gegneric-selection:
+ _Generic ( assignment-expression , generic-assoc-list
+ )
+ (6.5.1.1) generic-assoc-list:
+ generic-association
+ generic-assoc-list , generic-association
+*/
+Expr* Parser::parseGenericSelection()
+{
+    seq_->expect(TokenKind::T_Generic);
+    seq_->expect(TokenKind::LParent_);
+    parseAssignExpr();
+    while (seq_->match(TokenKind::Comma_)) {
+        parseGenericAssociation();
+    }
+    seq_->expect(TokenKind::RParent_);
+    return nullptr;
+}
+
+/*(6.5.1.1) generic-association:
+ type-name : assignment-expression
+ default : assignment-expression
+*/
+Expr* Parser::parseGenericAssociation()
+{
+    if (seq_->match(TokenKind::Default)) {
+
+    }
+    else {
+        parseTypeName();
+    }
+    seq_->match(TokenKind::Colon_);
+    parseAssignExpr();
+    return nullptr;
 }
 
 /* (6.5.2) postfix-expression:
@@ -319,7 +345,7 @@ Expr* Parser::parseUnaryExpr()
     
     case TokenKind::Sizeof:
         if (seq_->match(TokenKind::RParent_)) {
-            if (isTypeName(seq_->peek())) {
+            if (sys_->isTypeName(seq_->peek())) {
                 parseTypeName();
                 rex = sema_->onActParenExpr(nullptr);
             }
@@ -332,6 +358,12 @@ Expr* Parser::parseUnaryExpr()
             rex = parseUnaryExpr();
         }
         node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Logical_NOT_);
+        break;
+    
+    case TokenKind::Alignof:
+        seq_->expect(TokenKind::LParent_);
+        parseTypeName();
+        seq_->expect(TokenKind::RParent_);
         break;
 
     default:
@@ -634,7 +666,7 @@ Expr* Parser::parseParenExpr()
     }
     
     Expr* node = nullptr;
-    if (isTypeName(seq_->peek())) {
+    if (sys_->isTypeName(seq_->peek())) {
         //QualType qt = parseTypeName();
         seq_->expect(TokenKind::RParent_);
         if (seq_->match(TokenKind::LCurly_Brackets_)) {
@@ -664,17 +696,23 @@ Expr* Parser::parseParenExpr()
  declaration-specifiers init-declarator-listopt ;
  若类型declSpec是type-name, 则init-declarator不需要解析。
 */
-Parser::DeclGroup Parser::parseDeclaration()
+DeclGroup Parser::parseDeclaration()
 {
     DeclGroup res;
     int sc = 0, fs = 0;
     QualType qt = parseDeclarationSpec(&sc, &fs);
-    if (qt->isTypeName()) {
+    // typedef struct union enum 解析完成
+    if (seq_->match(TokenKind::Semicolon_)) {
         res.push_back(qt->getDecl());
         return res;
     }
-
+    // 解析第一个声明符
     res.push_back(parseInitDeclarator(qt, sc, fs));
+    if (qt->isFunctionType() && seq_->test(TokenKind::LCurly_Brackets_)) {
+        res.push_back(parseFunctionDefinitionBody(res[0]));
+        return res;
+    }
+
     while (seq_->match(TokenKind::Comma_)) {
             res.push_back(parseInitDeclarator(qt, sc, fs));
     }
@@ -684,11 +722,14 @@ Parser::DeclGroup Parser::parseDeclaration()
 
 QualType Parser::parseDeclarationSpec(int* sc, int* fs)
 {
-    int tq = 0, ts = 0;
-    ParseTypeSpec::TSState tss = ParseTypeSpec::START;
+    int tq = 0; // 类型限定符
+    int ts = 0; // 类型说明符
+    Type* ty = nullptr; // 类型：内建类型,自定义类型
+    ParseTypeSpec::TSState tss = ParseTypeSpec::START; // 类型说明符解析：状态机状态
     while (true)
     {
-        switch (seq_->next()->kind_)
+        TokenKind tkind = seq_->next()->kind_;
+        switch (tkind)
         {
         // (6.7.1) storage class specifier
         case TokenKind::Typedef:
@@ -696,7 +737,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         case TokenKind::Static:
         case TokenKind::Auto:
         case TokenKind::Register:
-            parseStorageClassSpec(sc, seq_->cur()->kind_);
+            parseStorageClassSpec(sc, tkind);
             break;
 
         // (6.7.2) type specifiers
@@ -713,24 +754,43 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         case TokenKind::Unsigned:
         case TokenKind::Short:
         case TokenKind::Long:
-            ParseTypeSpec()(tss, seq_->cur()->kind_, ts);
+            ParseTypeSpec()(tss, &ts, seq_->cur()->kind_);
+            if (tss == ParseTypeSpec::FOUND_TYPE) {
+                ty = sema_->onActBuiltinType(ts);
+            } else if (tss == ParseTypeSpec::ERROR) {
+                error("error type specifier!");
+            }
             break;
 
-        // (6.7.2) struct-or-union-specifier
+        // (6.7.2) type-specifier->struct-or-union-specifier
         case TokenKind::Struct:
         case TokenKind::Union:
-            return parseStructOrUnionSpec();
+            if (tss == ParseTypeSpec::START) {
+                ty = parseStructOrUnionSpec(seq_->cur()->kind_ == TokenKind::Struct);
+                tss = ParseTypeSpec::FOUND_UDT_TYPE;
+            }
+            else {
+                error("the type-specifier has discovered, there is a conflict!");
+                tss = ParseTypeSpec::ERROR;
+            }
+            break;
 
-        // (6.7.2) enum-specifier
+        // (6.7.2) type-specifier->enum-specifier
         case TokenKind::Enum:
-            return parseEnumSpec();
+            if (tss == ParseTypeSpec::START) {
+                ty = parseEnumSpec();
+                tss = ParseTypeSpec::FOUND_UDT_TYPE;
+            }
+            else {
+                error("the type-specifier has discovered, there is a conflict!");
+                tss = ParseTypeSpec::ERROR;
+            }
+            break;
 
         //(6.7.3) type-qualifier:
-        case TokenKind::Const:   tq |= TypeQualifier::CONST;break;
-        case TokenKind::Volatile:tq |= TypeQualifier::VOLATILE;break;
-        case TokenKind::Restrict:tq |= TypeQualifier::RESTRICT;break;
-            parseTypeQualList(&tq, seq_->cur()->kind_);
-            break;
+        case TokenKind::Const:    tq |= TypeQualifier::CONST; break;
+        case TokenKind::Volatile: tq |= TypeQualifier::VOLATILE; break;
+        case TokenKind::Restrict: tq |= TypeQualifier::RESTRICT; break;
 
         // (6.7.4) function-specifier
         case TokenKind::Inline:
@@ -740,12 +800,16 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         // (6.7.7) typedef-name 判断当前是否已有其他方式
         case TokenKind::Identifier:
             if (tss == ParseTypeSpec::START) {
-                curScope_->lookup(nullptr, nullptr);
-                tss = ParseTypeSpec::FOUND_TYPE;
+                //Decl* dc = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+                //qt = dc->getType();
+                tss = ParseTypeSpec::FOUND_UDT_TYPE;
                 break;
-            }  
+            } 
         default:
-            return QualType(sema_->onActBuiltinType(ts), tq);
+            if (!ty) {
+                error("incomplete type specifier!");
+            }
+            return QualType(ty, tq);
         }
     }
     return QualType();
@@ -802,39 +866,48 @@ void Parser::parseStorageClassSpec(int* sc, TokenKind tk)
  struct-or-union identifieropt { struct-declaration-list }
  struct-or-union identifier
 */
-QualType Parser::parseStructOrUnionSpec(TokenKind tk)
+Type* Parser::parseStructOrUnionSpec(bool isStruct)
 {
-    Type::TypeKind ttk;
-    switch (tk)
-    {
-    case TokenKind::Struct:
-        ttk = Type::STRUCT;
-        break;
-    case TokenKind::Union:
-        ttk = Type::UNION;
-        break;
-    default:
-        error("expect struct or union, but not!");
-        return QualType();
-    }
-    
-    IdentifierInfo id;
+    //符号解析
+    std::string key;
     if (seq_->match(TokenKind::Identifier)) {
-        id = IdentifierInfo(seq_->cur()->value_);
+        key = seq_->cur()->value_;
     }
 
-    DeclGroup dg;
+    Symbol* sym = sys_->lookup(Symbol::RECORD, key);
+    // UDT定义
     if (seq_->match(TokenKind::LCurly_Brackets_)) {
-        dg = parseStructDeclarationList();
-        seq_->expect(TokenKind::RCurly_Brackets_);
-    }
-    else {
-        if (id) {
-            error("struct or union need identifier, but not!");
-            return QualType();
+        // 符号表没查找到:第一次定义
+        if (!sym) {
+            Type* ty = sema_->onActRecordType(isStruct, nullptr);
+            if (key.empty()) { // 匿名对象不插入符号表
+                sys_->insert(Symbol::RECORD, key, t);
+            }
+            return parseStructDeclarationList(ty);
+        }
+        // 符号表查找到了但是类型定义不完整：存在前向声明
+        else if (sym->getType()->isIncompleteType()) {
+            return parseStructDeclarationList(sym->getType());
+        }
+        // 符号表查找到了并且类型定义完整：重复定义
+        else {
+            error("redefined struct or union!");
+            return nullptr;
         }
     }
-    return sema_->onACtRecordType(ttk, sema_->onActStructDecl());
+    // UDT前向声明 struct test;
+    // struct test *p;
+    // 非定义情况下使用UDT必须要有声明符
+    if (key.empty()) {
+        error("struct or union need identifier, but not!");
+        return nullptr;
+    }
+    if (sym) {
+        return sym->getType();
+    }
+    Type* ty = sema_->onActRecordType(isStruct, nullptr);
+    sys_->insert(Symbol::RECORD, key, ty);
+    return ty;
 }
 
 /* (6.7.2.1) struct-declaration-list:
@@ -842,16 +915,24 @@ QualType Parser::parseStructOrUnionSpec(TokenKind tk)
  struct-declaration-list struct-declaration
  struct-declaration:
  specifier-qualifier-list struct-declarator-list ;
+ 解析结构体成员
 */
-DeclGroup Parser::parseStructDeclarationList()
+Type* Parser::parseStructDeclarationList(Symbol* sym)
 {
-    DeclGroup res;
+    ScopeManager scm(this, Scope::BLOCK);
+    if (!sym) {
+        return nullptr;
+    }
+    RecordType* ty = dynamic_cast<RecordType*>(sym->getType());
+    RecordDecl* dc = sema_->onActRecordDecl(sym, true, ty->isStruct());
     do {
         QualType qt = parseSpecQualList();
-        auto path = parseStructDeclaratorList(qt);
-        res.insert(res.end(), path.begin(), path. end());
-    }while (seq_->match(TokenKind::Semantics));
-    return res;
+        DeclGroup path = parseStructDeclaratorList(qt);
+        dc->addField(path);
+        seq_->match(TokenKind::Semantics);
+    }while (seq_->test(TokenKind::RCurly_Brackets_));
+    ty->setDecl(ty);
+    return ty;
 }
 
 /* (6.7.2.1) specifier-qualifier-list:
@@ -879,34 +960,61 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt)
             parseConstansExpr();
         }
         else {
-            Decl* dc = parseDeclarator(qt, nullptr, nullptr);
+            Decl* dc = parseDeclarator(qt, 0, 0);
             if (seq_->match(TokenKind::Colon_)) {
                 parseConstansExpr();
             }
         }
 
     }while (seq_->match(TokenKind::Semicolon_));
-    return res
+    return res;
 }
 
 /* (6.7.2.2) enum-specifier:
  enum identifieropt { enumerator-list }
  enum identifieropt { enumerator-list ,}
  enum identifier
+  (6.7.2.2) enumerator-list:
+ enumerator
+ enumerator-list , enumerator
 */
-QualType Parser::parseEnumSpec()
+Type* Parser::parseEnumSpec()
 {
-    seq_->expect(TokenKind::Enum);
+    // 符号解析
+    std::string key;
     if (seq_->match(TokenKind::Identifier)) {
-        // 解析符号 TODO
+        key = seq_->cur()->value_;
     }
 
+    // 枚举定义解析
     if (seq_->match(TokenKind::LCurly_Brackets_)) {
-        while (!seq_->match(TokenKind::RCurly_Brackets_)) {
-            
+        // 打开新作用域
+        ScopeManager scm(this, Scope::FILE);
+        while (true) {
+            parseEnumerator();
+            // 匹配到逗号
+            if (seq_->match(TokenKind::Comma_)) {
+                if (seq_->match(TokenKind::RCurly_Brackets_)) {
+                    break;
+                }
+                continue;
+            }
+            // 未匹配到逗号，则必定结束
+            else {
+                seq_->expect(TokenKind::RCurly_Brackets_);
+                break;
+            }
         }
+        return nullptr; 
     }
-    return QualType();
+    // 枚举声明或使用
+    // 必须要定义符号
+    if (key.empty()) {
+        error("expect enum identifier, but not!");
+        return nullptr;
+    }
+    sema_
+    return nullptr;
 }
 
 /*(6.7.2.2) enumerator:
@@ -930,17 +1038,54 @@ void Parser::parseEnumerator()
  restrict
  volatile
 */
-void Parser::parseTypeQualList(int* tq, TokenKind tk)
+int Parser::parseTypeQualList()
 {
-
+    //(6.7.3) type-qualifier:
+    int res = 0;
+    while (true) {
+        switch (seq_->peek()->kind_)
+        {
+        case TokenKind::Const:   
+            res |= TypeQualifier::CONST;
+            break;
+        case TokenKind::Volatile:
+            res |= TypeQualifier::VOLATILE;
+            break;
+        case TokenKind::Restrict:
+            res |= TypeQualifier::RESTRICT;
+            break;
+        default:
+            return res;
+        }
+        seq_->next();
+    }
+    return res;
 }
 
 /*(6.7.4) function-specifier:
  inline
 */
-void Parser::parseFunctionSpec(int* tq, TokenKind tk)
+void Parser::parseFunctionSpec(int* fs, TokenKind tk)
 {
-
+    if (fs == nullptr) {
+        error("expect not function specifier, but has!");
+        return;
+    } 
+    else if (fs != 0) {
+        error("duplication function specifier!");
+        return;
+    }
+    
+    switch (tk)
+    {
+    case TokenKind::Inline:
+        *fs |= FuncSpecifier::INLINE;
+        break;
+    
+    default:
+        error("expect function specifier, but not!");
+        break;
+    }
 }
 
 /*declarator:
@@ -948,7 +1093,10 @@ void Parser::parseFunctionSpec(int* tq, TokenKind tk)
 */
 Decl* Parser::parseDeclarator(QualType qt, int sc, int fs)
 {
-    parsePointer();
+    if (seq_->test(TokenKind::Multiplication_)) {
+        qt = parsePointer(qt);
+    }
+
     parseDirectDeclarator();
     return nullptr;
 }
@@ -962,12 +1110,14 @@ void Parser::parseDirectDeclarator()
  * type-qualifier-listopt
  * type-qualifier-listopt pointer
 */
-void Parser::parsePointer()
+QualType Parser::parsePointer(QualType qt)
 { 
-    int tq;
     while (seq_->match(TokenKind::Multiplication_)) {
-        //parseTypeQualList(&tq);
+        Type* ty = sema_->onActPointerType(qt);
+        int tq = parseTypeQualList();
+        qt = QualType(ty, tq);
     }
+    return qt;
 }
 
 void Parser::parseParameterTypeList()
@@ -1317,16 +1467,36 @@ Stmt* Parser::parseJumpStmt()
     }
     return node;
 }
+//---------------------------------------------------------External definitions------------------------------------------------------------------------
+/*(6.9.1) function-definition:
+ declaration-specifiers declarator declaration-listopt compound-statement
+ 已经解析过了declaration-specifiers declarator， declaration-listopt不支持， 只解析 compound-statement
+*/
+Decl* Parser::parseFunctionDefinitionBody(Decl* dc)
+{
+    FunctionDecl* fd= dynamic_cast<FunctionDecl*>(dc);
+    Stmt* body = parseCompoundStmt();
+    fd->setBody(body);
+    return fd;
+}
 
+
+/*(6.9) translation-unit:
+ external-declaration
+ translation-unit external-declaration
+*/
 void Parser::parseTranslationUnit()
 {
-    enterScope(Scope::FILE);
-    while (!seq_->match(TokenKind::EOF_)) {
-        if (seq_->match(TokenKind::Semicolon_)) {
+    ScopeManager scm(this, Scope::FILE);
+    DeclGroup res;
+    while (!seq_->match(TokenKind::EOF_)) 
+    {
+        if (seq_->match(TokenKind::Semicolon_)) 
+        {
             continue;
         }
-        //auto res = parseExternalDeclaration();
+        auto rpath = parseDeclaration();
+        res.insert(res.begin(), rpath.begin(), rpath.end());
     }
-    //sema_->onActTranslationUnit(curScope_);
-    exitScope();
+    unit_ = sema_->onActTranslationUnitDecl(res);
 }

@@ -10,27 +10,30 @@ class AstNode {
 public:
     // 抽象语法树node类型
     enum NodeKind {
+        // 翻译单元
         NK_TranslationUnitDecl,
+        // 具名基类
         NK_NamedDecl,
         NK_LabelDecl,
+        // 含值类型
         NK_ValueDecl,
+        // 含声明说明符
         NK_DeclaratorDecl,
+        // 变量
         NK_VarDecl,
+        // 参数变量
         NK_ParmVarDecl,
+        // 函数
         NK_FunctionDecl,
+        // 类型别名
+        NK_TypedefDecl,
+        // 结构体/联合体字段声明
         NK_FieldDecl,
         NK_EnumConstantDecl,
-        NK_IndirectFieldDecl,
-        NK_TypeDecl,
-        NK_TypedefNameDecl,
+        // 标签声明(结构体/联合体/枚举)
         NK_TagDecl,
         NK_EnumDecl,
         NK_RecordDecl,
-        NK_FileScopeAsmDecl,
-        NK_TopLevelStmtDecl,
-        NK_BlockDecl,
-        NK_CapturedDecl,
-        NK_EmptyDecl,
 
         /* 表达式*/
         // 基本表达式
@@ -38,7 +41,6 @@ public:
         NK_IntegerLiteral,
         NK_CharacterLiteral,
         NK_FloatingLiteral,
-        NK_ImaginaryLiteral,
         NK_StringLiteral,
         NK_ParenExpr,
         // 后缀表达式
@@ -90,20 +92,6 @@ private:
     NodeKind kind_;
 };
 
-// ast上下文
-class AstContext {
-private:
-    // 类型池: 维护全局统一的类型系统，规范类型，使用装饰器模式
-    std::vector<Type*> ty_;
-
-public:
-    // AST树
-    TranslationUnitDecl* ast_;
-    // 符号表: 决定是否要设置？
-
-    // 类型系统构建
-};
-
 // 声明说明符
 enum StorageClass 
 {
@@ -124,13 +112,15 @@ enum TypeSpecifier
     DOUBLE =   (1 << 5),
     SHORT =    (1 << 6),
     LONG =     (1 << 7),
-    SIGNED =   (1 << 8),
-    UNSIGNED = (1 << 9),
-    _BOOL =    (1 << 10),
-    _COMPLEX = (1 << 11),
-    STRUCT =   (1 << 12),
-    UNION =    (1 << 13),
-    ENUM =     (1 << 14)
+    LONGLONG = (1 << 8),
+    SIGNED =   (1 << 9),
+    UNSIGNED = (1 << 10),
+    _BOOL =    (1 << 11),
+    _COMPLEX = (1 << 12),
+    STRUCT =   (1 << 13),
+    UNION =    (1 << 14),
+    ENUM =     (1 << 15),
+    LONGDOUBLE = (1 << 16)
 };
 enum TypeQualifier 
 {
@@ -145,6 +135,8 @@ enum FuncSpecifier
     FS_MASK = INLINE
 };
 
+class Decl;
+class Declarator;
 using DeclGroup = std::vector<Decl*>;
-
+using DeclaratorGroup = std::vector<Declarator>;
 

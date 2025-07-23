@@ -138,3 +138,8 @@ void TokenSequence::expect(TokenKind tk)
     ss << "Expect " << Token::TokenKindMap.at(tk) << " but " << Token::TokenKindMap.at(peek()->kind_);
     throw CCError(ss.str());
 }
+
+bool TokenSequence::test(TokenKind tk)
+{
+    return peek()->kind_ == tk;
+}
