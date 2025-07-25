@@ -52,14 +52,13 @@ public:
     Decl* onActVarDecl();
     Decl* onActParmVarDecl();
     Decl* onActFunctionDecl(); 
-    Decl* onActFieldDecl();
-    Decl* onActEnumConstantDecl();
+    Decl* onActFieldDecl(Symbol* id, QualType ty, Decl* parent, unsigned offset);
+    Decl* onActEnumConstantDecl(Symbol* id, Expr* ex);
     Decl* onActIndirectFieldDecl(); 
     Decl* onActTypeDecl();
     Decl* onActTypedefNameDecl();
     Decl* onActTypedefDecl();
-    Decl* onActTagDecl();
-    Decl* onActEnumDecl(); 
+    Decl* onActEnumDecl(Symbol* id, bool isDefinition); 
     Decl* onActRecordDecl(Symbol* id, bool isDefinition, bool isStruct);
     /*-----------------------statemnts node----------------------------------*/
     Stmt* onActLabelStmt();

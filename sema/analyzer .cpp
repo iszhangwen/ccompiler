@@ -6,7 +6,7 @@
 
 Type* SemaAnalyzer::onActBuiltinType(int ts) 
 {
-    return new BuiltinType(ts);
+    return nullptr;
 }
 
 Type* SemaAnalyzer::onActDerivedType() 
@@ -16,7 +16,7 @@ Type* SemaAnalyzer::onActDerivedType()
 
 Type* SemaAnalyzer::onActPointerType(QualType pointee) 
 {
-    return new PointerType(pointee);
+   return nullptr;
 }
 
 Type* SemaAnalyzer::onActArrayType() 
@@ -106,7 +106,7 @@ Expr* SemaAnalyzer::onActUnaryOpExpr(Expr*, int)
 /*-----------------------Declarations node----------------------------------*/
 TranslationUnitDecl* SemaAnalyzer::onActTranslationUnitDecl(DeclGroup dc) 
 {
-    return new TranslationUnitDecl(dc);
+    return nullptr;
 }
 
 Decl* SemaAnalyzer::onActNamedDecl() 
@@ -144,12 +144,12 @@ Decl* SemaAnalyzer::onActFunctionDecl()
     return nullptr;
 }
 
-Decl* SemaAnalyzer::onActFieldDecl() 
+Decl* SemaAnalyzer::onActFieldDecl(Symbol* id, QualType ty, Decl* parent, unsigned offset) 
 {
     return nullptr;
 }
 
-Decl* SemaAnalyzer::onActEnumConstantDecl() 
+Decl* SemaAnalyzer::onActEnumConstantDecl(Symbol* id, Expr* ex) 
 {
     return nullptr;
 }
@@ -174,19 +174,14 @@ Decl* SemaAnalyzer::onActTypedefDecl()
     return nullptr;
 }
 
-Decl* SemaAnalyzer::onActTagDecl() 
-{
-    return nullptr;
-}
-
-Decl* SemaAnalyzer::onActEnumDecl() 
+Decl* SemaAnalyzer::onActEnumDecl(Symbol* id, bool isDefinition) 
 {
     return nullptr;
 }
 
 Decl* SemaAnalyzer::onActRecordDecl(Symbol* id, bool isDefinition, bool isStruct) 
 {
-    return new RecordDecl(id, isDefinition, bool isStruct);
+    return nullptr;
 }
 /*-----------------------statemnts node----------------------------------*/
 Stmt* SemaAnalyzer::onActLabelStmt() 

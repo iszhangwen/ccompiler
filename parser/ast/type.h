@@ -88,7 +88,8 @@ public:
     // 派生类型：从对象，函数和不完整类型可以构造任意数量派生类型; 数组，函数，指针
     ARRAY, // 数组类型从元素类型派生，数组的特征是元素类型和元素数量
     FUNCION, // 函数类型派生自他的返回值类型
-    POINTER
+    POINTER,
+    TYPEDEF
     };
 private: 
     TypeKind kind_;  // 类型域标识
@@ -117,9 +118,9 @@ public:
     函数类型：描述函数参数和返回值类型的抽象类型
     不完整类型：缺少完整定义的类型（未指定大小的数组或前向声明的结构体）
     */
-    bool isObjectType() const;
-    bool isIncompleteType() const;
-    bool isFunctionType() const;
+    bool isObjectType() const {return false;}
+    bool isIncompleteType() const {return false;}
+    bool isFunctionType() const {return false;}
 
     // 判断是否是可变类型：（1）变长数组 （2）基于变长数组的符合类型 Note:注意区分可变数组和不完整类型
     bool isVariablyModifiedType() const;
@@ -141,8 +142,10 @@ class BuiltinType : public Type
     bool isSigned_;
     int width_;
     int kind_;
-public:
+protected:
     BuiltinType(int tq);
+public:
+    static BuiltinType* NewObj(int tq);
 };
 
 // 复数类型
@@ -159,6 +162,9 @@ private:
 protected:
     ComplexType(TypeKind co, QualType derived, Kind kd) :
     Type(co, derived), kind_(kd){}
+
+public:
+    static ComplexType* NewObj(TypeKind co, QualType derived, Kind kd);
 };
 
 /*---------------------------------派生类型---------------------------------------------------*/
@@ -181,8 +187,8 @@ class PointerType : public DerivedType
 protected:
     PointerType(QualType pointee) 
     :DerivedType(Type::POINTER, pointee){}
-
 public:
+    static PointerType* NewObj(QualType pointee);
     std::string getName() const {return "";}
     static PointerType* newObj(QualType);
 };
@@ -208,6 +214,8 @@ protected:
     : DerivedType(Type::ARRAY, can), lenExpr_(lenExpr) {}
 
 public:
+    static ArrayType* NewObj(QualType can, int len);
+    static ArrayType* NewObj(QualType can, Expr* lenExpr);
     void setLen(unsigned len) {len_ = len;}
     unsigned getLen() const {return len_;}
 };
@@ -222,6 +230,7 @@ protected:
     : DerivedType(Type::FUNCION, qt), inline_(isInline), noReturn_(isNoReturn), params_(params){}
 
 public:
+    static FunctionType* NewObj(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params);
     QualType getResultType() const { return QualType(); }
     bool isInline() const {return inline_;}
     bool isNoReturn() const {return noReturn_;}
@@ -229,58 +238,42 @@ public:
 
 /*------------------------------结构体和枚举类型----------------------------------------------*/
 class TagType : public Type {
-    TagDecl* decl_;
+    Decl* decl_;
     bool process_;
 
 protected:
-    TagType(TypeKind tk, TagDecl *decl, QualType can)
-    : Type(tk, can), decl_(decl){}
+    TagType(TypeKind tk, QualType can, Decl* dc)
+    : Type(tk, can), decl_(dc){}
 
-public:   
-    TagDecl *getDecl() const { return nullptr; }
-
+public:  
+    Decl* getDecl() const {return decl_;}
+    void setDecl(Decl* dc) {decl_ = dc;}
 };
 
 class RecordType : public TagType {
+protected:
+    RecordType(TypeKind tk, Decl *dc)
+    : TagType(tk, QualType(), dc) {}
 public:
-    RecordType(RecordDecl *D)
-    : TagType(Type::RECORD, reinterpret_cast<TagDecl*>(D), QualType()) {}
-    RecordType(TypeKind tk, RecordDecl *D)
-    : TagType(tk, reinterpret_cast<TagDecl*>(D), QualType()) {}
-
-   RecordDecl *getDecl() const {
-    return reinterpret_cast<RecordDecl*>(TagType::getDecl());
-   }
-   void setDecl(Decl* dc) {
-        decl_ = dynamic_cast<TagDecl*>(dc);
-   }
-  
-  // FIXME: This predicate is a helper to QualType/Type. It needs to 
-  // recursively check all fields for const-ness. If any field is declared
-  // const, it needs to return false. 
-  bool hasConstFields() const { return false; }
-
-  // FIXME: RecordType needs to check when it is created that all fields are in
-  // the same address space, and return that.
-  unsigned getAddressSpace() const { return 0; }
+    static RecordType* NewObj(bool isStruct, Decl *dc);
 };
 
 class EnumType : public TagType {
-  explicit EnumType(EnumDecl *D)
-    : TagType(Type::ENUM, reinterpret_cast<TagDecl*>(D), QualType()) { }
+protected:
+    EnumType(Decl *dc)
+    : TagType(Type::ENUM, QualType(), dc) {}
 public:
-  EnumDecl *getDecl() const {
-    return reinterpret_cast<EnumDecl*>(TagType::getDecl());
-  }
+    static EnumType* NewObj(Decl *dc);
 };
 
 /*--------------------------typedef定义的类型别名--------------------------------------*/
 class TypedefType : public Type {
-  TypedefDecl *decl_;
+    TypedefDecl *decl_;
 protected:
-  TypedefType(TypeKind tc, TypedefDecl *decl, QualType can) 
-    : Type(tc, can), decl_(decl) {}
+    TypedefType(TypedefDecl *decl, QualType qt) 
+    : Type(Type::TYPEDEF, qt), decl_(decl) {}
 
 public:
-  TypedefDecl *getDecl() const { return decl_; }
+    static TypedefType* NewObj(TypedefDecl *decl, QualType can);
+    TypedefDecl *getDecl() const { return decl_; }
 };

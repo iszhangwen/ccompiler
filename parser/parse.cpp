@@ -107,6 +107,16 @@ void ParseTypeSpec::operator()(TSState& curState, int* ts, TokenKind cond)
     }
 }
 
+ScopeManager::ScopeManager(Parser* p, Scope::ScopeType st) 
+: parent_(p) 
+{
+    parent_->sys_->enterScope(st);
+}
+ScopeManager::~ScopeManager() 
+{
+    parent_->sys_->exitScope();
+}
+
 Parser::Parser(const std::string& filename)
 {
     buf_ = new Source(filename);
@@ -166,20 +176,41 @@ Expr* Parser::parsePrimaryExpr()
     switch (seq_->next()->kind_)
     {
     case TokenKind::Identifier:
-        node = sema_->onActDeclRefExpr(seq_->cur());
-        break;
+    {
+        Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+        if (!sym) {
+            error("symbol undefined!");
+            return nullptr;
+        }
+        Type* ty = sym->getType();
+        if (ty && ty->getDecl()) {
+            node = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
+            break;
+        }
+        error("Symbol type incomplete!");
+        return nullptr;
+    }    
 
     case TokenKind::Numeric_Constant_:
+        node = IntegerLiteral::NewObj(seq_->cur());
+        break;
+
     case TokenKind::Float_Constant:
+        node = FloatingLiteral::NewObj(seq_->cur());
+        break;
+
     case TokenKind::Character_Constant_:
+        node = CharacterLiteral::NewObj(seq_->cur());
+        break;
+
     case TokenKind::String_Constant_:
-        node = sema_->onActConstant(seq_->cur());
+        node = StringLiteral::NewObj(seq_->cur());
         break;
     
     case TokenKind::LParent_:
         node = parseExpr();
         seq_->expect(TokenKind::RParent_);
-        node = sema_->onActParenExpr(node);
+        node = ParenExpr::NewObj(node);
         break;
 
     default:
@@ -235,6 +266,7 @@ Expr* Parser::parseGenericAssociation()
 Expr* Parser::parsePostfixExpr()
 {
     Expr* node = nullptr;
+    /*
     if (seq_->peek()->kind_ == TokenKind::LParent_) {
         node = parseParenExpr();
     }
@@ -245,44 +277,68 @@ Expr* Parser::parsePostfixExpr()
         if (seq_->match(TokenKind::LSquare_Brackets_)) {
             auto lex = parseExpr();
             seq_->expect(TokenKind::RSquare_Brackets_);
-            node = sema_->onActArraySubscriptExpr(node, lex);
+            node = ArraySubscriptExpr::NewObj(node, lex);
         }
         else if (seq_->match(TokenKind::LParent_)) {
             auto lex = parseArgListExpr();
             seq_->expect(TokenKind::RParent_);
-            node = sema_->onActCallExpr(node, lex);
+            node = CallExpr::NewObj(node, lex);
         }
         else if (seq_->match(TokenKind::Dot_)) {
             seq_->expect(TokenKind::Identifier);
-            auto lex = sema_->onActDeclRefExpr(seq_->cur());
-            node = sema_->onActMemberExpr(node, lex, false);
+            Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+            if (!sym) {
+                error("symbol undefined!");
+                break;
+            }
+            Type* ty = sym->getType();
+            if (ty && ty->getDecl()) {
+                //auto lex = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
+                node = MemberExpr::NewObj(node, nullptr, false);
+            }
+            else {
+                error("symbol type undefined!");
+                break;
+            }
         }
         else if (seq_->match(TokenKind::Arrow_)) {
             seq_->expect(TokenKind::Identifier);
-            auto lex = sema_->onActDeclRefExpr(seq_->cur());
-            node = sema_->onActMemberExpr(node, lex, true);
+            Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+            if (!sym) {
+                error("symbol undefined!");
+                break;
+            }
+            Type* ty = sym->getType();
+            if (ty && ty->getDecl()) {
+                //auto lex = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
+                node = MemberExpr::NewObj(node, nullptr, true);
+            }
+            else {
+                error("symbol type undefined!");
+                break;
+            }
         }
         else if (seq_->match(TokenKind::Increment_)) {
-            node = sema_->onActUnaryOpExpr(node, UnaryOpExpr::Post_Increment_);
+            node = UnaryOpExpr::NewObj(node, UnaryOpExpr::Post_Increment_);
         }
         else if (seq_->match(TokenKind::Decrement_)) {
-            node = sema_->onActUnaryOpExpr(node, UnaryOpExpr::Post_Decrement_);
+            node = UnaryOpExpr::NewObj(node, UnaryOpExpr::Post_Decrement_);
         }
         else {
             break;
         }
-    }
+    }*/
     return node;
 }
 
-Expr* Parser::parseArgListExpr()
+std::vector<Expr*> Parser::parseArgListExpr()
 {
-    Expr* node = parseAssignExpr();
+    std::vector<Expr*> res;
+    res.push_back(parseAssignExpr());
     while (seq_->match(TokenKind::Comma_)) {
-        auto rex = parseAssignExpr();
-        node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Comma);
+        res.push_back(parseAssignExpr());
     }
-    return node;
+    return res;
 }
 
 /*
@@ -305,49 +361,49 @@ Expr* Parser::parseUnaryExpr()
     {
     case TokenKind::Increment_:
         rex = parseUnaryExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Pre_Increment_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Pre_Increment_);
         break;
 
     case TokenKind::Decrement_:
         rex = parseUnaryExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Pre_Decrement_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Pre_Decrement_);
         break;
 
     case TokenKind::BitWise_AND_:
         rex = parseCastExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::BitWise_AND_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::BitWise_AND_);
         break;
 
     case TokenKind::Multiplication_:
         rex = parseCastExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Multiplication_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Multiplication_);
         break;
 
     case TokenKind::Addition_:
         rex = parseCastExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Addition_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Addition_);
         break;
 
     case TokenKind::Subtraction_:
         rex = parseCastExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Subtraction_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Subtraction_);
         break;
 
     case TokenKind::BitWise_NOT_:
         rex = parseCastExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::BitWise_NOT_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::BitWise_NOT_);
         break;
 
     case TokenKind::Logical_NOT_:
         rex = parseCastExpr();
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Logical_NOT_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Logical_NOT_);
         break;
     
     case TokenKind::Sizeof:
         if (seq_->match(TokenKind::RParent_)) {
             if (sys_->isTypeName(seq_->peek())) {
                 parseTypeName();
-                rex = sema_->onActParenExpr(nullptr);
+                rex = ParenExpr::NewObj(nullptr);
             }
             else {
                 rex = parseUnaryExpr();
@@ -357,7 +413,7 @@ Expr* Parser::parseUnaryExpr()
         else {
             rex = parseUnaryExpr();
         }
-        node = sema_->onActUnaryOpExpr(rex, UnaryOpExpr::Logical_NOT_);
+        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Logical_NOT_);
         break;
     
     case TokenKind::Alignof:
@@ -388,15 +444,15 @@ Expr* Parser::parseMultiExpr()
     while (true) {
         if (seq_->match(TokenKind::Multiplication_)) {
             Expr* rex = parseCastExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Multiplication_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Multiplication_);
         } 
         else if (seq_->match(TokenKind::Division_)) {
             Expr* rex = parseCastExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Division_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Division_);
         } 
         else if (seq_->match(TokenKind::Modulus_)) {
             Expr* rex = parseCastExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Modulus_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Modulus_);
         } 
         else {
             break;
@@ -411,11 +467,11 @@ Expr* Parser::parseAddExpr()
     while (true) {
         if (seq_->match(TokenKind::Addition_)) {
             Expr* rex = parseMultiExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Addition_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Addition_);
         } 
         else if (seq_->match(TokenKind::Subtraction_)) {
             Expr* rex = parseMultiExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Subtraction_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Subtraction_);
         } 
         else {
             break;
@@ -430,11 +486,11 @@ Expr* Parser::parseShiftExpr()
     while (true) {
         if (seq_->match(TokenKind::LShift_)) {
             Expr* rex = parseAddExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::LShift_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::LShift_);
         } 
         else if (seq_->match(TokenKind::RShift_)) {
             Expr* rex = parseAddExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::RShift_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::RShift_);
         } 
         else {
             break;
@@ -449,19 +505,19 @@ Expr* Parser::parseRelationalExpr()
     while (true) {
         if (seq_->match(TokenKind::Less_)) {
             Expr* rex = parseShiftExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Less_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Less_);
         } 
         else if (seq_->match(TokenKind::Less_Equal_)) {
             Expr* rex = parseShiftExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Less_Equal_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Less_Equal_);
         } 
         else if (seq_->match(TokenKind::Greater_)) {
             Expr* rex = parseShiftExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Greater_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Greater_);
         } 
         else if (seq_->match(TokenKind::Greater_Equal_)) {
             Expr* rex = parseShiftExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Greater_Equal_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Greater_Equal_);
         } 
         else  {
             break;
@@ -476,11 +532,11 @@ Expr* Parser::parseEqualExpr()
     while (true) {
         if (seq_->match(TokenKind::Equality_)) {
             Expr* rex = parseRelationalExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Equality_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Equality_);
         } 
         else if (seq_->match(TokenKind::Inequality_)) {
             Expr* rex = parseRelationalExpr();
-            node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Inequality_);
+            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Inequality_);
         } 
         else {
             break;
@@ -494,7 +550,7 @@ Expr* Parser::parseBitANDExpr()
     Expr* node = parseEqualExpr();
     while (seq_->match(TokenKind::BitWise_AND_)) {
         Expr* rex = parseEqualExpr();
-        node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::BitWise_AND_);
+        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_AND_);
     }
     return node;
 }
@@ -504,7 +560,7 @@ Expr* Parser::parseBitXORExpr()
     Expr* node = parseBitANDExpr();
     while (seq_->match(TokenKind::BitWise_XOR_)) {
         Expr* rex = parseBitANDExpr();
-        node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::BitWise_XOR_);
+        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_XOR_);
     }
     return node;
 }
@@ -514,7 +570,7 @@ Expr* Parser::parseBitORExpr()
     Expr* node = parseBitXORExpr();
     while (seq_->match(TokenKind::BitWise_OR_)) {
         Expr* rex = parseBitXORExpr();
-        node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::BitWise_OR_);
+        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_OR_);
     }
     return node;
 }
@@ -524,7 +580,7 @@ Expr* Parser::parseLogicalANDExpr()
     Expr* node = parseBitORExpr();
     while (seq_->match(TokenKind::Logical_AND_)) {
         Expr* rex = parseBitORExpr();
-        node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Logical_AND_);
+        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Logical_AND_);
     }
     return node;
 }
@@ -534,7 +590,7 @@ Expr* Parser::parseLogicalORExpr()
     Expr* node = parseLogicalANDExpr();
     while (seq_->match(TokenKind::Logical_OR_)) {
         Expr* rex = parseLogicalANDExpr();
-        node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Logical_OR_);
+        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Logical_OR_);
     }
     return node;
 }
@@ -546,7 +602,7 @@ Expr* Parser::parseConditionalExpr()
         Expr* th = parseExpr();
         seq_->expect(TokenKind::Colon_);
         Expr* el = parseConditionalExpr();
-        node = sema_->onActConditionalExpr(node, th, el);
+        node = ConditionalOperator::NewObj(node, th, el);
     }
     return node;
 }
@@ -627,7 +683,7 @@ Expr* Parser::parseAssignExpr()
         error("expect assignment-operator, but not!");
         break;
     }
-    return sema_->onActBinaryOpExpr(node, rex, opc);
+    return BinaryOpExpr::NewObj(node, rex, opc);
 }
 
 /*
@@ -641,7 +697,7 @@ Expr* Parser::parseExpr()
     node = parseAssignExpr();
     while (seq_->match(TokenKind::Comma_)) {
         auto rnode = parseAssignExpr();
-        node = sema_->onActBinaryOpExpr(node, rnode, BinaryOpExpr::Comma);
+        node = BinaryOpExpr::NewObj(node, rnode, BinaryOpExpr::Comma, QualType());
     }
     return node;
 }
@@ -673,10 +729,10 @@ Expr* Parser::parseParenExpr()
             //node = parseInitlizerList();
             while (seq_->match(TokenKind::Comma_)) {
                 //auto rex = parseInitlizerList();
-                //node = sema_->onActBinaryOpExpr(node, rex, BinaryOpExpr::Comma);
+                //node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Comma);
             }
             seq_->expect(TokenKind::RCurly_Brackets_);
-            node = sema_->onActCompoundLiteralExpr();
+            //node = CompoundLiteralExpr::NewObj();
         }
         else {
             auto lex = parseCastExpr();
@@ -686,7 +742,7 @@ Expr* Parser::parseParenExpr()
     else {
         auto lex = parseExpr();
         seq_->expect(TokenKind::RParent_);
-        node = sema_->onActParenExpr(lex);
+        node = ParenExpr::NewObj(lex);
     }
     return node;
 }
@@ -756,7 +812,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         case TokenKind::Long:
             ParseTypeSpec()(tss, &ts, seq_->cur()->kind_);
             if (tss == ParseTypeSpec::FOUND_TYPE) {
-                ty = sema_->onActBuiltinType(ts);
+                ty = BuiltinType::NewObj(ts);
             } else if (tss == ParseTypeSpec::ERROR) {
                 error("error type specifier!");
             }
@@ -879,15 +935,15 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
     if (seq_->match(TokenKind::LCurly_Brackets_)) {
         // 符号表没查找到:第一次定义
         if (!sym) {
-            Type* ty = sema_->onActRecordType(isStruct, nullptr);
-            if (key.empty()) { // 匿名对象不插入符号表
-                sys_->insert(Symbol::RECORD, key, t);
+            Type* ty = RecordType::NewObj(isStruct, nullptr);
+            if (!key.empty()) { // 匿名对象不插入符号表
+                sym = sys_->insertRecord(key, ty, nullptr);
             }
-            return parseStructDeclarationList(ty);
+            return parseStructDeclarationList(sym);
         }
         // 符号表查找到了但是类型定义不完整：存在前向声明
         else if (sym->getType()->isIncompleteType()) {
-            return parseStructDeclarationList(sym->getType());
+            return parseStructDeclarationList(sym);
         }
         // 符号表查找到了并且类型定义完整：重复定义
         else {
@@ -905,8 +961,8 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
     if (sym) {
         return sym->getType();
     }
-    Type* ty = sema_->onActRecordType(isStruct, nullptr);
-    sys_->insert(Symbol::RECORD, key, ty);
+    Type* ty = RecordType::NewObj(isStruct, nullptr);
+    sys_->insertRecord(key, ty, nullptr);
     return ty;
 }
 
@@ -924,14 +980,14 @@ Type* Parser::parseStructDeclarationList(Symbol* sym)
         return nullptr;
     }
     RecordType* ty = dynamic_cast<RecordType*>(sym->getType());
-    RecordDecl* dc = sema_->onActRecordDecl(sym, true, ty->isStruct());
+    RecordDecl* dc = RecordDecl::NewObj(sym, true, ty->isStruct());
     do {
         QualType qt = parseSpecQualList();
-        DeclGroup path = parseStructDeclaratorList(qt);
+        DeclGroup path = parseStructDeclaratorList(qt, dc);
         dc->addField(path);
         seq_->match(TokenKind::Semantics);
     }while (seq_->test(TokenKind::RCurly_Brackets_));
-    ty->setDecl(ty);
+    ty->setDecl(dc);
     return ty;
 }
 
@@ -952,19 +1008,24 @@ QualType Parser::parseSpecQualList()
  declarator
  declaratoropt : constant-expression
 */
-DeclGroup Parser::parseStructDeclaratorList(QualType qt)
+DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
 {
     DeclGroup res;
     do {
+        Decl* dc = nullptr;
+        Expr* initEx = nullptr;
         if (seq_->match(TokenKind::Colon_)) {
-            parseConstansExpr();
+            initEx = parseConstansExpr();
+            dc = FieldDecl::NewObj(nullptr, qt, parent, 0);
         }
         else {
-            Decl* dc = parseDeclarator(qt, 0, 0);
+            NamedDecl* tmp = dynamic_cast<NamedDecl*>(parseDeclarator(qt, 0, 0));
             if (seq_->match(TokenKind::Colon_)) {
-                parseConstansExpr();
+                initEx = parseConstansExpr();
             }
+            dc = FieldDecl::NewObj(tmp->getSymbol(), qt, parent, 0);
         }
+        res.push_back(dc);
 
     }while (seq_->match(TokenKind::Semicolon_));
     return res;
@@ -974,9 +1035,6 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt)
  enum identifieropt { enumerator-list }
  enum identifieropt { enumerator-list ,}
  enum identifier
-  (6.7.2.2) enumerator-list:
- enumerator
- enumerator-list , enumerator
 */
 Type* Parser::parseEnumSpec()
 {
@@ -987,25 +1045,26 @@ Type* Parser::parseEnumSpec()
     }
 
     // 枚举定义解析
+    Symbol* sym = sys_->lookup(Symbol::RECORD, key);
     if (seq_->match(TokenKind::LCurly_Brackets_)) {
-        // 打开新作用域
-        ScopeManager scm(this, Scope::FILE);
-        while (true) {
-            parseEnumerator();
-            // 匹配到逗号
-            if (seq_->match(TokenKind::Comma_)) {
-                if (seq_->match(TokenKind::RCurly_Brackets_)) {
-                    break;
-                }
-                continue;
+        // 符号表没有查找到，第一次定义
+        if (!sym) {
+            Type* ty = EnumType::NewObj(nullptr);
+            if (key.empty()) { // 匿名对象不插入符号表
+                sys_->insertRecord(key, ty, nullptr);
             }
-            // 未匹配到逗号，则必定结束
-            else {
-                seq_->expect(TokenKind::RCurly_Brackets_);
-                break;
-            }
+            return parseEnumeratorList(nullptr, ty);
         }
-        return nullptr; 
+        // 符号表查找到了但是未定义
+        else if (sym->getType()->isIncompleteType()) {
+            Type* ty = sym->getType();
+            return parseEnumeratorList(sym, ty);
+        }
+        // 其他情况：符号表查找到了但是已经定义了：重定义错误
+        else {
+            error("redefined enum identifier!");
+            return nullptr;
+        }
     }
     // 枚举声明或使用
     // 必须要定义符号
@@ -1013,8 +1072,43 @@ Type* Parser::parseEnumSpec()
         error("expect enum identifier, but not!");
         return nullptr;
     }
-    sema_
-    return nullptr;
+    // 返回类型，若由符号则返回，否则创建
+    if (!sym) {
+        return sym->getType();
+    }
+    Type* ty = EnumType::NewObj(nullptr);
+    sys_->insertRecord(key, ty, nullptr);
+    return ty;
+}
+
+/*  (6.7.2.2) enumerator-list:
+ enumerator
+ enumerator-list , enumerator
+*/
+Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
+{
+    // 打开块作用域
+    ScopeManager scm(this, Scope::BLOCK);
+    EnumDecl* dc = EnumDecl::NewObj(sym, true);
+    while (true) {
+        dc->addConstant(parseEnumerator(QualType()));
+        // 匹配到逗号
+        if (seq_->match(TokenKind::Comma_)) {
+            if (seq_->match(TokenKind::RCurly_Brackets_)) {
+                break;
+            }
+            continue;
+        }
+        // 未匹配到逗号，则必定结束
+        else {
+            seq_->expect(TokenKind::RCurly_Brackets_);
+            break;
+        }
+    }
+    // 匿名对象则创建类型
+    EnumType* t = dynamic_cast<EnumType*>(ty);
+    t->setDecl(dc);
+    return ty;
 }
 
 /*(6.7.2.2) enumerator:
@@ -1023,14 +1117,17 @@ Type* Parser::parseEnumSpec()
   (6.4.4.3) enumeration-constant:
  identifier
 */
-void Parser::parseEnumerator()
+EnumConstantDecl* Parser::parseEnumerator(QualType qt)
 {
+    // 解析符号
     seq_->expect(TokenKind::Identifier);
-    if (seq_->match(TokenKind::Assign_))
-    {
-        parseConstansExpr();
+    Symbol* sym = sys_->insertMember(seq_->cur()->value_, nullptr, nullptr);
+    // 解析表达式
+    Expr* ex = nullptr;
+    if (seq_->match(TokenKind::Assign_)) {
+        ex = parseConstansExpr();
     }
-    return;
+    return EnumConstantDecl::NewObj(sym, ex);
 }
 
 /* (6.7.3) type-qualifier:
@@ -1113,7 +1210,7 @@ void Parser::parseDirectDeclarator()
 QualType Parser::parsePointer(QualType qt)
 { 
     while (seq_->match(TokenKind::Multiplication_)) {
-        Type* ty = sema_->onActPointerType(qt);
+        Type* ty = PointerType::NewObj(qt);
         int tq = parseTypeQualList();
         qt = QualType(ty, tq);
     }
@@ -1173,7 +1270,7 @@ void Parser::parseTypeName()
 */
 void Parser::parseAbstractDeclarator()
 {
-    parsePointer();
+    //parsePointer();
     parseDirectAbstractDeclarator();
 }
 
@@ -1303,10 +1400,11 @@ Stmt* Parser::parseLabeledStmt()
     {
     case TokenKind::Identifier:
     {
-        NamedDecl* key = nullptr;
+        Symbol* sym = sys_->insertLabel(seq_->cur()->value_, nullptr);
+        LabelDecl* key = LabelDecl::NewObj(sym);
         seq_->expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
-        node = sema_->onActLabelStmt();
+        node = LabelStmt::NewObj(key, body);
         break;
     }
     
@@ -1315,7 +1413,7 @@ Stmt* Parser::parseLabeledStmt()
         Expr* cond = parseConstansExpr();
         seq_->expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
-        node = sema_->onActCaseStmt();
+        node = CaseStmt::NewObj(cond, body);
         break;
     }
 
@@ -1323,7 +1421,7 @@ Stmt* Parser::parseLabeledStmt()
     {
         seq_->expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
-        node = sema_->onActDefaultStmt();
+        node = DefaultStmt::NewObj(nullptr, body);
         break;
     }
 
@@ -1336,12 +1434,18 @@ Stmt* Parser::parseLabeledStmt()
 
 Stmt* Parser::parseCompoundStmt()
 {
+    ScopeManager scm(this, Scope::BLOCK);
     seq_->expect(TokenKind::LCurly_Brackets_);
-    Stmt* node = sema_->onActCompoundStmt();
-    while (seq_->match(TokenKind::RCurly_Brackets_)) 
-    {
-        // 
+    std::vector<Stmt*> res;
+    while (!seq_->match(TokenKind::RCurly_Brackets_)) {
+        DeclGroup dc = parseDeclaration();
+        for (int i =0; i < dc.size(); i++) {
+            res.push_back(DeclStmt::NewObj(dc[i]));
+        }
+        Stmt* st = parseStmt();
+        res.push_back(st);
     }
+    Stmt* node = CompoundStmt::NewObj(res);
     return node;    
 }
 
@@ -1349,7 +1453,7 @@ Stmt* Parser::parseExprStmt()
 {
     Expr* ex = parseExpr();
     seq_->expect(TokenKind::Semicolon_);
-    return sema_->onActExprStmt();
+    return ExprStmt::NewObj(ex);
 }
 
 Stmt* Parser::parseSelectionStmt()
@@ -1364,7 +1468,7 @@ Stmt* Parser::parseSelectionStmt()
         seq_->expect(TokenKind::RParent_);
         Stmt* th = parseStmt();
         Stmt* el = (seq_->match(TokenKind::Else)) ? parseStmt() : nullptr;
-        node = sema_->onActIfStmt();
+        node = IFStmt::NewObj(cond, th, el);
         break;
     }
 
@@ -1374,7 +1478,7 @@ Stmt* Parser::parseSelectionStmt()
         Expr* cond = parseExpr();
         seq_->expect(TokenKind::RParent_);
         Stmt* body = parseStmt();
-        node = sema_->onActSwitchStmt();
+        node = SwitchStmt::NewObj(cond, body);
         break;
     }
     
@@ -1402,7 +1506,7 @@ Stmt* Parser::parseIterationStmt()
         Expr* cond = parseExpr();
         seq_->expect(TokenKind::RParent_);
         Stmt* body = parseStmt();
-        node = sema_->onActWhileStmt();
+        node = WhileStmt::NewObj(cond, body);
         break;
     }
 
@@ -1414,6 +1518,7 @@ Stmt* Parser::parseIterationStmt()
         Expr* cond = parseExpr();
         seq_->expect(TokenKind::RParent_);
         seq_->expect(TokenKind::Semicolon_);
+        return DoStmt::NewObj(cond, body);
     }
 
     case TokenKind::For:
@@ -1438,25 +1543,28 @@ Stmt* Parser::parseJumpStmt()
     switch (seq_->next()->kind_)
     {
     case TokenKind::Goto:
+    {
         seq_->expect(TokenKind::Identifier);
+        Symbol* sym = sys_->lookup(Symbol::LABEL, seq_->cur()->value_);
         seq_->expect(TokenKind::Semicolon_);
-        node = sema_->onActGotoStmt();
+        node = GotoStmt::NewObj(nullptr);
         break;
-    
+    }
+
     case TokenKind::Continue:
         seq_->expect(TokenKind::Semicolon_);
-        node = sema_->onActContinueStmt();
+        node = ContinueStmt::NewObj(nullptr);
         break;
 
     case TokenKind::Break:
         seq_->expect(TokenKind::Semicolon_);
-        node = sema_->onActBreakStmt();
+        node = BreakStmt::NewObj(nullptr);
         break;
 
     case TokenKind::Return:
     {
         auto rex = parseExprStmt();
-        node = sema_->onActReturnStmt();
+        node = ReturnStmt::NewObj(nullptr);
         break;
     }
     
@@ -1498,5 +1606,5 @@ void Parser::parseTranslationUnit()
         auto rpath = parseDeclaration();
         res.insert(res.begin(), rpath.begin(), rpath.end());
     }
-    unit_ = sema_->onActTranslationUnitDecl(res);
+    unit_ = TranslationUnitDecl::NewObj(res);
 }

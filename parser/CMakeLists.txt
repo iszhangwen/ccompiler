@@ -1,4 +1,4 @@
-file(GLOB SRC "*")
+file(GLOB_RECURSE SRC "*")
 
 add_library(parser ${SRC})
 target_link_libraries(parser lexer sema)

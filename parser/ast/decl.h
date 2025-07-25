@@ -21,6 +21,7 @@
 class Expr;
 class Stmt;
 class Symbol;
+class RecordDecl;
 
 class Decl : public AstNode
 {
@@ -36,89 +37,96 @@ protected:
 class TranslationUnitDecl final : public Decl
 {
     DeclGroup dcs_;
-public:
+protected:
     TranslationUnitDecl(const DeclGroup& dc)
     : Decl(NK_TranslationUnitDecl), dcs_(dc){}
 
     TranslationUnitDecl()
     : Decl(NK_TranslationUnitDecl){}
 
-    void addDecl(const DeclGroup& dc) {
-        dcs_.insert(dcs_.end(), dc.begin(), dc.end());
-    }
-
+public:
+    static TranslationUnitDecl* NewObj(const DeclGroup& dc);
+    void addDecl(const DeclGroup& dc) {dcs_.insert(dcs_.end(), dc.begin(), dc.end());}
 };
 
 // 所有具有名称的基类, 命名实体具备链接属性
 class NamedDecl : public Decl
 {
     Symbol* sym_;
-public:
+protected:
     NamedDecl(NodeKind nk, Symbol* id)
     : Decl(nk), sym_(id){}
 
-    Symbol* getSymbol() {
-        return sym_;
-    }
-    void setSymbol(Symbol* id) {
-        sym_ = id;
-    }
+public:
+    Symbol* getSymbol() {return sym_;}
+    void setSymbol(Symbol* id) {sym_ = id;}
 };
 
 // 标签声明:需要记录标签的名称和位置
 class LabelDecl final : public NamedDecl
 {
-public:
+protected:
     LabelDecl(Symbol* id)
     : NamedDecl(NK_LabelDecl, id){}
+public:
+    static LabelDecl* NewObj(Symbol* id);
 };
 
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
 class ValueDecl : public NamedDecl 
 {
     QualType ty_;
-public:
+protected:
     ValueDecl(NodeKind nk, Symbol* id, QualType ty)
     :NamedDecl(nk, id), ty_(ty){}
 
     ValueDecl(Symbol* id, QualType ty)
     :NamedDecl(NK_ValueDecl, id), ty_(ty){}
 
+public:
+    static ValueDecl* NewObj(Symbol* id, QualType ty);
+    QualType getQualType() {return ty_;}
+    void setQualType(QualType qt) {ty_ = qt;}
 };
 
 // 带有声明说明符的声明，声明说明符包括：存储说明符，类型限定符，类型说明符，比如变量，函数，参数等，
 class DeclaratorDecl : public ValueDecl 
 {
     int sc_;
-public:
+protected:
     DeclaratorDecl(NodeKind nk, Symbol* id, QualType ty, int sc)
     : ValueDecl(nk, id, ty), sc_(sc){}
 
     DeclaratorDecl(Symbol* id, QualType ty, int sc)
     : ValueDecl(NK_DeclaratorDecl, id, ty), sc_(sc){}
-
+public:
+    static DeclaratorDecl* NewObj(Symbol* id, QualType ty, int sc);
 };
 
 // 变量声明：需要包含存储类，作用域，初始化表达式等
 class VarDecl : public DeclaratorDecl
 {
     Expr* initExpr_; // 初始化表达式
-public:
+protected:
     VarDecl(NodeKind nk, Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
     : DeclaratorDecl(nk, id, ty, sc), initExpr_(ex){}
 
     VarDecl(Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
     : DeclaratorDecl(NK_ValueDecl, id, ty, sc), initExpr_(ex){}
-
+public:
+    static VarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
+    Expr* getExpr() {return initExpr_;}
+    void setExpr(Expr* ex) {initExpr_ = ex;}
 };
 
 /// 函数参数声明，需要默认值
 class ParmVarDecl final : public VarDecl 
 {
-public:
+protected:
     ParmVarDecl(Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
     : VarDecl(id, ty, sc, ex){}
-
+public:
+    static ParmVarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
 };
 
 // 函数声明: 
@@ -127,10 +135,11 @@ class FunctionDecl : public DeclaratorDecl
     int fs_;
     DeclGroup param_;
     Stmt* body_;
-public:
+protected:
     FunctionDecl(Symbol* id, QualType ty, int sc, DeclGroup param, Stmt* body)
     : DeclaratorDecl(id, ty, sc), param_(param), body_(body){}
-    
+public:
+    static FunctionDecl* NewObj(Symbol* id, QualType ty, int sc, DeclGroup param, Stmt* body);
     Stmt* getBody() {return body_;}
     void setBody(Stmt* body) {body_ = body;}
 };
@@ -138,85 +147,74 @@ public:
 /// Represents a member of a struct/union
 class FieldDecl : public ValueDecl
 {
-    RecordDecl* parent_;  // 所属的结构体/联合体
+    Decl* parent_;  // 所属的结构体/联合体
     unsigned offset_;     // 字段在内存中的偏移量
-    bool isAnonymous_;    // 是否是匿名字段（如 union 内嵌的匿名 struct）
 
+protected:
+    FieldDecl(Symbol* id, QualType type, Decl* parent, unsigned offset)
+    : ValueDecl(NodeKind::NK_FieldDecl, id, type), parent_(parent), offset_(offset) {}
 public:
-    FieldDecl(Symbol* id, QualType type, RecordDecl* parent, unsigned offset, bool isAnonymous)
-    : ValueDecl(NodeKind::NK_FieldDecl, id, type), parent_(parent), offset_(offset), isAnonymous_(isAnonymous) {}
-
-    RecordDecl* getParent() const { 
-        return parent_; 
-    }
-    unsigned getOffset() const { 
-        return offset_; 
-    }
-    bool isAnonymous() const { 
-        return isAnonymous_; 
-    }
+    static FieldDecl* NewObj(Symbol* id, QualType type, Decl* parent, unsigned offset);
+    RecordDecl* getParent() { return reinterpret_cast<RecordDecl*>(parent_);  }
+    unsigned getOffset() const { return offset_; }
 };
 
 class EnumConstantDecl : public ValueDecl
 {
     Expr* initExpr_;
+protected:
+    EnumConstantDecl(Symbol* id,QualType qt, Expr* val)
+    : ValueDecl(NodeKind::NK_EnumConstantDecl, id, qt), initExpr_(val) {}
 public:
-    EnumConstantDecl(Symbol* id, Expr* val);
-    Expr* getInitExpr() const { 
-        return initExpr_; 
-    }
+    static EnumConstantDecl* NewObj(Symbol* id, Expr* val);
+    Expr* getInitExpr() const { return initExpr_;}
 };
 
 class TypedefDecl : public NamedDecl 
 {
     QualType ty_;
-public:
+protected:
     TypedefDecl(Symbol* id, QualType ty)
     : NamedDecl(NodeKind::NK_TypedefDecl, id), ty_(ty) {}
+public:
+    static TypedefDecl* NewObj(Symbol* id, QualType ty);
 };
 
 class TagDecl : public NamedDecl
 {
     bool isDefinition_;  // 是否是定义（而非前向声明）
-public:
+protected:
     TagDecl(NodeKind kind, Symbol* id, bool isDefinition)
         : NamedDecl(kind, id), isDefinition_(isDefinition) {}
-    bool isDefinition() const { 
-        return isDefinition_; 
-    }
+public:
+    bool isDefinition() const { return isDefinition_;}
 };
 
 class EnumDecl : public TagDecl 
 {
     DeclGroup constants_;  // 枚举常量列表
-public:
+protected:
     EnumDecl(Symbol* id, bool isDefinition)
         : TagDecl(NodeKind::NK_EnumDecl, id, isDefinition) {}
-    void addConstant(EnumConstantDecl* constant) { 
-        constants_.push_back(constant); 
-    }
-    DeclGroup getConstants() { 
-        return constants_; 
-    }
+
+public:
+    static EnumDecl* NewObj(Symbol* id, bool isDefinition);
+    void addConstant(EnumConstantDecl* constant) {constants_.push_back(constant); }
+    DeclGroup getConstants() {return constants_; }
 };
 
 class RecordDecl : public TagDecl 
 {
     DeclGroup fields_;  // 字段列表
-    bool isUnion_;                    // 是否是 union
-public:
+    bool isUnion_;      // 是否是 union
+protected:
     RecordDecl(Symbol* id, bool isDefinition, bool isUnion)
     : TagDecl(NodeKind::NK_RecordDecl, id, isDefinition), isUnion_(isUnion) {}
-    void addField(Decl* field) { 
-        fields_.push_back(field); 
-    }
-    void addField(DeclGroup fields) { 
-        fields_.insert(fields_.end(), fields.begin(), fields.end());
-    }
-    DeclGroup getFields() { 
-        return fields_; 
-    }
-    bool isUnion() const {
-        return isUnion_; 
-    }
+
+public:
+    static RecordDecl* NewObj(Symbol* id, bool isDefinition, bool isUnion);
+    void addField(Decl* field) {fields_.push_back(field);}
+    void addField(DeclGroup fields) { fields_.insert(fields_.end(), fields.begin(), fields.end());}
+    DeclGroup getFields() {return fields_;}
+    bool isUnion() const {return isUnion_; }
 };

@@ -1,6 +1,6 @@
 #pragma once
 #include "stmt.h"
-class QualType;
+#include "type.h"
 
 class Expr : public Stmt
 {
@@ -21,10 +21,11 @@ public:
 class DeclRefExpr : public Expr 
 {
     NamedDecl* decl_;
-public:
+protected:
     DeclRefExpr(QualType qt, NamedDecl* dc)
     : Expr(NodeKind::NK_DeclRefExpr, qt), decl_(dc) {}
-
+public:
+    static DeclRefExpr* NewObj(QualType qt, NamedDecl* dc);
     NamedDecl* getNameDecl() const {
         return decl_;
     }
@@ -32,71 +33,52 @@ public:
 
 class IntegerLiteral : public Expr 
 {
-    long long val_;
-public:
-    IntegerLiteral(QualType qt, long long val)
+    std::string val_;
+protected:
+    IntegerLiteral(QualType qt, const std::string& val)
     : Expr(NodeKind::NK_IntegerLiteral, qt), val_(val){}
-
-    long long getValue() const {
-        return val_;
-    }
-    void setValue(long long val) {
-        val_ = val;
-    }
+public:
+    static IntegerLiteral* NewObj(Token*);
 };
 
 class CharacterLiteral : public Expr 
 {
-    unsigned val_;
-public:
-    CharacterLiteral(QualType qt, unsigned val)
+    std::string val_;
+protected:
+    CharacterLiteral(QualType qt, const std::string& val)
     : Expr(NodeKind::NK_CharacterLiteral, qt), val_(val) {}
-
-    unsigned getValue() const {
-        return val_;
-    }
-    void setValue(unsigned val) {
-        val_ = val;
-    }
+public:
+    static CharacterLiteral* NewObj(Token*);
 };
 
 class FloatingLiteral : public Expr 
 {
-    long double val_;
-public:
-    FloatingLiteral(QualType qt, long double val)
+    std::string val_;
+protected:
+    FloatingLiteral(QualType qt, const std::string& val)
     : Expr(NodeKind::NK_FloatingLiteral, qt), val_(val) {}
-
-    long double getValue() const {
-        return val_;
-    }
-    void setValue(long double val) {
-        val_ = val;
-    }
+public:
+    static FloatingLiteral* NewObj(Token*);
 };
 
 class StringLiteral : public Expr 
 {
     std::string val_;
-public:
+protected:
     StringLiteral(QualType qt, const std::string& val)
     : Expr(NodeKind::NK_StringLiteral, qt), val_(val) {}
-
-    std::string getValue() const {
-        return val_;
-    }
-    void setValue(const std::string& val) {
-        val_ = val;
-    }
+public:
+    static StringLiteral* NewObj(Token*);
 };
 
 class ParenExpr : public Expr 
 {
     Stmt* val_;
-public:
+protected:
     ParenExpr(Expr* val)
     : Expr(NodeKind::NK_ParenExpr, val->getType()), val_(val) {}
-
+public:
+    static ParenExpr* NewObj(Expr* val);
     Expr* getSubExpr() const {
         return dynamic_cast<Expr*>(val_);
     }
@@ -119,10 +101,12 @@ public:
 private:
     Stmt* val_;
     OpCode op_;
-public:
+protected:
     UnaryOpExpr(QualType qt, Expr* val, OpCode op)
     : Expr(NodeKind::NK_UnaryOperator, qt), val_(val), op_(op) {}
-
+public:
+    static UnaryOpExpr* NewObj(Expr* val, OpCode op);
+    static UnaryOpExpr* NewObj(QualType qt, Expr* val, OpCode op);
     OpCode getOpCode() const {
         return op_;
     }
@@ -142,11 +126,12 @@ class ArraySubscriptExpr : public Expr
 {
     Stmt* base_;
     Stmt* index_;
-public:
+protected:
     ArraySubscriptExpr(Expr* base, Expr* index)
     : Expr(NodeKind::NK_ArraySubscriptExpr, base->getType()), 
     base_(base), index_(index) {} 
-
+public:
+    static ArraySubscriptExpr* NewObj(Expr* base, Expr* index);
     Expr* getBaseExpr() const {
         return dynamic_cast<Expr*>(base_);
     }
@@ -166,7 +151,7 @@ class CallExpr : public Expr
 {
     Stmt* fn_;
     std::vector<Stmt*> params_;
-public:
+protected:
     CallExpr(Expr* fn, const std::vector<Expr*>& params)
     : Expr(NodeKind::NK_CallExpr, fn->getType()), fn_(fn){
         params_.clear();
@@ -174,7 +159,8 @@ public:
             params_.emplace_back(static_cast<Expr*>(params_[i]));
         }
     }
-
+public:
+    static CallExpr* NewObj(Expr* fn, const std::vector<Expr*>& params);
     Expr* getCallee() {
         return static_cast<Expr*>(fn_);
     }
@@ -202,11 +188,12 @@ class MemberExpr : public Expr
 {
     Stmt* base_;
     NamedDecl* memberDecl_;
-public:
+protected:
     bool isArrow_;
     MemberExpr(Expr* base, bool isArrow, NamedDecl* member, QualType qt)
     : Expr(NodeKind::NK_MemberExpr, qt), base_(base), memberDecl_(member), isArrow_(isArrow) {}
-
+public:
+    static MemberExpr* NewObj(Expr* base, bool isArrow, NamedDecl* member, QualType qt);
     Expr* getBase() {
         return static_cast<Expr*>(base_);
     }
@@ -225,10 +212,11 @@ public:
 class CompoundLiteralExpr : public Expr 
 {
     Stmt* init_;
-public:
+protected:
     CompoundLiteralExpr(QualType qt, Expr* ex)
     : Expr(NodeKind::NK_CompoundLiteralExpr, qt), init_(ex) {}
-
+public:
+    static CompoundLiteralExpr* NewObj(QualType qt, Expr* ex);
     Expr *getInitExpr() { 
         return dynamic_cast<Expr*>(init_);
     }
@@ -257,10 +245,11 @@ public:
 private:
     Stmt* val_;
     CastKind ck_;
-public:
+protected:
     CastExpr(QualType qt, Expr* ex, CastKind ck)
     : Expr(NodeKind::NK_CastExpr, qt), ck_(ck) {}
-
+public:
+    static CastExpr* NewObj(QualType qt, Expr* ex, CastKind ck);
     Expr *getCastExpr() { 
         return dynamic_cast<Expr*>(val_);
     }
@@ -302,10 +291,12 @@ private:
     Stmt* LExpr_;
     Stmt* RExpr_;
     OpCode op_;
-public:
+protected:
     BinaryOpExpr(Expr* LE, Expr* RE, OpCode op, QualType qt)
     : Expr(NodeKind::NK_BinaryOperator, qt), LExpr_(LE), RExpr_(RE), op_(op) {}
-
+public:
+    static BinaryOpExpr* NewObj(Expr* LE, Expr* RE, OpCode op);
+    static BinaryOpExpr* NewObj(Expr* LE, Expr* RE, OpCode op, QualType qt);
     OpCode getOpCode() const {
         return op_;
     }
@@ -331,10 +322,12 @@ class ConditionalOperator : public Expr
     Stmt* cond_;
     Stmt* then_;    
     Stmt* else_; 
-public:
+protected:
     ConditionalOperator(Expr* co, Expr* th, Expr* el, QualType qt)
     : Expr(NodeKind::NK_ConditionalOperator, qt), cond_(co), then_(th), else_(el) {}
-
+public:
+    static ConditionalOperator* NewObj(Expr* co, Expr* th, Expr* el);
+    static ConditionalOperator* NewObj(Expr* co, Expr* th, Expr* el, QualType qt);
     Expr* getCond() {
         return dynamic_cast<Expr*>(cond_);
     }

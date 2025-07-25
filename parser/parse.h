@@ -7,7 +7,7 @@
 #include <scanner.h>
 #include <sema.h>
 
-class Parse;
+class Parser;
 
 // 状态机解析type specifier
 class ParseTypeSpec {
@@ -29,14 +29,8 @@ public:
 class ScopeManager {
     Parser* parent_;
 public:
-    ScopeManager(Parser* p, Scope::ScopeType st) 
-    : parent_(p) {
-        static_assert((p != nullptr), "ScopeManager do not initialize by nullptr!");
-        parent_->sys_->enterScope(st);
-    }
-    ~ScopeManager() {
-        parent_->sys_->exitScope();
-    }
+    ScopeManager(Parser* p, Scope::ScopeType st);
+    ~ScopeManager();
 };
 
 class Parser {
@@ -57,7 +51,7 @@ private:
     Expr* parseGenericSelection();
     Expr* parseGenericAssociation();
     Expr* parsePostfixExpr();
-    Expr* parseArgListExpr();
+    std::vector<Expr*> parseArgListExpr();
     Expr* parseUnaryExpr();
     Expr* parseCastExpr();
     Expr* parseMultiExpr();
@@ -88,10 +82,11 @@ private:
     Type* parseStructOrUnionSpec(bool isStruct);
     Type* parseStructDeclarationList(Symbol*);
     QualType parseSpecQualList();
-    DeclGroup parseStructDeclaratorList(QualType qt);
+    DeclGroup parseStructDeclaratorList(QualType qt, Decl* parent);
     Decl* parseStructDeclarator(QualType qt);
     Type* parseEnumSpec();
-    void parseEnumerator();
+    Type* parseEnumeratorList(Symbol*, Type*);
+    EnumConstantDecl* parseEnumerator(QualType qt);
     // 6.7.3 type-qualifier
     int parseTypeQualList();
     // 6.7.4 function-specifier

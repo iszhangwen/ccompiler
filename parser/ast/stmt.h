@@ -29,9 +29,11 @@ class LabelStmt : public Stmt
 {
     NamedDecl* key_;
     Stmt* val_;
-public:
+protected:
     LabelStmt(NamedDecl* key, Stmt* val)
     : Stmt(NodeKind::NK_LabelStmt), key_(key), val_(val) {}
+public:
+    static LabelStmt* NewObj(NamedDecl* key, Stmt* val);
 
     NamedDecl* getLabel() {
         return key_;
@@ -52,10 +54,11 @@ class CaseStmt : public Stmt
 {
     Expr* cond_;
     Stmt* val_;
-public:
+protected:
     CaseStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_CaseStmt), cond_(cond), val_(val) {}
-
+public:
+    static CaseStmt* NewObj(Expr* cond, Stmt* val);
     Expr* getCond() {
         return cond_;
     }
@@ -74,10 +77,11 @@ public:
 class DefaultStmt : public Stmt 
 {
     Stmt* val_;
-public:
+protected:
     DefaultStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_DefaultStmt), val_(val) {}
-
+public:
+    static DefaultStmt* NewObj(Expr* cond, Stmt* val);
     Stmt* getStmt() {
         return val_;
     }
@@ -90,20 +94,23 @@ public:
 class CompoundStmt : public Stmt
 {
     std::vector<Stmt*> vals_;
-public:
+protected:
     CompoundStmt()
     : Stmt(NodeKind::NK_CompoundStmt) {}
 
     CompoundStmt(const std::vector<Stmt*>& vals)
     : Stmt(NodeKind::NK_CompoundStmt), vals_(vals) {}
+public:
+    static CompoundStmt* NewObj(const std::vector<Stmt*>& vals);
 };
 
 class DeclStmt : public Stmt {
     Decl* dc_;
-public:
+protected:
     DeclStmt(Decl* dc)
     : Stmt(NodeKind::NK_DeclStmt), dc_(dc) {}
-
+public:
+    static DeclStmt* NewObj(Decl* dc);
     Decl* getDecl() {
         return dc_;
     }
@@ -115,10 +122,11 @@ public:
 /*------------------------------表达式语句------------------------------------------------*/
 class ExprStmt : public Stmt {
     Expr* ex_;
-public:
+protected:
     ExprStmt(Expr* ex)
     : Stmt(NodeKind::NK_ExprStmt), ex_(ex){}
-
+public:
+    static ExprStmt* NewObj(Expr* ex);
     Expr* getExpr() {
         return ex_;
     }
@@ -133,10 +141,11 @@ class IFStmt : public Stmt
     Expr* cond_;
     Stmt* then_;
     Stmt* else_;
-public:
+protected:
     IFStmt(Expr* cond, Stmt* th, Stmt* el = nullptr)
     : Stmt(NodeKind::NK_IfStmt), cond_(cond), then_(th), else_(el) {}
-
+public:
+    static IFStmt* NewObj(Expr* cond, Stmt* th, Stmt* el = nullptr);
     Expr* getCond() {
         return cond_;
     }
@@ -161,10 +170,11 @@ class SwitchStmt : public Stmt
 {
     Expr* cond_;
     Stmt* val_;
-public:
+protected:
     SwitchStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_SwitchStmt), cond_(cond), val_(val) {}
-
+public:
+    static SwitchStmt* NewObj(Expr* cond, Stmt* val);
      Expr* getCond() {
         return cond_;
     }
@@ -185,10 +195,11 @@ class WhileStmt : public Stmt
 {
     Expr* cond_;
     Stmt* val_;
-public:
+protected:
     WhileStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_WhileStmt), cond_(cond), val_(val) {}
-
+public:
+    static WhileStmt* NewObj(Expr* cond, Stmt* val);
      Expr* getCond() {
         return cond_;
     }
@@ -207,10 +218,11 @@ class DoStmt : public Stmt
 {
     Expr* cond_;
     Stmt* val_;
-public:
+protected:
     DoStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_DoStmt), cond_(cond), val_(val) {}
-
+public:
+    static DoStmt* NewObj(Expr* cond, Stmt* val);
      Expr* getCond() {
         return cond_;
     }
@@ -231,9 +243,11 @@ class ForStmt : public Stmt
     Expr* cond_;
     Expr* update_;
     Stmt* val_;
-public:
+protected:
     ForStmt(Expr* init, Expr* cond, Expr* update, Stmt* val)
     : Stmt(NodeKind::NK_ForStmt), init_(init), cond_(cond), update_(update), val_(val) {}
+public:
+    static ForStmt* NewObj(Expr* init, Expr* cond, Expr* update, Stmt* val);
 };
 
 
@@ -241,10 +255,11 @@ public:
 class GotoStmt : public Stmt 
 {
     Stmt* label_;
-public:
+protected:
     GotoStmt(Stmt* label)
     : Stmt(NodeKind::NK_GotoStmt), label_(label) {}
-
+public:
+    static GotoStmt* NewObj(Stmt* label);
     Stmt* getLabel() {
         return label_;
     }
@@ -256,23 +271,29 @@ public:
 class ContinueStmt : public Stmt 
 {
     Stmt* label_;
-public:
+protected:
     ContinueStmt(Stmt* label)
     : Stmt(NodeKind::NK_ContinueStmt), label_(label) {}
+public:
+    static ContinueStmt* NewObj(Stmt* label);
 };
 
 class BreakStmt : public Stmt 
 {
     Stmt* label_;
-public:
+protected:
     BreakStmt(Stmt* label)
     : Stmt(NodeKind::NK_BreakStmt), label_(label) {}
+public:
+    static BreakStmt* NewObj(Stmt* label);
 };
 
 class ReturnStmt : public Stmt 
 {
     Stmt* label_;
-public:
+protected:
     ReturnStmt(Stmt* label)
     : Stmt(NodeKind::NK_ReturnStmt), label_(label) {}
+public:
+    static ReturnStmt* NewObj(Stmt* label);
 };
