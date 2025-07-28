@@ -96,5 +96,5 @@ public:
     void exitScope();
 
     // 类型检测
-    bool isTypeName(Token*) {return true;}
+    bool isTypeName(Token*);
 };

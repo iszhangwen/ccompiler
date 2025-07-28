@@ -59,6 +59,7 @@ protected:
     : Stmt(NodeKind::NK_CaseStmt), cond_(cond), val_(val) {}
 public:
     static CaseStmt* NewObj(Expr* cond, Stmt* val);
+    // 获取和设置条件表达式和语句
     Expr* getCond() {
         return cond_;
     }
@@ -82,6 +83,10 @@ protected:
     : Stmt(NodeKind::NK_DefaultStmt), val_(val) {}
 public:
     static DefaultStmt* NewObj(Expr* cond, Stmt* val);
+    // 获取和设置条件表达式和语句
+    Expr* getCond() {
+        return nullptr; // DefaultStmt没有条件表达式
+    }
     Stmt* getStmt() {
         return val_;
     }
@@ -102,6 +107,32 @@ protected:
     : Stmt(NodeKind::NK_CompoundStmt), vals_(vals) {}
 public:
     static CompoundStmt* NewObj(const std::vector<Stmt*>& vals);
+    std::vector<Stmt*> getStmts() const {
+        return vals_;
+    }
+    void setStmts(const std::vector<Stmt*>& vals) {
+        vals_ = vals;
+    }
+    void addStmt(Stmt* st) {
+        vals_.push_back(st);
+    }
+    void clearStmts() {
+        vals_.clear();
+    }
+    size_t size() const {
+        return vals_.size();
+    }
+    Stmt* getStmt(size_t index) const {
+        if (index < vals_.size()) {
+            return vals_[index];
+        }
+        return nullptr; // 如果索引越界，返回nullptr
+    }
+    void removeStmt(size_t index) {
+        if (index < vals_.size()) {
+            vals_.erase(vals_.begin() + index);
+        }
+    }
 };
 
 class DeclStmt : public Stmt {
@@ -117,6 +148,13 @@ public:
     void setDecl(Decl* dc) {
         dc_ = dc;
     }
+    // 获取声明的类型
+    QualType getDeclType() const {
+        if (dc_) {
+            return dc_->getQualType();
+        }
+        return QualType(); // 如果没有声明，返回空类型
+    }   
 };
 
 /*------------------------------表达式语句------------------------------------------------*/
@@ -133,6 +171,13 @@ public:
     void setExpr(Expr* ex) {
         ex_ = ex;
     }
+    // 获取表达式的类型
+    QualType getExprType() const {
+        if (ex_) {
+            return ex_->getType();
+        }
+        return QualType(); // 如果没有表达式，返回空类型
+    }
 };
 
 /*------------------------------控制流-条件语句---------------------------------------------*/
@@ -146,6 +191,7 @@ protected:
     : Stmt(NodeKind::NK_IfStmt), cond_(cond), then_(th), else_(el) {}
 public:
     static IFStmt* NewObj(Expr* cond, Stmt* th, Stmt* el = nullptr);
+    // 获取和设置条件表达式和语句
     Expr* getCond() {
         return cond_;
     }
@@ -163,6 +209,27 @@ public:
     }
     void setElse(Stmt* el) {
         else_ = el;
+    }
+    // 获取条件表达式的类型
+    QualType getCondType() const {
+        if (cond_) {
+            return cond_->getType();
+        }
+        return QualType(); // 如果没有条件表达式，返回空类型
+    }
+    // 获取then语句的类型
+    QualType getThenType() const {
+        if (then_) {
+            return then_->getType();
+        }
+        return QualType(); // 如果没有then语句，返回空类型
+    }
+    // 获取else语句的类型
+    QualType getElseType() const {
+        if (else_) {
+            return else_->getType();
+        }
+        return QualType(); // 如果没有else语句，返回空类型
     }
 };
 
@@ -186,6 +253,20 @@ public:
     }
     void setStmt(Stmt* val) {
         val_ = val;
+    }
+    // 获取条件表达式的类型
+    QualType getCondType() const {
+        if (cond_) {
+            return cond_->getType();
+        }
+        return QualType(); // 如果没有条件表达式，返回空类型
+    }
+    // 获取语句的类型
+    QualType getStmtType() const {
+        if (val_) {
+            return val_->getType();
+        }
+        return QualType(); // 如果没有语句，返回空类型
     }
 };
 
@@ -211,6 +292,20 @@ public:
     }
     void setStmt(Stmt* val) {
         val_ = val;
+    }
+    // 获取条件表达式的类型
+    QualType getCondType() const {
+        if (cond_) {
+            return cond_->getType();
+        }
+        return QualType(); // 如果没有条件表达式，返回空类型
+    }
+    // 获取语句的类型
+    QualType getStmtType() const {
+        if (val_) {
+            return val_->getType();
+        }
+        return QualType(); // 如果没有语句，返回空类型
     }
 };
 
@@ -266,6 +361,13 @@ public:
     void setLabel(Stmt* lb) {
         label_ = lb;
     }
+    // 获取标签的类型
+    QualType getLabelType() const {
+        if (label_) {
+            return label_->getType();
+        }
+        return QualType(); // 如果没有标签，返回空类型
+    }
 };
 
 class ContinueStmt : public Stmt 
@@ -276,6 +378,19 @@ protected:
     : Stmt(NodeKind::NK_ContinueStmt), label_(label) {}
 public:
     static ContinueStmt* NewObj(Stmt* label);
+    Stmt* getLabel() {
+        return label_;
+    }
+    void setLabel(Stmt* lb) {
+        label_ = lb;
+    }
+    // 获取标签的类型
+    QualType getLabelType() const {
+        if (label_) {
+            return label_->getType();
+        }
+        return QualType(); // 如果没有标签，返回空类型
+    }
 };
 
 class BreakStmt : public Stmt 
@@ -286,14 +401,40 @@ protected:
     : Stmt(NodeKind::NK_BreakStmt), label_(label) {}
 public:
     static BreakStmt* NewObj(Stmt* label);
+    Stmt* getLabel() {
+        return label_;
+    }
+    void setLabel(Stmt* lb) {
+        label_ = lb;
+    }
+    // 获取标签的类型
+    QualType getLabelType() const {
+        if (label_) {
+            return label_->getType();
+        }
+        return QualType(); // 如果没有标签，返回空类型
+    }
 };
 
 class ReturnStmt : public Stmt 
 {
-    Stmt* label_;
+    Expr* retVal_; // 返回值表达式
 protected:
-    ReturnStmt(Stmt* label)
-    : Stmt(NodeKind::NK_ReturnStmt), label_(label) {}
+    ReturnStmt(Expr* retVal)
+    : Stmt(NodeKind::NK_ReturnStmt), retVal_(retVal) {}
 public:
-    static ReturnStmt* NewObj(Stmt* label);
+    static ReturnStmt* NewObj(Expr* retVal);
+    Expr* getReturnValue() {
+        return retVal_;
+    }
+    void setReturnValue(Expr* retVal) {
+        retVal_ = retVal;
+    }
+    // 获取返回值表达式的类型
+    QualType getReturnType() const {
+        if (retVal_) {
+            return retVal_->getType();
+        }
+        return QualType(); // 如果没有返回值，返回空类型
+    }
 };

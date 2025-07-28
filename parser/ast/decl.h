@@ -23,6 +23,49 @@ class Stmt;
 class Symbol;
 class RecordDecl;
 
+class Declarator
+{
+public:
+    enum DeclaratorKind {
+        DK_Identifier, // 标识符
+        DK_Pointer, // 指针
+        DK_Array, // 数组
+        DK_Function, // 函数
+        DK_Paren, // 括号
+        DK_Abstract // 抽象声明
+    };
+private:
+    DeclaratorKind dk_;
+    std::string name_; // 标识符名称
+    QualType type_; // 声明的类型
+    int storageClass_; // 存储类
+    int funcSpec_; // 函数说明符    
+public:
+    Declarator(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs)
+    : dk_(dk), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
+    DeclaratorKind getKind() const { return dk_; }
+    const std::string& getName() const { return name_; }
+    QualType getType() const { return type_; }
+    int getStorageClass() const { return storageClass_; }
+    int getFuncSpec() const { return funcSpec_; }   
+    void setType(QualType qt) { type_ = qt; }
+    void setName(const std::string& name) { name_ = name; }
+    void setStorageClass(int sc) { storageClass_ = sc; }    
+    void setFuncSpec(int fs) { funcSpec_ = fs; }    
+    static Declarator* NewObj(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs) {
+        return new Declarator(dk, name, type, sc, fs);
+    }
+    static Declarator* NewObj(DeclaratorKind dk, const std::string& name, QualType type) {
+        return new Declarator(dk, name, type, 0, 0);
+    }
+    static Declarator* NewObj(DeclaratorKind dk, const std::string& name) {
+        return new Declarator(dk, name, QualType(), 0, 0);
+    }
+    static Declarator* NewObj(DeclaratorKind dk) {
+        return new Declarator(dk, "", QualType(), 0, 0);
+    }
+};
+
 class Decl : public AstNode
 {
 public:
@@ -47,6 +90,25 @@ protected:
 public:
     static TranslationUnitDecl* NewObj(const DeclGroup& dc);
     void addDecl(const DeclGroup& dc) {dcs_.insert(dcs_.end(), dc.begin(), dc.end());}
+    void addDecl(Decl* dc) {dcs_.push_back(dc);}
+    const DeclGroup& getDecls() const {return dcs_;}
+    void setDecls(const DeclGroup& dc) {dcs_ = dc;}
+    size_t size() const {return dcs_.size();}
+    Decl* getDecl(size_t index) const {
+        if (index < dcs_.size()) {
+            return dcs_[index];
+        }
+        return nullptr; // 如果索引越界，返回nullptr
+    }
+    void removeDecl(size_t index) {
+        if (index < dcs_.size()) {
+            dcs_.erase(dcs_.begin() + index);
+        }
+    }
+    // 获取声明的数量
+    size_t getDeclCount() const {
+        return dcs_.size();
+    }
 };
 
 // 所有具有名称的基类, 命名实体具备链接属性

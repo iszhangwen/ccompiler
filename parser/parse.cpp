@@ -182,9 +182,40 @@ Expr* Parser::parsePrimaryExpr()
             error("symbol undefined!");
             return nullptr;
         }
-        Type* ty = sym->getType();
-        if (ty && ty->getDecl()) {
-            node = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
+        NamedDecl* dc = sym->getNamedDecl();
+        if (!dc) {
+            error("symbol declaration undefined!");
+            return nullptr;
+        }
+        QualType ty = dc->getType();
+        if (ty.isNull()) {
+            error("symbol type undefined!");
+            return nullptr;
+        }
+        // 如果是函数声明，返回DeclRefExpr
+        if (ty->isFunctionType()) {
+            node = DeclRefExpr::NewObj(ty, dc);
+            break;
+        }
+        // 如果是变量声明，返回DeclRefExpr
+        if (ty->isObjectType()) {
+            // 如果是变量声明，返回DeclRefExpr
+            if (ty->getDecl() && ty->getDecl()->getKind() == NodeKind::NK_VarDecl) {
+                node = DeclRefExpr::NewObj(ty, dc);
+                break;
+            }
+        }
+        // 如果是类型声明，返回DeclRefExpr
+        if (ty->isTypeName()) {     
+            // 如果是类型声明，返回DeclRefExpr
+            if (ty->getDecl() && ty->getDecl()->getKind() == NodeKind::NK_TypedefDecl) {
+                node = DeclRefExpr::NewObj(ty, dc);
+                break;
+            }
+        }
+        // 如果是结构体/联合体声明，返回DeclRefExpr         
+        if (dc) {
+            node = DeclRefExpr::NewObj(ty, dc);
             break;
         }
         error("Symbol type incomplete!");
@@ -758,10 +789,122 @@ DeclGroup Parser::parseDeclaration()
     int sc = 0, fs = 0;
     QualType qt = parseDeclarationSpec(&sc, &fs);
     // typedef struct union enum 解析完成
+    if (qt.isNull()) {
+        error("declaration specifier incomplete!");
+        return res;
+    }
+    // 如果是typedef声明，直接返回
+    if (sc & StorageClass::TYPEDEF) {
+        if (qt->isTypeName()) {
+            // 直接返回类型声明
+            res.push_back(TypedefDecl::NewObj(qt, seq_->cur()->value_));
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+        else {
+            error("typedef declaration incomplete!");
+            return res;
+        }
+    }
+    // 如果是extern声明，直接返回
+    if (sc & StorageClass::EXTERN) {
+        if (qt->isTypeName()) {
+            // 直接返回类型声明
+            res.push_back(ExternDecl::NewObj(qt, seq_->cur()->value_));
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+        else {
+            error("extern declaration incomplete!");
+            return res;
+        }
+    }
+    // 如果是static声明，直接返回
+    if (sc & StorageClass::STATIC) {
+        if (qt->isTypeName()) {
+            // 直接返回类型声明
+            res.push_back(StaticDecl::NewObj(qt, seq_->cur()->value_));
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+        else {
+            error("static declaration incomplete!");
+            return res;
+        }
+    }
+    // 如果是auto声明，直接返回
+    if (sc & StorageClass::AUTO) {
+        if (qt->isTypeName()) {
+            // 直接返回类型声明
+            res.push_back(AutoDecl::NewObj(qt, seq_->cur()->value_));
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+        else {
+            error("auto declaration incomplete!");
+            return res;
+        }
+    }
+    // 如果是register声明，直接返回
+    if (sc & StorageClass::REGISTER) {  
+        if (qt->isTypeName()) {
+            // 直接返回类型声明
+            res.push_back(RegisterDecl::NewObj(qt, seq_->cur()->value_));
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+        else {
+            error("register declaration incomplete!");
+            return res;
+        }
+    }   
+    // 如果是函数声明，直接返回
+    if (qt->isFunctionType()) {
+        res.push_back(FunctionDecl::NewObj(qt, seq_->cur()->value_, sc, fs));
+        seq_->expect(TokenKind::Semicolon_);
+        return res;
+    }
     if (seq_->match(TokenKind::Semicolon_)) {
         res.push_back(qt->getDecl());
         return res;
     }
+    // 如果是变量声明，直接返回
+    if (qt->isObjectType()) {   
+        // 如果是变量声明，直接返回
+        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_VarDecl) {
+            res.push_back(qt->getDecl());
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+    }
+    // 如果是类型声明，直接返回
+    if (qt->isTypeName()) {
+        // 如果是类型声明，直接返回 
+        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_TypedefDecl) {
+            res.push_back(qt->getDecl());
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+    }
+    // 如果是结构体/联合体声明，直接返回
+    if (qt->isStructOrUnionType()) {
+        // 如果是结构体/联合体声明，直接返回
+        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_StructOrUnionDecl) {
+            res.push_back(qt->getDecl());
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+    }
+    // 如果是枚举声明，直接返回
+    if (qt->isEnumType()) {
+        // 如果是枚举声明，直接返回
+        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_EnumDecl) {
+            res.push_back(qt->getDecl());
+            seq_->expect(TokenKind::Semicolon_);
+            return res;
+        }
+    }
+
     // 解析第一个声明符
     res.push_back(parseInitDeclarator(qt, sc, fs));
     if (qt->isFunctionType() && seq_->test(TokenKind::LCurly_Brackets_)) {
@@ -882,6 +1025,11 @@ Decl* Parser::parseInitDeclarator(QualType qt, int sc, int fs)
         parseInitializer();
     }
     return dc;
+}
+
+Declarator parseInitDeclarator(QualType qt, int sc, int fs)
+{
+
 }
 
 void Parser::parseStorageClassSpec(int* sc, TokenKind tk)
@@ -1200,7 +1348,59 @@ Decl* Parser::parseDeclarator(QualType qt, int sc, int fs)
 
 void Parser::parseDirectDeclarator()
 {
- 
+    if (seq_->match(TokenKind::Identifier)) {
+        // 解析标识符
+        seq_->expect(TokenKind::Identifier);
+    }
+    else if (seq_->match(TokenKind::LParent_)) {
+        // 解析括号表达式
+        seq_->expect(TokenKind::LParent_);
+        parseDeclarator(QualType(), 0, 0);
+        seq_->expect(TokenKind::RParent_);
+    }
+    else if (seq_->match(TokenKind::LSquare_Brackets_)) {
+        // 解析数组声明
+        seq_->expect(TokenKind::LSquare_Brackets_);
+        if (seq_->match(TokenKind::RSquare_Brackets_)) {
+            // 数组长度不确定
+            seq_->expect(TokenKind::RSquare_Brackets_);
+        } else {
+            parseConstansExpr();
+            seq_->expect(TokenKind::RSquare_Brackets_);
+        }
+    }
+    else if (seq_->match(TokenKind::LCurly_Brackets_)) {
+        // 解析函数声明
+        seq_->expect(TokenKind::LCurly_Brackets_);
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RCurly_Brackets_);
+    }
+    else {
+        error("expect direct declarator, but not!");
+    }
+    // 解析可选的函数参数列表
+    if (seq_->match(TokenKind::LParent_)) {
+        seq_->expect(TokenKind::LParent_);
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RParent_);  
+    }
+    // 解析可选的数组声明
+    while (seq_->match(TokenKind::LSquare_Brackets_)) {
+        seq_->expect(TokenKind::LSquare_Brackets_);
+        if (seq_->match(TokenKind::RSquare_Brackets_)) {
+            // 数组长度不确定
+            seq_->expect(TokenKind::RSquare_Brackets_);
+        } else {
+            parseConstansExpr();
+            seq_->expect(TokenKind::RSquare_Brackets_); 
+        }
+    }
+    // 解析可选的函数参数列表
+    if (seq_->match(TokenKind::LParent_)) { 
+        seq_->expect(TokenKind::LParent_);
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RParent_);
+    }
 }
 
 /*(6.7.5) pointer:
@@ -1240,7 +1440,26 @@ void Parser::parseParameterList()
 */
 void Parser::parseParameterDeclaration()
 {
-
+    QualType qt = parseDeclarationSpec(nullptr, nullptr);
+    if (seq_->match(TokenKind::Identifier)) {
+        // 解析标识符
+        seq_->expect(TokenKind::Identifier);
+    }
+    else if (seq_->match(TokenKind::LParent_)) {
+        // 解析括号表达式
+        seq_->expect(TokenKind::LParent_);
+        parseDeclarator(qt, 0, 0);
+        seq_->expect(TokenKind::RParent_);
+    }
+    else {
+        parseAbstractDeclarator();
+    }
+    // 解析可选的函数参数列表
+    if (seq_->match(TokenKind::LParent_)) {
+        seq_->expect(TokenKind::LParent_);
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RParent_);
+    }
 }
 
 /* (6.7.5) identifier-list:
@@ -1250,9 +1469,10 @@ void Parser::parseParameterDeclaration()
 void Parser::parseIdentifierList()
 {
     seq_->expect(TokenKind::Identifier);
-    while (seq_->match(TokenKind::Identifier)) {
+    while (seq_->match(TokenKind::Comma_)) {
         seq_->expect(TokenKind::Identifier);
     }
+
 }
 
 /*(6.7.6) type-name:
@@ -1276,7 +1496,36 @@ void Parser::parseAbstractDeclarator()
 
 void Parser::parseDirectAbstractDeclarator()
 {
-
+    if (seq_->match(TokenKind::LParent_)) {
+        seq_->expect(TokenKind::LParent_);
+        parseAbstractDeclarator();
+        seq_->expect(TokenKind::RParent_);
+    }
+    else if (seq_->match(TokenKind::LSquare_Brackets_)) {
+        seq_->expect(TokenKind::LSquare_Brackets_);
+        if (seq_->match(TokenKind::RSquare_Brackets_)) {
+            // 数组长度不确定
+            seq_->expect(TokenKind::RSquare_Brackets_);
+        } else {
+            parseConstansExpr();
+            seq_->expect(TokenKind::RSquare_Brackets_);
+        }
+    }
+    else if (seq_->match(TokenKind::LCurly_Brackets_)) {
+        // 解析函数声明
+        seq_->expect(TokenKind::LCurly_Brackets_);
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RCurly_Brackets_);
+    }
+    else {
+        error("expect direct abstract declarator, but not!");
+    }
+    // 解析可选的函数参数列表
+    if (seq_->match(TokenKind::LParent_)) {
+        seq_->expect(TokenKind::LParent_);
+        parseParameterTypeList();
+        seq_->expect(TokenKind::RParent_);
+    }
 }
 
 /* (6.7.7) typedef-name:

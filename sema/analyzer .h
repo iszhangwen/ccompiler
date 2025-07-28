@@ -16,64 +16,64 @@ class Expr;
 class Stmt;
 class Token;
 
+
 // 使用语法制导翻译方案，翻译过程即完成语义检查过程
 // 语义分析主要有两个作用：AST构建，和语义分析
-class SemaAnalyzer
+class SemaAnalyzer : public Vistor
 {
+private:
+    SymbolTableContext* sys_; // 符号表上下文
 public:
-    /*-----------------------type----------------------------------*/
-    Type* onActBuiltinType(int); 
-    Type* onActDerivedType();
-    Type* onActPointerType(QualType);
-    Type* onActArrayType();
-    Type* onActFunctionType();
-    Type* onActTagType();
-    Type* onActRecordType(bool, Decl*);
-    Type* onActEnumType();
-    Type* onActTypedefType();
+    SemaAnalyzer(SymbolTableContext* sys)
+    : sys_(sys) {}
+    virtual void visit(BuiltinType* bt) override;
+    virtual void visit(PointerType* pt) override;
+    virtual void visit(ArrayType at) override;
+    virtual void visit(FunctionType* ft) override;
+    virtual void visit(RecordType* rt) override;
+    virtual void visit(EnumType* et) override;
+    virtual void visit(TypedefType* tt) override;
     /*-----------------------expression node----------------------------------*/
-    Expr* onActConstant(Token*); 
-    Expr* onActDeclRefExpr(Token*);
-    Expr* onActParenExpr(Expr*);
-    Expr* onActBinaryOpExpr(Expr*, Expr*, int);
-    Expr* onActConditionalExpr(Expr*, Expr*, Expr*);;
-    Expr* onActCompoundLiteralExpr();
-    Expr* onActCastExpr(QualType&, Expr*);
-    Expr* onActArraySubscriptExpr(Expr*,Expr*);
-    Expr* onActCallExpr(Expr*, Expr*);
-    Expr* onActMemberExpr(Expr*, Expr*, bool);
-    Expr* onActUnaryOpExpr(Expr*, int);
+    virtual void visit(Constant* c) override;
+    virtual void visit(DeclRefExpr* dre) override;
+    virtual void visit(ParenExpr* pe) override;
+    virtual void visit(BinaryOpExpr* boe) override;
+    virtual void visit(ConditionalExpr* ce) override;
+    virtual void visit(CompoundLiteralExpr* cle) override;
+    virtual void visit(CastExpr* ce) override;
+    virtual void visit(ArraySubscriptExpr* ase) override;
+    virtual void visit(CallExpr* ce) override;
+    virtual void visit(MemberExpr* me) override;
+    virtual void visit(UnaryOpExpr* uoe) override;
     /*-----------------------Declarations node----------------------------------*/
-    TranslationUnitDecl* onActTranslationUnitDecl(DeclGroup);
-    Decl* onActNamedDecl();
-    Decl* onActLabelDecl();
-    Decl* onActValueDecl();
-    Decl* onActDeclaratorDecl();
-    Decl* onActVarDecl();
-    Decl* onActParmVarDecl();
-    Decl* onActFunctionDecl(); 
-    Decl* onActFieldDecl(Symbol* id, QualType ty, Decl* parent, unsigned offset);
-    Decl* onActEnumConstantDecl(Symbol* id, Expr* ex);
-    Decl* onActIndirectFieldDecl(); 
-    Decl* onActTypeDecl();
-    Decl* onActTypedefNameDecl();
-    Decl* onActTypedefDecl();
-    Decl* onActEnumDecl(Symbol* id, bool isDefinition); 
-    Decl* onActRecordDecl(Symbol* id, bool isDefinition, bool isStruct);
+    virtual void visit(TranslationUnitDecl* tud) override;
+    virtual void visit(LabelDecl* ld) override;
+    virtual void visit(ValueDecl* vd) override;
+    virtual void visit(DeclaratorDecl* dd) override;
+    virtual void visit(VarDecl* vd) override;
+    virtual void visit(ParmVarDecl* pvd) override;
+    virtual void visit(FunctionDecl* fd) override;
+    virtual void visit(FieldDecl* fd) override;
+    virtual void visit(EnumConstantDecl* ecd) override;
+    virtual void visit(IndirectFieldDecl* ifd) override;
+    virtual void visit(TypedefNameDecl* tnd) override;
+    virtual void visit(EnumDecl* ed) override;
+    virtual void visit(RecordDecl* rd) override;
     /*-----------------------statemnts node----------------------------------*/
-    Stmt* onActLabelStmt();
-    Stmt* onActCaseStmt();
-    Stmt* onActDefaultStmt();
-    Stmt* onActCompoundStmt(); 
-    Stmt* onActDeclStmt();
-    Stmt* onActExprStmt();
-    Stmt* onActIfStmt();
-    Stmt* onActSwitchStmt();
-    Stmt* onActWhileStmt();
-    Stmt* onActDoStmt();
-    Stmt* onActForStmt();
-    Stmt* onActGotoStmt(); 
-    Stmt* onActContinueStmt();
-    Stmt* onActBreakStmt();
-    Stmt* onActReturnStmt(); 
+    virtual void visit(LabelStmt* ls) override;
+    virtual void visit(CaseStmt* cs) override;
+    virtual void visit(DefaultStmt* ds) override;
+    virtual void visit(CompoundStmt* cs) override;
+    virtual void visit(DeclStmt* ds) override;
+    virtual void visit(ExprStmt* es) override;
+    virtual void visit(IfStmt* is) override;
+    virtual void visit(SwitchStmt* ss) override;
+    virtual void visit(WhileStmt* ws) override;
+    virtual void visit(DoStmt* ds) override;
+    virtual void visit(ForStmt* fs) override;
+    virtual void visit(GotoStmt* gs) override;
+    virtual void visit(ContinueStmt* cs) override;
+    virtual void visit(BreakStmt* bs) override;
+    virtual void visit(ReturnStmt* rs) override;    
+
 };
