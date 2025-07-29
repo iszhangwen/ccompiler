@@ -5,14 +5,6 @@
 class Expr;
 class Decl;
 class Stmt;
-class ASTVisitor;
-class IntegerType;
-class PointerType;
-class ArrayType;
-class FunctionType;
-class RecordType;
-class EnumType;
-class TypedefType;
 class TranslationUnitDecl;
 class LabelDecl;
 class NamedDecl;
@@ -26,7 +18,7 @@ class EnumConstantDecl;
 class EnumDecl;
 class RecordDecl;
 class IndirectFieldDecl;
-class TypedefNameDecl;
+class TypedefDecl;
 class LabelStmt;
 class CaseStmt;
 class DefaultStmt;
@@ -57,6 +49,58 @@ class CallExpr;
 class MemberExpr;
 class UnaryOpExpr;
 class SymbolTableContext;
+
+class ASTVisitor
+{
+public:
+    virtual ~ASTVisitor() = default;
+    // 访问翻译单元节点
+    virtual void visit(TranslationUnitDecl* tud) = 0;
+    // 访问申明节点
+    virtual void visit(LabelDecl* ld) = 0;
+    virtual void visit(ValueDecl* vd) = 0;
+    virtual void visit(DeclaratorDecl* dd) = 0;
+    virtual void visit(VarDecl* vd) = 0;
+    virtual void visit(ParmVarDecl* pvd) = 0;
+    virtual void visit(FunctionDecl* fd) = 0;
+    virtual void visit(FieldDecl* fd) = 0;
+    virtual void visit(EnumConstantDecl* ecd) = 0;
+    virtual void visit(IndirectFieldDecl* ifd) = 0;
+    virtual void visit(TypedefDecl* tnd) = 0;
+    virtual void visit(EnumDecl* ed) = 0;
+    virtual void visit(RecordDecl* rd) = 0;
+    // 访问语句节点
+    virtual void visit(LabelStmt* ls) = 0;
+    virtual void visit(CaseStmt* cs) = 0;
+    virtual void visit(DefaultStmt* ds) = 0;
+    virtual void visit(CompoundStmt* cs) = 0;
+    virtual void visit(DeclStmt* ds) = 0;
+    virtual void visit(ExprStmt* es) = 0;
+    virtual void visit(IfStmt* is) = 0;
+    virtual void visit(SwitchStmt* ss) = 0;
+    virtual void visit(WhileStmt* ws) = 0;
+    virtual void visit(DoStmt* ds) = 0;
+    virtual void visit(ForStmt* fs) = 0;
+    virtual void visit(GotoStmt* gs) = 0;
+    virtual void visit(ContinueStmt* cs) = 0;
+    virtual void visit(BreakStmt* bs) = 0;
+    virtual void visit(ReturnStmt* rs) = 0;
+    // 访问表达式节点
+    virtual void visit(IntegerLiteral* c) = 0;
+    virtual void visit(FloatingLiteral* c) = 0;
+    virtual void visit(CharacterLiteral* c) = 0;
+    virtual void visit(StringLiteral* c) = 0;
+    virtual void visit(DeclRefExpr* dre) = 0;
+    virtual void visit(ParenExpr* pe) = 0;
+    virtual void visit(BinaryOpExpr* boe) = 0;
+    virtual void visit(ConditionalExpr* ce) = 0;
+    virtual void visit(CompoundLiteralExpr* cle) = 0;
+    virtual void visit(CastExpr* ce) = 0;
+    virtual void visit(ArraySubscriptExpr* ase) = 0;
+    virtual void visit(CallExpr* ce) = 0;
+    virtual void visit(MemberExpr* me) = 0;
+    virtual void visit(UnaryOpExpr* uoe) = 0;
+};
 
 class AstNode {
 public:
@@ -142,72 +186,6 @@ public:
 
 private:
     NodeKind kind_;
-};
-
-class ASTVisitor
-{
-public:
-    virtual ~ASTVisitor() = default;
-    // 访问翻译单元节点
-    virtual void visit(TranslationUnitDecl* tud) = 0;
-    // 访问申明节点
-    virtual void visit(LabelDecl* ld) = 0;
-    virtual void visit(ValueDecl* vd) = 0;
-    virtual void visit(DeclaratorDecl* dd) = 0;
-    virtual void visit(VarDecl* vd) = 0;
-    virtual void visit(ParmVarDecl* pvd) = 0;
-    virtual void visit(FunctionDecl* fd) = 0;
-    virtual void visit(FieldDecl* fd) = 0;
-    virtual void visit(EnumConstantDecl* ecd) = 0;
-    virtual void visit(IndirectFieldDecl* ifd) = 0;
-    virtual void visit(TypedefNameDecl* tnd) = 0;
-    virtual void visit(EnumDecl* ed) = 0;
-    virtual void visit(RecordDecl* rd) = 0;
-    // 访问语句节点
-    virtual void visit(LabelStmt* ls) = 0;
-    virtual void visit(CaseStmt* cs) = 0;
-    virtual void visit(DefaultStmt* ds) = 0;
-    virtual void visit(CompoundStmt* cs) = 0;
-    virtual void visit(DeclStmt* ds) = 0;
-    virtual void visit(ExprStmt* es) = 0;
-    virtual void visit(IfStmt* is) = 0;
-    virtual void visit(SwitchStmt* ss) = 0;
-    virtual void visit(WhileStmt* ws) = 0;
-    virtual void visit(DoStmt* ds) = 0;
-    virtual void visit(ForStmt* fs) = 0;
-    virtual void visit(GotoStmt* gs) = 0;
-    virtual void visit(ContinueStmt* cs) = 0;
-    virtual void visit(BreakStmt* bs) = 0;
-    virtual void visit(ReturnStmt* rs) = 0;
-    // 访问表达式节点
-    virtual void visit(IntegerLiteral* c) = 0;
-    virtual void visit(FloatingLiteral* c) = 0;
-    virtual void visit(CharacterLiteral* c) = 0;
-    virtual void visit(StringLiteral* c) = 0;
-    virtual void visit(DeclRefExpr* dre) = 0;
-    virtual void visit(ParenExpr* pe) = 0;
-    virtual void visit(BinaryOpExpr* boe) = 0;
-    virtual void visit(ConditionalExpr* ce) = 0;
-    virtual void visit(CompoundLiteralExpr* cle) = 0;
-    virtual void visit(CastExpr* ce) = 0;
-    virtual void visit(ArraySubscriptExpr* ase) = 0;
-    virtual void visit(CallExpr* ce) = 0;
-    virtual void visit(MemberExpr* me) = 0;
-    virtual void visit(UnaryOpExpr* uoe) = 0;
-};
-
-class TypeVisitor
-{
-public:
-    virtual ~TypeVisitor() = default;
-    // 访问类型节点
-    virtual void visit(IntegerType* bt) = 0;
-    virtual void visit(PointerType* pt) = 0;
-    virtual void visit(ArrayType at) = 0;
-    virtual void visit(FunctionType* ft) = 0;
-    virtual void visit(RecordType* rt) = 0;
-    virtual void visit(EnumType* et) = 0;
-    virtual void visit(TypedefType* tt) = 0;
 };
 
 // 声明说明符

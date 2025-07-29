@@ -18,14 +18,14 @@ bool Type::isBoolType()
 bool Type::isSignedIntegerType()
 {
     if (getKind() == Type::INTEGER) {
-        return dynamic_cast<Integer*>(this)->isSigned();
+        return dynamic_cast<IntegerType*>(this)->isSigned();
     }
     return false;
 }
 bool Type::isUnSignedIntegerType()
 {
     if (getKind() == Type::INTEGER) {
-        return !dynamic_cast<Integer*>(this)->isSigned();
+        return !dynamic_cast<IntegerType*>(this)->isSigned();
     }
     return false;
 }
@@ -41,7 +41,7 @@ bool Type::isComplexType()
 }
 bool Type::isFloatingType()
 {
-    return (isRealFloatingType() || isComplexType);
+    return (isRealFloatingType() || isComplexType());
 }
 // 6.2.5-14
 bool Type::isBasicType()
@@ -128,7 +128,7 @@ VoidType* VoidType::NewObj()
 }
 
 IntegerType::IntegerType(int ts)
-: Type(Type::ARITHMETIC, QualType())
+: Type(Type::INTEGER, QualType())
 {
     // 解析类别
     kind_ = (ts & TypeSpecifier::VOID) 
@@ -186,6 +186,7 @@ TypedefType* TypedefType::NewObj(TypedefDecl *dc, QualType qt)
 {
     return new TypedefType(dc, qt );
 }
+
 
 
 

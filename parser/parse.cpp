@@ -886,8 +886,8 @@ DeclGroup Parser::parseDeclaration()
             return res;
         }
     }
-    // 如果是结构体/联合体声明，直接返回
-    if (qt->isStructOrUnionType()) {
+    // 如果是结构体/联合体声明，直接返回TRUE
+    if (1) {
         // 如果是结构体/联合体声明，直接返回
         if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_StructOrUnionDecl) {
             res.push_back(qt->getDecl());
@@ -896,7 +896,7 @@ DeclGroup Parser::parseDeclaration()
         }
     }
     // 如果是枚举声明，直接返回
-    if (qt->isEnumType()) {
+    if (qt->isEnumeratedType()) {
         // 如果是枚举声明，直接返回
         if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_EnumDecl) {
             res.push_back(qt->getDecl());
@@ -1090,7 +1090,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
             return parseStructDeclarationList(sym);
         }
         // 符号表查找到了但是类型定义不完整：存在前向声明
-        else if (sym->getType()->isIncompleteType()) {
+        else if (!sym->getType()->isCompleteType()) {
             return parseStructDeclarationList(sym);
         }
         // 符号表查找到了并且类型定义完整：重复定义
@@ -1128,7 +1128,7 @@ Type* Parser::parseStructDeclarationList(Symbol* sym)
         return nullptr;
     }
     RecordType* ty = dynamic_cast<RecordType*>(sym->getType());
-    RecordDecl* dc = RecordDecl::NewObj(sym, true, ty->isStruct());
+    RecordDecl* dc = RecordDecl::NewObj(sym, true, ty->isStructType());
     do {
         QualType qt = parseSpecQualList();
         DeclGroup path = parseStructDeclaratorList(qt, dc);
@@ -1204,7 +1204,7 @@ Type* Parser::parseEnumSpec()
             return parseEnumeratorList(nullptr, ty);
         }
         // 符号表查找到了但是未定义
-        else if (sym->getType()->isIncompleteType()) {
+        else if (!sym->getType()->isCompleteType()) {
             Type* ty = sym->getType();
             return parseEnumeratorList(sym, ty);
         }

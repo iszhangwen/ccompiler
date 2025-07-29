@@ -1,5 +1,6 @@
 #pragma once
 #include "ast.h"
+#include "type.h"
 #include <token.h>
 
 /* (6.8) statement:
@@ -192,27 +193,6 @@ public:
     void setElse(Stmt* el) {
         else_ = el;
     }
-    // 获取条件表达式的类型
-    QualType getCondType() const {
-        if (cond_) {
-            return cond_->getType();
-        }
-        return QualType(); // 如果没有条件表达式，返回空类型
-    }
-    // 获取then语句的类型
-    QualType getThenType() const {
-        if (then_) {
-            return then_->getType();
-        }
-        return QualType(); // 如果没有then语句，返回空类型
-    }
-    // 获取else语句的类型
-    QualType getElseType() const {
-        if (else_) {
-            return else_->getType();
-        }
-        return QualType(); // 如果没有else语句，返回空类型
-    }
 };
 
 class SwitchStmt : public Stmt 
@@ -235,20 +215,6 @@ public:
     }
     void setStmt(Stmt* val) {
         val_ = val;
-    }
-    // 获取条件表达式的类型
-    QualType getCondType() const {
-        if (cond_) {
-            return cond_->getType();
-        }
-        return QualType(); // 如果没有条件表达式，返回空类型
-    }
-    // 获取语句的类型
-    QualType getStmtType() const {
-        if (val_) {
-            return val_->getType();
-        }
-        return QualType(); // 如果没有语句，返回空类型
     }
 };
 
@@ -276,19 +242,9 @@ public:
         val_ = val;
     }
     // 获取条件表达式的类型
-    QualType getCondType() const {
-        if (cond_) {
-            return cond_->getType();
-        }
-        return QualType(); // 如果没有条件表达式，返回空类型
-    }
+    QualType getCondType() const;
     // 获取语句的类型
-    QualType getStmtType() const {
-        if (val_) {
-            return val_->getType();
-        }
-        return QualType(); // 如果没有语句，返回空类型
-    }
+    QualType getStmtType();
 };
 
 class DoStmt : public Stmt 
@@ -343,13 +299,6 @@ public:
     void setLabel(Stmt* lb) {
         label_ = lb;
     }
-    // 获取标签的类型
-    QualType getLabelType() const {
-        if (label_) {
-            return label_->getType();
-        }
-        return QualType(); // 如果没有标签，返回空类型
-    }
 };
 
 class ContinueStmt : public Stmt 
@@ -366,13 +315,6 @@ public:
     void setLabel(Stmt* lb) {
         label_ = lb;
     }
-    // 获取标签的类型
-    QualType getLabelType() const {
-        if (label_) {
-            return label_->getType();
-        }
-        return QualType(); // 如果没有标签，返回空类型
-    }
 };
 
 class BreakStmt : public Stmt 
@@ -388,13 +330,6 @@ public:
     }
     void setLabel(Stmt* lb) {
         label_ = lb;
-    }
-    // 获取标签的类型
-    QualType getLabelType() const {
-        if (label_) {
-            return label_->getType();
-        }
-        return QualType(); // 如果没有标签，返回空类型
     }
 };
 
@@ -413,10 +348,5 @@ public:
         retVal_ = retVal;
     }
     // 获取返回值表达式的类型
-    QualType getReturnType() const {
-        if (retVal_) {
-            return retVal_->getType();
-        }
-        return QualType(); // 如果没有返回值，返回空类型
-    }
+    QualType getReturnType() const;
 };

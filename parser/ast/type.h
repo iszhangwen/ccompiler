@@ -21,6 +21,7 @@
 #include <assert.h>
 #include "ast.h"
 
+class Type;
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
 class QualType 
 {
@@ -29,16 +30,17 @@ class QualType
 public:
     // 构造函数
     QualType() {}
-    QualType(const Type *ptr, unsigned qual=0x00)
+    QualType(Type *ptr, unsigned qual=0x00)
         :ty_(ptr) {
         // 校验类型限定符的合法性
         assert((qual & ~TypeQualifier::TQ_MASK) == 0);
-        ptr_ |= qual;
+        ql_ |= qual;
     }
 
     // 获取类型指针
-    bool isNull() const {return getPtr() == nullptr;}
-    Type *getPtr() {return ty_);}
+    bool isNull() const {return (nullptr == getPtr());}
+    Type *getPtr() {return ty_;}
+    const Type *getPtr() const {return ty_;}
     
     // 运算符重载: 
     // 隐式类型转换: 用于在布尔上下文环境中表达
@@ -46,6 +48,7 @@ public:
     // 解引用运算符重载
     Type &operator*() {return *getPtr();}
     const Type &operator*() const {return *getPtr();}
+    
     // 箭头运算符重载：箭头运算符是双目运算符
     Type *operator->() {return getPtr();}
     const Type *operator->() const{return getPtr();}
@@ -101,7 +104,7 @@ public:
     QualType getQualType() {return canonicalType_;}
 
     // 判断当前类型是否是规范类型
-    bool isCanonical() const { return canonicalType_.getPtr() == this; }
+    bool isCanonical() { return canonicalType_.getPtr() == this; }
         Decl* getDecl() {return nullptr;}
     void setCompleteType(bool complete) {isComplete_ = complete;}
 
@@ -156,7 +159,7 @@ public:
 class VoidType : public Type
 {
 protected:
-    VoidType(){}
+    VoidType();
 public:
     static VoidType* NewObj();
 };
@@ -165,7 +168,7 @@ public:
 class BoolType : public Type
 {
 protected:
-    BoolType(){}
+    BoolType();
 public:
     static BoolType* NewObj();
 };
@@ -191,7 +194,7 @@ public:
 class RealFloatingType : public Type
 {
 protected:
-    RealFloatingType(){}
+    RealFloatingType();
 public:
     static RealFloatingType* NewObj();
 };
@@ -238,13 +241,8 @@ public:
     bool isConstPointer() const {return canonicalType_.isConstQual();}
     bool isVolatilePointer() const {return canonicalType_.isVolatileQual();}
     bool isRestrictPointer() const {return canonicalType_.isRestrictQual();}
-    bool isPointerType() const {return true;}
-    bool isIncompleteType() const {return canonicalType_.getPtr()->isIncompleteType();}
-    bool isObjectType() const {return canonicalType_.getPtr()->isObjectType();}
-    bool isFunctionType() const {return canonicalType_.getPtr()->isFunctionType();}
     Decl* getDecl() {return canonicalType_.getPtr()->getDecl();}
     // 获取指针指向的类型
-    QualType getPointee() const {return canonicalType_.getPtr();}
     // 获取指针类型的规范类型
     QualType getCanonicalType() const {return canonicalType_;}
 };
@@ -274,19 +272,9 @@ public:
     static ArrayType* NewObj(QualType can, Expr* lenExpr);
     void setLen(unsigned len) {len_ = len;}
     unsigned getLen() const {return len_;}
-    QualType getElementType() const {return getTy;}
     bool isStarArray() const {return lenExpr_ != nullptr;}
     bool isStaticArray() const {return len_ > 0;}
     bool isNormalArray() const {return len_ > 0 && lenExpr_ == nullptr;}
-    bool isArrayType() const {return true;}
-    bool isIncompleteType() const {return len_ == 0 && lenExpr_ == nullptr;}
-    bool isObjectType() const {return canonicalType_.getPtr()->isObjectType();}
-    bool isFunctionType() const {return canonicalType_.getPtr()->isFunctionType();}
-    Decl* getDecl() {return canonicalType_.getPtr()->getDecl();}
-    // 获取数组元素类型
-    QualType getElement() const {return canonicalType_.getPtr();}
-    // 获取数组类型的规范类型
-    QualType getCanonicalType() const {return canonicalType_;}
 };
 
 class FunctionType : public DerivedType {
@@ -313,20 +301,6 @@ public:
     // 获取函数类型的规范类型
     QualType getCanonicalType() const {return canonicalType_;}
     // 获取函数返回值类型
-    QualType getReturnType() const {
-        if (params_.empty()) {
-            return QualType(); // 如果没有参数，返回空类型
-        }
-        return params_.front()->getQualType(); // 假设第一个参数是返回值类型
-    }
-    // 获取函数参数类型列表
-    std::vector<QualType> getParamTypes() const {
-        std::vector<QualType> paramTypes;
-        for (const auto& param : params_) {
-            paramTypes.push_back(param->getQualType());
-        }
-        return paramTypes;
-    }
 };
 
 /*------------------------------结构体和枚举类型----------------------------------------------*/
@@ -364,6 +338,7 @@ public:
 
 /*--------------------------typedef定义的类型别名--------------------------------------*/
 class TypedefType : public Type {
+private:
     TypedefDecl *decl_;
 protected:
     TypedefType(TypedefDecl *decl, QualType qt) 
@@ -372,5 +347,5 @@ protected:
 public:
     static TypedefType* NewObj(TypedefDecl *decl, QualType can);
     TypedefDecl *getDecl() const { return decl_; }
-    void setDecl(TypedefDecl *decl) { decl_ = decl; }
+    void setDecl(TypedefDecl *dc) { decl_ = dc; }
 };

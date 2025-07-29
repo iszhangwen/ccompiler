@@ -16,7 +16,7 @@
 #pragma once
 #include "ast.h"
 #include "type.h"
-#include "../lexer/token.h"
+#include <token.h>
 
 class Symbol;
 

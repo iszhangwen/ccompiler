@@ -39,7 +39,7 @@ public:
     virtual void visit(FieldDecl* fd) override;
     virtual void visit(EnumConstantDecl* ecd) override;
     virtual void visit(IndirectFieldDecl* ifd) override;
-    virtual void visit(TypedefNameDecl* tnd) override;
+    virtual void visit(TypedefDecl* tnd) override;
     virtual void visit(EnumDecl* ed) override;
     virtual void visit(RecordDecl* rd) override;
     /*-----------------------statemnts node----------------------------------*/

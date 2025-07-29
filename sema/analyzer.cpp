@@ -256,7 +256,7 @@ void SemaAnalyzer::visit(IndirectFieldDecl* ifd)
     }
 }
 
-void SemaAnalyzer::visit(TypedefNameDecl* tnd)
+void SemaAnalyzer::visit(TypedefDecl* tnd)
 {
     // 处理类型定义名称声明
     if (tnd) {

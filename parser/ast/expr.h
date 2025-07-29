@@ -1,6 +1,5 @@
 #pragma once
 #include "stmt.h"
-#include "type.h"
 
 class Expr : public Stmt
 {

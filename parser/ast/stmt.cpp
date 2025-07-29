@@ -70,9 +70,9 @@ BreakStmt* BreakStmt::NewObj(Stmt* label)
     return new BreakStmt(label);
 }
 
-ReturnStmt* ReturnStmt::NewObj(Stmt* label)
+ReturnStmt* ReturnStmt::NewObj(Expr* retVal)
 {
-    return new ReturnStmt(label);
+    return new ReturnStmt(retVal);
 }
 
 
