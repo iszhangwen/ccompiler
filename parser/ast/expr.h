@@ -29,6 +29,9 @@ public:
     NamedDecl* getNameDecl() const {
         return decl_;
     }
+    void setNameDecl(NamedDecl* dc) {
+        decl_ = dc;
+    }
 };
 
 class IntegerLiteral : public Expr 

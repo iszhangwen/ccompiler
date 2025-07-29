@@ -1,81 +1,36 @@
-#include "sema.h"
-#include <ast/decl.h>
-#include <ast/expr.h>
-#include <ast/stmt.h>
-#include <ast/type.h>
+#include "analyzer.h"
 
-
-void SemaAnalyzer::visit(BuiltinType* bt)
+void SemaAnalyzer::visit(IntegerLiteral* c)
 {
-    // 处理内置类型
-    if (bt) {
-        // 在这里可以添加对内置类型的处理逻辑
-        // 例如，记录内置类型的符号等v
-        // bt->getSymbol()->setType(bt);
+    // 处理常量表达式
+    if (c) {
+        // 在这里可以添加对常量表达式的处理逻辑
+        // 例如，记录常量的值等
+        // c->getSymbol()->setValue(c->getValue());
     }
 }
 
-void SemaAnalyzer::visit(PointerType* pt)
+void SemaAnalyzer::visit(FloatingLiteral* c)
 {
-    // 处理指针类型
-    if (pt) {
-        // 在这里可以添加对指针类型的处理逻辑
-        // 例如，记录指针类型的符号等
-        // pt->getSymbol()->setType(pt);
+    // 处理常量表达式
+    if (c) {
+        // 在这里可以添加对常量表达式的处理逻辑
+        // 例如，记录常量的值等
+        // c->getSymbol()->setValue(c->getValue());
     }
 }
 
-void SemaAnalyzer::visit(ArrayType at)
+void SemaAnalyzer::visit(CharacterLiteral* c)
 {
-    // 处理数组类型
-    if (at) {
-        // 在这里可以添加对数组类型的处理逻辑
-        // 例如，记录数组类型的符号等
-        // at->getSymbol()->setType(at);
+    // 处理常量表达式
+    if (c) {
+        // 在这里可以添加对常量表达式的处理逻辑
+        // 例如，记录常量的值等
+        // c->getSymbol()->setValue(c->getValue());
     }
 }
 
-void SemaAnalyzer::visit(FunctionType* ft)
-{
-    // 处理函数类型
-    if (ft) {
-        // 在这里可以添加对函数类型的处理逻辑
-        // 例如，记录函数类型的符号等
-        // ft->getSymbol()->setType(ft);
-    }
-}
-
-void SemaAnalyzer::visit(RecordType* rt)
-{
-    // 处理记录类型
-    if (rt) {
-        // 在这里可以添加对记录类型的处理逻辑
-        // 例如，记录记录类型的符号等
-        // rt->getSymbol()->setType(rt);
-    }
-}
-
-void SemaAnalyzer::visit(EnumType* et)
-{
-    // 处理枚举类型
-    if (et) {
-        // 在这里可以添加对枚举类型的处理逻辑
-        // 例如，记录枚举类型的符号等
-        // et->getSymbol()->setType(et);
-    }
-}
-
-void SemaAnalyzer::visit(TypedefType* tt)
-{
-    // 处理类型定义
-    if (tt) {
-        // 在这里可以添加对类型定义的处理逻辑
-        // 例如，记录类型定义的符号等
-        // tt->getSymbol()->setType(tt);
-    }
-}
-
-void SemaAnalyzer::visit(Constant* c)
+void SemaAnalyzer::visit(StringLiteral* c)
 {
     // 处理常量表达式
     if (c) {
@@ -183,7 +138,7 @@ void SemaAnalyzer::visit(MemberExpr* me)
     }
 }
 
-void SemaAnalyzer::visit(UnaryOpExpr* uoe)
+void SemaAnalyzer::visit(UnaryOpExpr* uoe) 
 {
     // 处理一元操作表达式
     if (uoe) {

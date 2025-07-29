@@ -12,10 +12,6 @@
  按照C99文法定义，按照以上语句类型划分AST节点类型
 */
 
-class Expr;
-class Decl;
-class NamedDecl;
-
 /*------------------------------基类--------------------------------------------------*/
 class Stmt : public AstNode {
 public:
@@ -147,14 +143,7 @@ public:
     }
     void setDecl(Decl* dc) {
         dc_ = dc;
-    }
-    // 获取声明的类型
-    QualType getDeclType() const {
-        if (dc_) {
-            return dc_->getQualType();
-        }
-        return QualType(); // 如果没有声明，返回空类型
-    }   
+    } 
 };
 
 /*------------------------------表达式语句------------------------------------------------*/
@@ -170,13 +159,6 @@ public:
     }
     void setExpr(Expr* ex) {
         ex_ = ex;
-    }
-    // 获取表达式的类型
-    QualType getExprType() const {
-        if (ex_) {
-            return ex_->getType();
-        }
-        return QualType(); // 如果没有表达式，返回空类型
     }
 };
 

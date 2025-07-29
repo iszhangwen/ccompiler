@@ -182,7 +182,7 @@ Expr* Parser::parsePrimaryExpr()
             error("symbol undefined!");
             return nullptr;
         }
-        NamedDecl* dc = sym->getNamedDecl();
+        NamedDecl* dc = sym->getDecl();
         if (!dc) {
             error("symbol declaration undefined!");
             return nullptr;
@@ -955,7 +955,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         case TokenKind::Long:
             ParseTypeSpec()(tss, &ts, seq_->cur()->kind_);
             if (tss == ParseTypeSpec::FOUND_TYPE) {
-                ty = BuiltinType::NewObj(ts);
+                ty = IntegerType::NewObj(ts);
             } else if (tss == ParseTypeSpec::ERROR) {
                 error("error type specifier!");
             }

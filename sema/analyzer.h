@@ -4,37 +4,20 @@
 #include <vector>
 #include "ast/ast.h"
 
-class Scope;
-class Symbol; 
-class Decl;
-class TranslationUnitDecl;
-class FunctionDecl;
-class VarDecl;
-class Type;
-class QualType;
-class Expr;
-class Stmt;
-class Token;
-
 
 // 使用语法制导翻译方案，翻译过程即完成语义检查过程
 // 语义分析主要有两个作用：AST构建，和语义分析
-class SemaAnalyzer : public Vistor
+class SemaAnalyzer : public ASTVisitor 
 {
 private:
     SymbolTableContext* sys_; // 符号表上下文
 public:
-    SemaAnalyzer(SymbolTableContext* sys)
-    : sys_(sys) {}
-    virtual void visit(BuiltinType* bt) override;
-    virtual void visit(PointerType* pt) override;
-    virtual void visit(ArrayType at) override;
-    virtual void visit(FunctionType* ft) override;
-    virtual void visit(RecordType* rt) override;
-    virtual void visit(EnumType* et) override;
-    virtual void visit(TypedefType* tt) override;
+    SemaAnalyzer(SymbolTableContext* sys): sys_(sys) {}
     /*-----------------------expression node----------------------------------*/
-    virtual void visit(Constant* c) override;
+    virtual void visit(IntegerLiteral* c) override;
+    virtual void visit(FloatingLiteral* c) override;
+    virtual void visit(CharacterLiteral* c) override;
+    virtual void visit(StringLiteral* c) override;
     virtual void visit(DeclRefExpr* dre) override;
     virtual void visit(ParenExpr* pe) override;
     virtual void visit(BinaryOpExpr* boe) override;
@@ -75,5 +58,4 @@ public:
     virtual void visit(ContinueStmt* cs) override;
     virtual void visit(BreakStmt* bs) override;
     virtual void visit(ReturnStmt* rs) override;    
-
 };

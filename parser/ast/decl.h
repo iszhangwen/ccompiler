@@ -18,10 +18,7 @@
 #include "type.h"
 #include "../lexer/token.h"
 
-class Expr;
-class Stmt;
 class Symbol;
-class RecordDecl;
 
 class Declarator
 {
@@ -55,22 +52,13 @@ public:
     static Declarator* NewObj(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs) {
         return new Declarator(dk, name, type, sc, fs);
     }
-    static Declarator* NewObj(DeclaratorKind dk, const std::string& name, QualType type) {
-        return new Declarator(dk, name, type, 0, 0);
-    }
-    static Declarator* NewObj(DeclaratorKind dk, const std::string& name) {
-        return new Declarator(dk, name, QualType(), 0, 0);
-    }
-    static Declarator* NewObj(DeclaratorKind dk) {
-        return new Declarator(dk, "", QualType(), 0, 0);
-    }
 };
 
 class Decl : public AstNode
 {
 public:
     virtual ~Decl(){};
-    virtual void accept(std::shared_ptr<Vistor> vt) {}
+    virtual void accept(std::shared_ptr<ASTVisitor> vt) {}
 
 protected:
     Decl(NodeKind nk): AstNode(nk) {}
@@ -262,7 +250,7 @@ protected:
 public:
     static EnumDecl* NewObj(Symbol* id, bool isDefinition);
     void addConstant(EnumConstantDecl* constant) {constants_.push_back(constant); }
-    DeclGroup getConstants() {return constants_; }
+    DeclGroup getConstants() {return constants_;}
 };
 
 class RecordDecl : public TagDecl 

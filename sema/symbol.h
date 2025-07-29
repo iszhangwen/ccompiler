@@ -45,8 +45,8 @@ public:
     Type* getType() { return ty_;}
     void setType(Type* ty) {ty_ = ty;}
 
-    NamedDecl* getNamedDecl() { return dc_;}
-    void setNamedDecl(NamedDecl* dc) {dc_ = dc;}
+    NamedDecl* getDecl() { return dc_;}
+    void setDecl(NamedDecl* dc) {dc_ = dc;}
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 
@@ -96,5 +96,5 @@ public:
     void exitScope();
 
     // 类型检测
-    bool isTypeName(Token*);
+    bool isTypeName(Token*) {return true;}
 };
