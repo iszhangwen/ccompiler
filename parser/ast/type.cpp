@@ -1,4 +1,5 @@
 #include "type.h"
+#include "decl.h"
 
 bool Type::isObjectType()
 {
@@ -161,18 +162,29 @@ FunctionType* FunctionType::NewObj(QualType qt, bool isInline, bool isNoReturn, 
 {
     return new FunctionType(qt, isInline, isNoReturn, params);
 }
-RecordType* RecordType::NewObj(bool isStruct, Decl *dc)
+
+RecordType::RecordType(TagDecl* dc, bool isStruct)
+: TagType(isStruct ? Type::STRUCT : Type::UNION, dc)
 {
-    TypeKind tk = isStruct ? Type::STRUCT : Type::UNION;
-    return new RecordType(tk, dc);
 }
-EnumType* EnumType::NewObj(Decl *dc)
+
+RecordType* RecordType::NewObj(TagDecl* dc, bool isStruct)
+{
+    return new RecordType(dc, isStruct ? Type::STRUCT : Type::UNION);
+}
+
+EnumType::EnumType(EnumDecl* dc)
+: TagType(Type::ENUM, dc)
+{
+}
+
+EnumType* EnumType::NewObj(EnumDecl *dc)
 {
     return new EnumType(dc);
 }
-TypedefType* TypedefType::NewObj(TypedefDecl *dc, QualType qt)
+TypedefType* TypedefType::NewObj(QualType qt, TypedefDecl *dc)
 {
-    return new TypedefType(dc, qt );
+    return new TypedefType(qt, dc);
 }
 
 

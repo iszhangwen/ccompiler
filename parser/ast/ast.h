@@ -16,6 +16,7 @@ class FunctionDecl;
 class FieldDecl;
 class EnumConstantDecl;
 class EnumDecl;
+class TagDecl;
 class RecordDecl;
 class IndirectFieldDecl;
 class TypedefDecl;

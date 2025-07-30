@@ -32,9 +32,7 @@ protected:
 public:
     static LabelStmt* NewObj(NamedDecl* key, Stmt* val);
 
-    NamedDecl* getLabel() {
-        return key_;
-    }
+    NamedDecl* getLabel() {return key_;}
     void setLabel(NamedDecl* key) {
         key_ = key;
     }

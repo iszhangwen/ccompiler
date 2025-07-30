@@ -1015,7 +1015,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
     if (seq_->match(TokenKind::LCurly_Brackets_)) {
         // 符号表没查找到:第一次定义
         if (!sym) {
-            Type* ty = RecordType::NewObj(isStruct, nullptr);
+            Type* ty = nullptr;//RecordType::NewObj(isStruct, nullptr);
             if (!key.empty()) { // 匿名对象不插入符号表
                 sym = sys_->insertRecord(key, ty, nullptr);
             }
@@ -1041,7 +1041,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
     if (sym) {
         return sym->getType();
     }
-    Type* ty = RecordType::NewObj(isStruct, nullptr);
+    Type* ty = nullptr; //::NewObj(isStruct, nullptr);
     sys_->insertRecord(key, ty, nullptr);
     return ty;
 }
@@ -1067,7 +1067,7 @@ Type* Parser::parseStructDeclarationList(Symbol* sym)
         dc->addField(path);
         seq_->match(TokenKind::Semantics);
     }while (seq_->test(TokenKind::RCurly_Brackets_));
-    ty->setDecl(dc);
+    ty->setTagDecl(dc);
     return ty;
 }
 
@@ -1187,7 +1187,7 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
     }
     // 匿名对象则创建类型
     EnumType* t = dynamic_cast<EnumType*>(ty);
-    t->setDecl(dc);
+    t->setTagDecl(dc);
     return ty;
 }
 

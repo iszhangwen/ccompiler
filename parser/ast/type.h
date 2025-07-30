@@ -289,7 +289,7 @@ private:
 protected:
     ArrayType(QualType elem, int len)
     : Type(Type::ARRAY, elem, true), len_(len) {}
-    ArrayType(QualType can, Expr* lenExpr)
+    ArrayType(QualType elem, Expr* lenExpr)
     : Type(Type::ARRAY, elem, true), lenExpr_(lenExpr) {}
 
 public:
@@ -312,47 +312,42 @@ class FunctionType : public Type {
   
 protected:
     FunctionType(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& proto)
-    : Type(Type::FUNCION, qt, false), inline_(isInline), noReturn_(isNoReturn), proto_(proto){}
+    : Type(Type::FUNCION, qt, false), isInline_(isInline), isNoReturn_(isNoReturn), proto_(proto){}
 
 public:
     static FunctionType* NewObj(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& proto);
 
     QualType getResultType() const { return QualType(); }
-    bool isInline() const {return inline_;}
-    bool isNoReturn() const {return noReturn_;}
-    const std::vector<ParmVarDecl*>& getParams() const { return params_;}
-    void setParams(const std::vector<ParmVarDecl*>& params) { params_ = params; }
+    bool isInline() const {return isInline_;}
+    bool isNoReturn() const {return isNoReturn_;}
+    const std::vector<ParmVarDecl*>& getParams() const { return proto_;}
+    void setParams(const std::vector<ParmVarDecl*>& params) { proto_ = params; }
 };
 
 /*------------------------------结构体和枚举类型----------------------------------------------*/
 class TagType : public Type {
-    Decl* decl_;
+    TagDecl* tag_;
 protected:
-    TagType(TypeKind tk, QualType can, Decl* dc)
-    : Type(tk, can), decl_(dc){}
+    TagType(TypeKind tk, TagDecl* dc)
+    : Type(tk,  QualType(this)), tag_(dc){}
 
 public:  
-    Decl* getDecl() const {return decl_;}
-    void setDecl(Decl* dc) {decl_ = dc;}
-    bool isStructType() const {return (Type::STRUCT == getKind());}
-    bool isUnionType() const {return (Type::UNION == getKind());}
-    bool isEnumType() const {return (Type::ENUM == getKind());}
+    TagDecl* getTagDecl() const {return tag_;}
+    void setTagDecl(TagDecl* dc) {tag_ = dc;}
 };
 
 class RecordType : public TagType {
 protected:
-    RecordType(TypeKind tk, Decl *dc)
-    : TagType(tk, QualType(), dc) {}
+    RecordType(TagDecl* dc, bool isStruct);
 public:
-    static RecordType* NewObj(bool isStruct, Decl *dc);
+    static RecordType* NewObj(TagDecl* dc, bool isStruct);
 };
 
 class EnumType : public TagType {
 protected:
-    EnumType(Decl *dc)
-    : TagType(Type::ENUM, QualType(), dc) {}
+    EnumType(EnumDecl* dc);
 public:
-    static EnumType* NewObj(Decl *dc);
+    static EnumType* NewObj(EnumDecl* dc);
 };
 
 /*--------------------------typedef定义的类型别名--------------------------------------*/
@@ -360,11 +355,11 @@ class TypedefType : public Type {
 private:
     TypedefDecl *decl_;
 protected:
-    TypedefType(TypedefDecl *decl, QualType qt) 
+    TypedefType(QualType qt, TypedefDecl *decl) 
     : Type(Type::TYPEDEF, qt), decl_(decl) {}
 
 public:
-    static TypedefType* NewObj(TypedefDecl *decl, QualType can);
+    static TypedefType* NewObj(QualType qt, TypedefDecl *decl);
     TypedefDecl *getDecl() const { return decl_; }
     void setDecl(TypedefDecl *dc) { decl_ = dc; }
 };
