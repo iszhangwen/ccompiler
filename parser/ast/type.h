@@ -327,8 +327,6 @@ public:
 /*------------------------------结构体和枚举类型----------------------------------------------*/
 class TagType : public Type {
     Decl* decl_;
-    bool process_;
-
 protected:
     TagType(TypeKind tk, QualType can, Decl* dc)
     : Type(tk, can), decl_(dc){}
