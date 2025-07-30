@@ -38,6 +38,7 @@ private:
     int storageClass_; // 存储类
     int funcSpec_; // 函数说明符    
 public:
+    Declarator(){}
     Declarator(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs)
     : dk_(dk), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
     DeclaratorKind getKind() const { return dk_; }

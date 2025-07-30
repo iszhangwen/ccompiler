@@ -2,7 +2,7 @@
 
 bool Type::isObjectType()
 {
-
+    return !isFunctionType();
 }
 //bool isFunctionType();
 bool Type::isCompleteType()
@@ -54,7 +54,7 @@ bool Type::isBasicType()
 bool Type::isCharacterType()
 {
     if (Type::INTEGER == getKind()) {
-        return dynamic_cast<IntegerType*>(this)->isCharacter();
+        return dynamic_cast<IntegerType*>(this)->isChar();
     }
     return false;
 }
@@ -117,7 +117,7 @@ bool Type::iaDrivedDeclaratorType()
     return (isArrayType() || isFunctionType() || isPointerType());
 }
 // typedef单独判断
-bool Type::isTypeDefNameType()
+bool Type::isTypeDefType()
 {   
     return (Type::TYPEDEF == getKind());
 }
@@ -127,35 +127,23 @@ VoidType* VoidType::NewObj()
     return new VoidType();
 }
 
-IntegerType::IntegerType(int ts)
-: Type(Type::INTEGER, QualType())
+BoolType* BoolType::NewObj()
 {
-    // 解析类别
-    kind_ = (ts & TypeSpecifier::VOID) 
-    | (ts & TypeSpecifier::_BOOL) 
-    | (ts & TypeSpecifier::CHAR) 
-    | (ts & TypeSpecifier::INT) 
-    | (ts & TypeSpecifier::FLOAT) 
-    | (ts & TypeSpecifier::DOUBLE)
-    | (ts & TypeSpecifier::LONGDOUBLE);
-    // 解析符号
-    isSigned_ = true;
-    if (ts & TypeSpecifier::UNSIGNED) {
-        isSigned_ = false;
-    }
-    // 解析长度
-    width_ = (ts & TypeSpecifier::SHORT)
-    | (ts & TypeSpecifier::LONG)
-    | (ts & TypeSpecifier::LONGLONG);
+    return new BoolType();
 }
 
-IntegerType* IntegerType::NewObj(int tq)
+IntegerType* IntegerType::NewObj(Sign sig, Category cate)
 {
-    return new IntegerType(tq);
+    return new IntegerType(sig, cate);
 }
-ComplexType* ComplexType::NewObj(TypeKind co, QualType derived, Kind kd)
+
+RealFloatingType* RealFloatingType::NewObj(Category cate)
 {
-    return new ComplexType(co, derived, kd);
+    return new RealFloatingType(cate);
+}
+ComplexType* ComplexType::NewObj(Category cate)
+{
+    return new ComplexType(cate);
 }
 PointerType* PointerType::NewObj(QualType pointee)
 {

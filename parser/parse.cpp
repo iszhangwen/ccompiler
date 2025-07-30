@@ -187,31 +187,23 @@ Expr* Parser::parsePrimaryExpr()
             error("symbol declaration undefined!");
             return nullptr;
         }
-        QualType ty = dc->getType();
+        QualType ty = sym->getType();
         if (ty.isNull()) {
             error("symbol type undefined!");
             return nullptr;
         }
         // 如果是函数声明，返回DeclRefExpr
         if (ty->isFunctionType()) {
-            node = DeclRefExpr::NewObj(ty, dc);
-            break;
+
         }
         // 如果是变量声明，返回DeclRefExpr
         if (ty->isObjectType()) {
             // 如果是变量声明，返回DeclRefExpr
-            if (ty->getDecl() && ty->getDecl()->getKind() == NodeKind::NK_VarDecl) {
-                node = DeclRefExpr::NewObj(ty, dc);
-                break;
-            }
+
         }
         // 如果是类型声明，返回DeclRefExpr
-        if (ty->isTypeName()) {     
-            // 如果是类型声明，返回DeclRefExpr
-            if (ty->getDecl() && ty->getDecl()->getKind() == NodeKind::NK_TypedefDecl) {
-                node = DeclRefExpr::NewObj(ty, dc);
-                break;
-            }
+        if (ty) {     
+  
         }
         // 如果是结构体/联合体声明，返回DeclRefExpr         
         if (dc) {
@@ -795,9 +787,9 @@ DeclGroup Parser::parseDeclaration()
     }
     // 如果是typedef声明，直接返回
     if (sc & StorageClass::TYPEDEF) {
-        if (qt->isTypeName()) {
+        if (qt) {
             // 直接返回类型声明
-            res.push_back(TypedefDecl::NewObj(qt, seq_->cur()->value_));
+            //res.push_back(TypedefDecl::NewObj(qt, seq_->cur()->value_));
             seq_->expect(TokenKind::Semicolon_);
             return res;
         }
@@ -808,101 +800,41 @@ DeclGroup Parser::parseDeclaration()
     }
     // 如果是extern声明，直接返回
     if (sc & StorageClass::EXTERN) {
-        if (qt->isTypeName()) {
-            // 直接返回类型声明
-            res.push_back(ExternDecl::NewObj(qt, seq_->cur()->value_));
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
-        else {
-            error("extern declaration incomplete!");
-            return res;
-        }
+
     }
     // 如果是static声明，直接返回
     if (sc & StorageClass::STATIC) {
-        if (qt->isTypeName()) {
-            // 直接返回类型声明
-            res.push_back(StaticDecl::NewObj(qt, seq_->cur()->value_));
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
-        else {
-            error("static declaration incomplete!");
-            return res;
-        }
+
     }
     // 如果是auto声明，直接返回
     if (sc & StorageClass::AUTO) {
-        if (qt->isTypeName()) {
-            // 直接返回类型声明
-            res.push_back(AutoDecl::NewObj(qt, seq_->cur()->value_));
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
-        else {
-            error("auto declaration incomplete!");
-            return res;
-        }
+
     }
     // 如果是register声明，直接返回
     if (sc & StorageClass::REGISTER) {  
-        if (qt->isTypeName()) {
-            // 直接返回类型声明
-            res.push_back(RegisterDecl::NewObj(qt, seq_->cur()->value_));
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
-        else {
-            error("register declaration incomplete!");
-            return res;
-        }
+
     }   
     // 如果是函数声明，直接返回
     if (qt->isFunctionType()) {
-        res.push_back(FunctionDecl::NewObj(qt, seq_->cur()->value_, sc, fs));
-        seq_->expect(TokenKind::Semicolon_);
-        return res;
+
     }
     if (seq_->match(TokenKind::Semicolon_)) {
-        res.push_back(qt->getDecl());
-        return res;
     }
     // 如果是变量声明，直接返回
     if (qt->isObjectType()) {   
-        // 如果是变量声明，直接返回
-        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_VarDecl) {
-            res.push_back(qt->getDecl());
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
+
     }
     // 如果是类型声明，直接返回
-    if (qt->isTypeName()) {
-        // 如果是类型声明，直接返回 
-        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_TypedefDecl) {
-            res.push_back(qt->getDecl());
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
+    if (qt) {
+
     }
     // 如果是结构体/联合体声明，直接返回TRUE
     if (1) {
-        // 如果是结构体/联合体声明，直接返回
-        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_StructOrUnionDecl) {
-            res.push_back(qt->getDecl());
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
+
     }
     // 如果是枚举声明，直接返回
     if (qt->isEnumeratedType()) {
-        // 如果是枚举声明，直接返回
-        if (qt->getDecl() && qt->getDecl()->getKind() == NodeKind::NK_EnumDecl) {
-            res.push_back(qt->getDecl());
-            seq_->expect(TokenKind::Semicolon_);
-            return res;
-        }
+
     }
 
     // 解析第一个声明符
@@ -955,7 +887,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         case TokenKind::Long:
             ParseTypeSpec()(tss, &ts, seq_->cur()->kind_);
             if (tss == ParseTypeSpec::FOUND_TYPE) {
-                ty = IntegerType::NewObj(ts);
+                //ty = IntegerType::NewObj(ts);
             } else if (tss == ParseTypeSpec::ERROR) {
                 error("error type specifier!");
             }
@@ -1029,7 +961,7 @@ Decl* Parser::parseInitDeclarator(QualType qt, int sc, int fs)
 
 Declarator parseInitDeclarator(QualType qt, int sc, int fs)
 {
-
+    return Declarator();
 }
 
 void Parser::parseStorageClassSpec(int* sc, TokenKind tk)

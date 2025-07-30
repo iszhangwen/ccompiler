@@ -84,29 +84,35 @@ public:
     // 类型别名
     TYPEDEF
     };
-
-protected:
+private:
     TypeKind kind_;  // 类型域标识
     QualType canonicalType_; // 规范类型
-    int align; // 对齐方式
-    int size;  // 类型要占用多大空间
+    std::string name_;
+    int align_; // 对齐方式，32位系统默认4字节对齐
+    int size_;  // 类型要占用多大空间
     bool isComplete_; // 是否是完整类型
+    
+protected:
+    Type(TypeKind tk, QualType canonical, const std::string& name, int size, bool isComplete = false)
+    : kind_(tk), canonicalType_(canonical.isNull() ? QualType(this, 0) : canonical), name_(name), size_(size), isComplete_(isComplete) {}
     Type(TypeKind tk, QualType canonical, bool isComplete = false)
-    : kind_(tk), canonicalType_(canonical.isNull() ? QualType(this, 0) : canonical), isComplete_(isComplete) {}
+    : Type(tk, canonical, "", 0, isComplete) {}
     virtual ~Type() {}
   
 public:
     // 类型基本属性
     TypeKind getKind() const { return kind_;}
-    int getAlign() const {return align;}
-    int getSize() const {return size;}
-    virtual std::string getName() const {return "";}
+    int getAlign() const {return align_;}
+    void setAlign(int align) {align_ = align;}
+    int getSize() const {return size_;}
+    void setSize(int size) {size_ = size;}
+    std::string getName() const {return name_;}
+    void getName(const std::string& name) {name_ = name;}
     QualType getQualType() {return canonicalType_;}
-
+    const QualType getQualType() const {return canonicalType_;}
+    void setQualType(QualType ql) {canonicalType_ = ql;}
     // 判断当前类型是否是规范类型
     bool isCanonical() { return canonicalType_.getPtr() == this; }
-        Decl* getDecl() {return nullptr;}
-    void setCompleteType(bool complete) {isComplete_ = complete;}
 
     /* C语言类型分为三种：对象类型，函数类型，不完整类型
     对象类型：能够完整描述对象存储特征的类型(如int, struct, 数组等)，编译器可以确定大小和内存布局。
@@ -115,6 +121,7 @@ public:
     bool isObjectType();
     //bool isFunctionType();
     bool isCompleteType();
+    void setCompleteType(bool complete) {isComplete_ = complete;}
     //6.2.5-1
     bool isBoolType(); 
     //6.2.5-4 ~ 6.2.5-7
@@ -150,16 +157,16 @@ public:
     // 6.2.5-24
     bool iaDrivedDeclaratorType();
     // typedef单独判断
-    bool isTypeDefNameType();
+    bool isTypeDefType();
 };
-
 
 /*---------------------------------基本类型----------------------------------------------*/
 // 空类型
 class VoidType : public Type
 {
 protected:
-    VoidType();
+    VoidType()
+    : Type(Type::VOID, QualType(this), "void", 0, false){}
 public:
     static VoidType* NewObj();
 };
@@ -168,87 +175,105 @@ public:
 class BoolType : public Type
 {
 protected:
-    BoolType();
+    BoolType()
+    : Type(Type::BOOL, QualType(this), "_Bool", 1, true){}
 public:
     static BoolType* NewObj();
 };
 // 整型
 class IntegerType : public Type 
 {
-    bool isSigned_;
-    int width_;
-    int kind_;
-protected:
-    IntegerType(int tq);
 public:
-    static IntegerType* NewObj(int tq);
-    int getWidth() const {return width_;}
-    int getKind() const {return kind_;}
-    std::string getName() const override;
+    enum Sign {
+        NOSIGN,
+        SIGNED,
+        UNSIGNED
+    };
+    enum Category {
+        CHAR,
+        SHORT,
+        INT,
+        LONG,
+        LONG2
+    };
+private:
+    Sign signed_;
+    Category category_;
+protected:
+    IntegerType(Sign sig, Category cate)
+    : Type(Type::INTEGER, QualType(this), true), signed_(sig), category_(cate) {}
+public:
+    static IntegerType* NewObj(Sign sig, Category cate);
     // 判断是否是整数类型
-    bool isSigned() const {return isSigned_;}
-    bool isCharacter();
+    bool isSigned() const {return (Sign::SIGNED == signed_);}
+    bool isUnSigned() const {return (Sign::UNSIGNED == signed_);}
+    bool isChar() const {return (Category::CHAR == category_);}
+    bool isShort() const {return (Category::SHORT == category_);}
+    bool isInt() const {return (Category::INT == category_);}
+    bool isLong() const {return (Category::LONG == category_);}
+    bool isLongLong() const {return (Category::LONG2 == category_);}
 };
 
 // 浮点类型
 class RealFloatingType : public Type
 {
-protected:
-    RealFloatingType();
 public:
-    static RealFloatingType* NewObj();
+    enum Category{
+        FLOAT,
+        DOUBLE,
+        LONG_DOUBLE
+    };
+private:
+    Category category_;
+protected:
+    RealFloatingType(Category cate)
+    : Type(Type::REALFLOATING, QualType(this), true), category_(cate) {}
+public:
+    static RealFloatingType* NewObj(Category cate);
+    bool isFloat() const {return (Category::FLOAT == category_);}
+    bool isDouble() const {return (Category::DOUBLE == category_);}
+    bool isLongDouble() const {return (Category::LONG_DOUBLE == category_);}
 };
 
 // 复数类型
 class ComplexType : public Type 
 {
 public:
-    enum Kind {
+    enum Category {
         FLOAT,
         DOUBLE,
         LONG_DOUBLE
     };
-    Kind getKind() const {return kind_;}
 private:
-    Kind kind_;
-
+    Category category_;
 protected:
-    ComplexType(TypeKind co, QualType derived, Kind kd) :
-    Type(co, derived), kind_(kd){}
-
+    ComplexType(Category cate) 
+    : Type(Type::COMPLEX, QualType(this), true), category_(cate) {}
 public:
-    static ComplexType* NewObj(TypeKind co, QualType derived, Kind kd);
+    static ComplexType* NewObj(Category cate);
+    bool isFloatComplex() const {return (Category::FLOAT == category_);}
+    bool isDoubleComplex() const {return (Category::DOUBLE == category_);}
+    bool isLongDoubleComplex() const {return (Category::LONG_DOUBLE == category_);}
 };
 
 /*---------------------------------派生声明符类型---------------------------------------------------*/
-class DerivedType : public Type
-{
-protected:
-    DerivedType(TypeKind co, QualType derived)
-    : Type(co, derived){}
-
-};
-class PointerType : public DerivedType 
+class PointerType : public Type 
 {
 protected:
     PointerType(QualType pointee) 
-    :DerivedType(Type::POINTER, pointee){}
+    : Type(Type::POINTER, pointee, true){}
 public:
     static PointerType* NewObj(QualType pointee);
-    std::string getName() const {return "";}
-    static PointerType* newObj(QualType);
-    QualType getPointeeType() const {return canonicalType_;}
-    bool isConstPointer() const {return canonicalType_.isConstQual();}
-    bool isVolatilePointer() const {return canonicalType_.isVolatileQual();}
-    bool isRestrictPointer() const {return canonicalType_.isRestrictQual();}
-    Decl* getDecl() {return canonicalType_.getPtr()->getDecl();}
+    QualType getPointeeType() const {return getQualType();}
+    bool isConstPointer() const {return getQualType().isConstQual();}
+    bool isVolatilePointer() const {return getQualType().isVolatileQual();}
+    bool isRestrictPointer() const {return getQualType().isRestrictQual();}
     // 获取指针指向的类型
     // 获取指针类型的规范类型
-    QualType getCanonicalType() const {return canonicalType_;}
 };
 
 // 数组派生类型
-class ArrayType : public DerivedType 
+class ArrayType : public Type 
 {
 public:
     /*
@@ -259,48 +284,44 @@ public:
     */
 private:
     int len_;
-    const Expr* lenExpr_;
+    Expr* lenExpr_;
 
 protected:
-    ArrayType(QualType can, int len)
-    : DerivedType(Type::ARRAY, can), len_(len) {}
+    ArrayType(QualType elem, int len)
+    : Type(Type::ARRAY, elem, true), len_(len) {}
     ArrayType(QualType can, Expr* lenExpr)
-    : DerivedType(Type::ARRAY, can), lenExpr_(lenExpr) {}
+    : Type(Type::ARRAY, elem, true), lenExpr_(lenExpr) {}
 
 public:
     static ArrayType* NewObj(QualType can, int len);
     static ArrayType* NewObj(QualType can, Expr* lenExpr);
     void setLen(unsigned len) {len_ = len;}
-    unsigned getLen() const {return len_;}
+    int getLen() const {return len_;}
+    void setLenExpr(Expr* ex) {lenExpr_ = ex;}
+    Expr* getLenExpr() const {return lenExpr_;}
+
     bool isStarArray() const {return lenExpr_ != nullptr;}
     bool isStaticArray() const {return len_ > 0;}
     bool isNormalArray() const {return len_ > 0 && lenExpr_ == nullptr;}
 };
 
-class FunctionType : public DerivedType {
-    bool inline_; // 是否是内联函数
-    bool noReturn_; // 是否是无返回值函数
-    std::vector<ParmVarDecl*> params_; // 函数参数列表
+class FunctionType : public Type {
+    bool isInline_; // 是否是内联函数
+    bool isNoReturn_; // 是否是无返回值函数
+    std::vector<ParmVarDecl*> proto_; // 函数参数列表
   
 protected:
-    FunctionType(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params)
-    : DerivedType(Type::FUNCION, qt), inline_(isInline), noReturn_(isNoReturn), params_(params){}
+    FunctionType(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& proto)
+    : Type(Type::FUNCION, qt, false), inline_(isInline), noReturn_(isNoReturn), proto_(proto){}
 
 public:
-    static FunctionType* NewObj(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params);
+    static FunctionType* NewObj(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& proto);
+
     QualType getResultType() const { return QualType(); }
     bool isInline() const {return inline_;}
     bool isNoReturn() const {return noReturn_;}
-    const std::vector<ParmVarDecl*>& getParams() const { return params_; }
+    const std::vector<ParmVarDecl*>& getParams() const { return params_;}
     void setParams(const std::vector<ParmVarDecl*>& params) { params_ = params; }
-    bool isFunctionType() const {return true;}
-    bool isIncompleteType() const {return false;}
-    bool isObjectType() const {return false;}
-    bool isTypeName() const {return true;}
-    Decl* getDecl() {return canonicalType_.getPtr()->getDecl();}
-    // 获取函数类型的规范类型
-    QualType getCanonicalType() const {return canonicalType_;}
-    // 获取函数返回值类型
 };
 
 /*------------------------------结构体和枚举类型----------------------------------------------*/
@@ -315,9 +336,9 @@ protected:
 public:  
     Decl* getDecl() const {return decl_;}
     void setDecl(Decl* dc) {decl_ = dc;}
-    bool isStructType() const {return kind_ == Type::STRUCT;}
-    bool isUnionType() const {return kind_ == Type::UNION;}
-    bool isEnumType() const {return kind_ == Type::ENUM;}
+    bool isStructType() const {return (Type::STRUCT == getKind());}
+    bool isUnionType() const {return (Type::UNION == getKind());}
+    bool isEnumType() const {return (Type::ENUM == getKind());}
 };
 
 class RecordType : public TagType {
