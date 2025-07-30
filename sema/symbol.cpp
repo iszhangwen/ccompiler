@@ -122,3 +122,12 @@ void SymbolTableContext::exitScope()
     }
     curScope_ = curScope_->getParent();
 }
+
+bool SymbolTableContext::isTypeName(Token* tk) 
+{
+    if (!tk) {
+        return false;
+    }
+    // 这里可以根据TokenKind判断是否是类型名
+    return tk->isTypeSpecifier();
+}

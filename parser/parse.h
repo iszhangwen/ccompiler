@@ -75,6 +75,7 @@ private:
     DeclGroup parseDeclaration();
     QualType parseDeclarationSpec(int* sc, int* fs);
     Decl* parseInitDeclarator(QualType qt, int sc, int fs);
+    Declarator parseInitDeclarator(QualType qt, int sc, int fs);
     // 6.7.1 storage-class-specifier
     void parseStorageClassSpec(int* sc, TokenKind);
     // 6.7.2 type-specifier
