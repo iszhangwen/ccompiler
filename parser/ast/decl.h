@@ -35,7 +35,7 @@ private:
     DeclaratorKind dk_;
     std::string name_; // 标识符名称
     QualType type_; // 声明的类型
-    int storageClass_; // 存储类说明符
+    int storageClass_; // 存储类
     int funcSpec_; // 函数说明符    
 public:
     Declarator(){}
@@ -50,13 +50,16 @@ public:
     void setName(const std::string& name) { name_ = name; }
     void setStorageClass(int sc) { storageClass_ = sc; }    
     void setFuncSpec(int fs) { funcSpec_ = fs; }    
+    static Declarator* NewObj(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs) {
+        return new Declarator(dk, name, type, sc, fs);
+    }
 };
 
 class Decl : public AstNode
 {
 public:
     virtual ~Decl(){};
-    virtual void accept(ASTVisitor* vt) {}
+    virtual void accept(std::shared_ptr<ASTVisitor> vt) {}
 
 protected:
     Decl(NodeKind nk): AstNode(nk) {}
@@ -80,79 +83,75 @@ public:
     const DeclGroup& getDecls() const {return dcs_;}
     void setDecls(const DeclGroup& dc) {dcs_ = dc;}
     size_t size() const {return dcs_.size();}
+    Decl* getDecl(size_t index) const {
+        if (index < dcs_.size()) {
+            return dcs_[index];
+        }
+        return nullptr; // 如果索引越界，返回nullptr
+    }
+    void removeDecl(size_t index) {
+        if (index < dcs_.size()) {
+            dcs_.erase(dcs_.begin() + index);
+        }
+    }
     // 获取声明的数量
-    size_t getDeclCount() const {return dcs_.size();}
+    size_t getDeclCount() const {
+        return dcs_.size();
+    }
 };
 
 // 所有具有名称的基类, 命名实体具备链接属性
 class NamedDecl : public Decl
 {
-    Declarator declarator_;
+    Symbol* sym_;
 protected:
-    NamedDecl(NodeKind nk, Declarator id)
-    : Decl(nk), declarator_(id){}
-    Declarator getDeclarator() const {
-        return declarator_;
-    }
-    void setDeclarator(const Declarator& id) {
-        declarator_ = id;
-    }
+    NamedDecl(NodeKind nk, Symbol* id)
+    : Decl(nk), sym_(id){}
+
 public:
-    std::string getName() const {
-        return getDeclarator().getName();
-    }
-    void setName(const std::string& name) {
-        getDeclarator().setName(name);
-    }
+    Symbol* getSymbol() {return sym_;}
+    void setSymbol(Symbol* id) {sym_ = id;}
 };
 
 // 标签声明:需要记录标签的名称和位置
 class LabelDecl final : public NamedDecl
 {
 protected:
-    LabelDecl(Declarator id)
+    LabelDecl(Symbol* id)
     : NamedDecl(NK_LabelDecl, id){}
 public:
-    static LabelDecl* NewObj(Declarator id);
+    static LabelDecl* NewObj(Symbol* id);
 };
 
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
 class ValueDecl : public NamedDecl 
 {
+    QualType ty_;
 protected:
-    ValueDecl(NodeKind nk, Declarator id)
-    :NamedDecl(nk, id){}
+    ValueDecl(NodeKind nk, Symbol* id, QualType ty)
+    :NamedDecl(nk, id), ty_(ty){}
 
-    ValueDecl(Declarator id)
-    :NamedDecl(NK_ValueDecl, id){}
+    ValueDecl(Symbol* id, QualType ty)
+    :NamedDecl(NK_ValueDecl, id), ty_(ty){}
 
 public:
-    static ValueDecl* NewObj(Declarator id);
-    QualType getType() const {
-        return getDeclarator().getType();
-    }
-    void setType(QualType qt) {
-        getDeclarator().setType(qt);
-    }
+    static ValueDecl* NewObj(Symbol* id, QualType ty);
+    QualType getQualType() {return ty_;}
+    void setQualType(QualType qt) {ty_ = qt;}
 };
 
 // 带有声明说明符的声明，声明说明符包括：存储说明符，类型限定符，类型说明符，比如变量，函数，参数等，
 class DeclaratorDecl : public ValueDecl 
 {
+    int sc_;
 protected:
-    DeclaratorDecl(NodeKind nk, Declarator id)
-    : ValueDecl(nk, id){}
+    DeclaratorDecl(NodeKind nk, Symbol* id, QualType ty, int sc)
+    : ValueDecl(nk, id, ty), sc_(sc){}
 
-    DeclaratorDecl(Declarator id)
-    : ValueDecl(NK_DeclaratorDecl, id) {}
+    DeclaratorDecl(Symbol* id, QualType ty, int sc)
+    : ValueDecl(NK_DeclaratorDecl, id, ty), sc_(sc){}
 public:
-    static DeclaratorDecl* NewObj(Declarator id);
-    int getStorageClass() const {
-        return getDeclarator().getStorageClass();
-    }
-    void setStorageClass(int sc) {
-        getDeclarator().setStorageClass(sc);
-    }
+    static DeclaratorDecl* NewObj(Symbol* id, QualType ty, int sc);
 };
 
 // 变量声明：需要包含存储类，作用域，初始化表达式等
@@ -160,15 +159,15 @@ class VarDecl : public DeclaratorDecl
 {
     Expr* initExpr_; // 初始化表达式
 protected:
-    VarDecl(NodeKind nk, Declarator id, Expr* ex=nullptr)
-    : DeclaratorDecl(nk, id), initExpr_(ex){}
+    VarDecl(NodeKind nk, Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
+    : DeclaratorDecl(nk, id, ty, sc), initExpr_(ex){}
 
-    VarDecl(Declarator id, Expr* ex=nullptr)
-    : DeclaratorDecl(NK_ValueDecl, id), initExpr_(ex){}
+    VarDecl(Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
+    : DeclaratorDecl(NK_ValueDecl, id, ty, sc), initExpr_(ex){}
 public:
-    static VarDecl* NewObj(Declarator id, Expr* ex=nullptr);
-    Expr* getInitExpr() {return initExpr_;}
-    void setInitExpr(Expr* ex) {initExpr_ = ex;}
+    static VarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
+    Expr* getExpr() {return initExpr_;}
+    void setExpr(Expr* ex) {initExpr_ = ex;}
 };
 
 /// 函数参数声明，需要默认值

@@ -5,19 +5,19 @@ TranslationUnitDecl* TranslationUnitDecl::NewObj(const DeclGroup& dc)
     return new TranslationUnitDecl(dc);
 }
 
-LabelDecl* LabelDecl::NewObj(Declarator id)
+LabelDecl* LabelDecl::NewObj(Symbol* id)
 {
     return new LabelDecl(id);
 }
 
-ValueDecl* ValueDecl::NewObj(Declarator id)
+ValueDecl* ValueDecl::NewObj(Symbol* id, QualType ty)
 {
-    return new ValueDecl(id);
+    return new ValueDecl(id, ty);
 }
 
-DeclaratorDecl* DeclaratorDecl::NewObj(Declarator id)
+DeclaratorDecl* DeclaratorDecl::NewObj(Symbol* id, QualType ty, int sc)
 {
-    return new DeclaratorDecl(id);
+    return new DeclaratorDecl(id, ty, sc);
 }
 
 VarDecl* VarDecl::NewObj(Symbol* id, QualType ty, int sc, Expr* ex)
