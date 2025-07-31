@@ -78,6 +78,16 @@ bool Token::isEOF() const
     return kind_ == TokenKind::EOF_;
 }
 
+bool Token::isTypeQualifier() const
+{
+    if (kind_ == TokenKind::Const
+    || kind_ == TokenKind::Volatile
+    || kind_ == TokenKind::Restrict) {
+        return true;
+    }
+    return false;
+}
+
 bool Token::isTypeSpecifier() const
 {
     if (kind_ == TokenKind::Const

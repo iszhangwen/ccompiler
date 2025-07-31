@@ -1,9 +1,9 @@
 #include "symbol.h"
 #include <ast/decl.h>
 
-Symbol* Symbol::NewObj(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc)
+Symbol* Symbol::NewObj(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc, bool isType)
 {
-    return new Symbol(st, s, k, t, dc);
+    return new Symbol(st, s, k, t, dc, isType);
 }
 
 std::string Symbol::getTag() 
@@ -123,11 +123,73 @@ void SymbolTableContext::exitScope()
     curScope_ = curScope_->getParent();
 }
 
-bool SymbolTableContext::isTypeName(Token* tk) 
+/*
+(6.7.7) type-name:
+ specifier-qualifier-list abstract-declaratoropt
+  (6.7.2.1) specifier-qualifier-list:
+ type-specifier specifier-qualifier-listopt
+ type-qualifier specifier-qualifier-listopt
+*/
+bool SymbolTableContext::isTypeName(Token* tk)
 {
     if (!tk) {
         return false;
     }
-    // 这里可以根据TokenKind判断是否是类型名
-    return tk->isTypeSpecifier();
+    return (isTypeSpecifier(tk) || isTypeQualifier(tk));
 }
+
+bool SymbolTableContext::isTypeSpecifier(Token* tk)
+{
+    if (!tk) {
+        return false;
+    }
+    // 判断是否是类型说明
+    switch (tk->kind_)
+    {
+    case TokenKind::Void:
+    case TokenKind::Char:
+    case TokenKind::Short:
+    case TokenKind::Int:
+    case TokenKind::Long:
+    case TokenKind::Float:
+    case TokenKind::Double:
+    case TokenKind::Signed:
+    case TokenKind::Unsigned:
+    case TokenKind::T_Bool:
+    case TokenKind::T_Complex:
+    /* atomic-type-specifier*/
+    /*struct-or-union-specifier*/
+    case TokenKind::Struct:
+    case TokenKind::Union:
+    /*enum-specifier*/
+    case TokenKind::Enum:
+        return true;
+    default:
+        break;
+    }
+    /*typedef-name*/
+    Symbol* sym = lookup(Symbol::NORMAL, tk->value_);
+    if (!sym) {
+        return false;
+    }
+
+}
+
+bool SymbolTableContext::isTypeQualifier(Token* tk)
+{
+    if (!tk) {
+        return false;
+    }
+    // 判断是否是类型限定符
+    switch (tk->kind_)
+    {
+    case TokenKind::Const:
+    case TokenKind::Volatile:
+    case TokenKind::Restrict:
+    case TokenKind::T_Atomic:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}   

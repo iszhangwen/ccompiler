@@ -26,13 +26,13 @@ private:
     Scope* sc_;
     Type* ty_;
     NamedDecl* dc_;
-
+    bool isType_; // 是否是类型声明
 protected:
-    Symbol(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc)
-    : st_(st), sc_(s), key_(k), ty_(t), dc_(dc) {}
+    Symbol(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc, bool isType = false)
+    : st_(st), sc_(s), key_(k), ty_(t), dc_(dc), isType_(isType){}
 
 public:
-    static Symbol* NewObj(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc);
+    static Symbol* NewObj(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc, bool isType = false);
     static std::string getTag(SymbolType, const std::string&);
     std::string getTag();
 
@@ -47,6 +47,8 @@ public:
 
     NamedDecl* getDecl() { return dc_;}
     void setDecl(NamedDecl* dc) {dc_ = dc;}
+
+    
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 
@@ -88,7 +90,7 @@ public:
     Symbol* insertLabel(const std::string&, NamedDecl*);
     Symbol* insertRecord(const std::string&, Type*, NamedDecl*);
     Symbol* insertMember(const std::string&, Type*, NamedDecl*);
-    Symbol* insertNormal(const std::string&, Type*, NamedDecl*);
+    Symbol* insertNormal(const std::string&, Type*, NamedDecl*, bool);
     Symbol* lookup(Symbol::SymbolType, const std::string&);
     // 作用域管理函数
     Scope* getCurScope() {return curScope_;}
@@ -96,5 +98,7 @@ public:
     void exitScope();
 
     // 类型检测
-    bool isTypeName(Token*) {return true;}
+    bool isTypeName(Token* tk);
+    bool isTypeSpecifier(Token* tk);
+    bool isTypeQualifier(Token* tk);
 };

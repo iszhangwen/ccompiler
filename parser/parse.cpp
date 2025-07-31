@@ -129,12 +129,12 @@ Parser:: ~Parser()
     delete seq_;
 }
 
-void Parser::error(const std::string& val)
+void Parser::sytaxError(const std::string& val)
 {
-    error(seq_->cur(), val);
+    sytaxError(seq_->cur(), val);
 }
 
-void Parser::error(Token *tk, const std::string& val)
+void Parser::sytaxError(Token *tk, const std::string& val)
 {
     #define RED "\033[31m"
     #define CANCEL "\033[0m"
@@ -162,6 +162,39 @@ void Parser::error(Token *tk, const std::string& val)
     throw CCError(ss.str());
 }
 
+void Parser::semaError(const std::string& val)
+{
+    semaError(seq_->cur(), val);
+}
+
+void Parser::semaError(Token *tk, const std::string& val)
+{
+#define RED "\033[31m"
+    #define CANCEL "\033[0m"
+    std::stringstream ss;
+    ss << tk->loc_.filename 
+        << ":" 
+        << tk->loc_.line 
+        << ":" 
+        << tk->loc_.column 
+        << ": "
+        << RED 
+        << "error: " 
+        << CANCEL
+        << val 
+        << std::endl
+        << buf_->segline(tk->loc_)
+        << std::string(tk->loc_.column, ' ') 
+        << "^ "  
+        << RED 
+        << std::string(buf_->segline(tk->loc_).size() - tk->loc_.column - 2, '~') 
+        << CANCEL 
+        << std::endl;
+    #undef RED
+    #undef CANCEL
+    std::cerr << ss.str();
+}
+
 //---------------------------------------------------------Expressions------------------------------------------------------------------------
 /* primary-expression:
  identifier
@@ -179,39 +212,17 @@ Expr* Parser::parsePrimaryExpr()
     {
         Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
         if (!sym) {
-            error("symbol undefined!");
+            semaError("symbol undefined!");
             return nullptr;
         }
-        NamedDecl* dc = sym->getDecl();
-        if (!dc) {
-            error("symbol declaration undefined!");
+        else if (!sym->getDecl()) {
+            semaError("symbol declaration undefined!");
             return nullptr;
         }
-        QualType ty = sym->getType();
-        if (ty.isNull()) {
-            error("symbol type undefined!");
-            return nullptr;
+        else {
+            node = DeclRefExpr::NewObj(sym->getType()->getQualType(), sym->getDecl());
         }
-        // 如果是函数声明，返回DeclRefExpr
-        if (ty->isFunctionType()) {
-
-        }
-        // 如果是变量声明，返回DeclRefExpr
-        if (ty->isObjectType()) {
-            // 如果是变量声明，返回DeclRefExpr
-
-        }
-        // 如果是类型声明，返回DeclRefExpr
-        if (ty) {     
-  
-        }
-        // 如果是结构体/联合体声明，返回DeclRefExpr         
-        if (dc) {
-            node = DeclRefExpr::NewObj(ty, dc);
-            break;
-        }
-        error("Symbol type incomplete!");
-        return nullptr;
+        return node;
     }    
 
     case TokenKind::Numeric_Constant_:
@@ -237,7 +248,7 @@ Expr* Parser::parsePrimaryExpr()
         break;
 
     default:
-        error(seq_->cur(), "unexpect PrimaryExpr!");
+        sytaxError(seq_->cur(), "unexpect PrimaryExpr!");
         break;
     }
     return node;
@@ -289,7 +300,6 @@ Expr* Parser::parseGenericAssociation()
 Expr* Parser::parsePostfixExpr()
 {
     Expr* node = nullptr;
-    /*
     if (seq_->peek()->kind_ == TokenKind::LParent_) {
         node = parseParenExpr();
     }
@@ -350,7 +360,7 @@ Expr* Parser::parsePostfixExpr()
         else {
             break;
         }
-    }*/
+    }
     return node;
 }
 
@@ -703,7 +713,7 @@ Expr* Parser::parseAssignExpr()
         break;
         
     default:
-        error("expect assignment-operator, but not!");
+        sytaxError("expect assignment-operator, but not!");
         break;
     }
     return BinaryOpExpr::NewObj(node, rex, opc);
@@ -740,7 +750,7 @@ Expr* Parser::parseConstansExpr()
 Expr* Parser::parseParenExpr()
 {
     if (!seq_->match(TokenKind::LParent_)) {
-        error(seq_->cur(), "expect Lparen, but not Lparen!");
+        sytaxError(seq_->cur(), "expect Lparen, but not Lparen!");
         return nullptr;
     }
     
@@ -782,7 +792,7 @@ DeclGroup Parser::parseDeclaration()
     QualType qt = parseDeclarationSpec(&sc, &fs);
     // typedef struct union enum 解析完成
     if (qt.isNull()) {
-        error("declaration specifier incomplete!");
+        sytaxError("declaration specifier incomplete!");
         return res;
     }
     // 如果是typedef声明，直接返回
@@ -794,7 +804,7 @@ DeclGroup Parser::parseDeclaration()
             return res;
         }
         else {
-            error("typedef declaration incomplete!");
+            sytaxError("typedef declaration incomplete!");
             return res;
         }
     }
@@ -889,7 +899,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
             if (tss == ParseTypeSpec::FOUND_TYPE) {
                 //ty = IntegerType::NewObj(ts);
             } else if (tss == ParseTypeSpec::ERROR) {
-                error("error type specifier!");
+                sytaxError("error type specifier!");
             }
             break;
 
@@ -901,7 +911,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
                 tss = ParseTypeSpec::FOUND_UDT_TYPE;
             }
             else {
-                error("the type-specifier has discovered, there is a conflict!");
+                sytaxError("the type-specifier has discovered, there is a conflict!");
                 tss = ParseTypeSpec::ERROR;
             }
             break;
@@ -913,7 +923,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
                 tss = ParseTypeSpec::FOUND_UDT_TYPE;
             }
             else {
-                error("the type-specifier has discovered, there is a conflict!");
+                sytaxError("the type-specifier has discovered, there is a conflict!");
                 tss = ParseTypeSpec::ERROR;
             }
             break;
@@ -938,7 +948,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
             } 
         default:
             if (!ty) {
-                error("incomplete type specifier!");
+                sytaxError("incomplete type specifier!");
             }
             return QualType(ty, tq);
         }
@@ -967,11 +977,11 @@ Declarator parseInitDeclarator(QualType qt, int sc, int fs)
 void Parser::parseStorageClassSpec(int* sc, TokenKind tk)
 {
     if (sc == nullptr) {
-        error("expect not storageclass, but has!");
+        sytaxError("expect not storageclass, but has!");
         return;
     } 
     else if (sc != 0) {
-        error("duplication storageclass!");
+        sytaxError("duplication storageclass!");
         return;
     }
     switch (tk)
@@ -993,7 +1003,7 @@ void Parser::parseStorageClassSpec(int* sc, TokenKind tk)
         break;
     
     default:
-        error("expect storageclass, but not!");
+        sytaxError("expect storageclass, but not!");
         break;
     }
 }
@@ -1027,7 +1037,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
         }
         // 符号表查找到了并且类型定义完整：重复定义
         else {
-            error("redefined struct or union!");
+            sytaxError("redefined struct or union!");
             return nullptr;
         }
     }
@@ -1035,7 +1045,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
     // struct test *p;
     // 非定义情况下使用UDT必须要有声明符
     if (key.empty()) {
-        error("struct or union need identifier, but not!");
+        sytaxError("struct or union need identifier, but not!");
         return nullptr;
     }
     if (sym) {
@@ -1142,14 +1152,14 @@ Type* Parser::parseEnumSpec()
         }
         // 其他情况：符号表查找到了但是已经定义了：重定义错误
         else {
-            error("redefined enum identifier!");
+            sytaxError("redefined enum identifier!");
             return nullptr;
         }
     }
     // 枚举声明或使用
     // 必须要定义符号
     if (key.empty()) {
-        error("expect enum identifier, but not!");
+        sytaxError("expect enum identifier, but not!");
         return nullptr;
     }
     // 返回类型，若由符号则返回，否则创建
@@ -1245,11 +1255,11 @@ int Parser::parseTypeQualList()
 void Parser::parseFunctionSpec(int* fs, TokenKind tk)
 {
     if (fs == nullptr) {
-        error("expect not function specifier, but has!");
+        sytaxError("expect not function specifier, but has!");
         return;
     } 
     else if (fs != 0) {
-        error("duplication function specifier!");
+        sytaxError("duplication function specifier!");
         return;
     }
     
@@ -1260,7 +1270,7 @@ void Parser::parseFunctionSpec(int* fs, TokenKind tk)
         break;
     
     default:
-        error("expect function specifier, but not!");
+        sytaxError("expect function specifier, but not!");
         break;
     }
 }
@@ -1308,7 +1318,7 @@ void Parser::parseDirectDeclarator()
         seq_->expect(TokenKind::RCurly_Brackets_);
     }
     else {
-        error("expect direct declarator, but not!");
+        sytaxError("expect direct declarator, but not!");
     }
     // 解析可选的函数参数列表
     if (seq_->match(TokenKind::LParent_)) {
@@ -1450,7 +1460,7 @@ void Parser::parseDirectAbstractDeclarator()
         seq_->expect(TokenKind::RCurly_Brackets_);
     }
     else {
-        error("expect direct abstract declarator, but not!");
+        sytaxError("expect direct abstract declarator, but not!");
     }
     // 解析可选的函数参数列表
     if (seq_->match(TokenKind::LParent_)) {
@@ -1520,7 +1530,7 @@ void Parser::parseDesignator()
         seq_->expect(TokenKind::Identifier);
     }
     else {
-        error("expect designator, but not!");
+        sytaxError("expect designator, but not!");
     }
 }
 
@@ -1607,7 +1617,7 @@ Stmt* Parser::parseLabeledStmt()
     }
 
     default:
-        error("expect label, but not!");
+        sytaxError("expect label, but not!");
         return nullptr;
     }
     return node;
@@ -1664,7 +1674,7 @@ Stmt* Parser::parseSelectionStmt()
     }
     
     default:
-        error("expect selection, but not!");
+        sytaxError("expect selection, but not!");
         return nullptr;
     }
     return node;
@@ -1707,7 +1717,7 @@ Stmt* Parser::parseIterationStmt()
         break;
     
     default:
-        error("expect iteration, but not!");
+        sytaxError("expect iteration, but not!");
         return nullptr;
     }
     return node;
@@ -1750,7 +1760,7 @@ Stmt* Parser::parseJumpStmt()
     }
     
     default:
-        error("expect jump, but not!");
+        sytaxError("expect jump, but not!");
         return nullptr;
 
     }

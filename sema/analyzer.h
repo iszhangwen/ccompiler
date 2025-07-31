@@ -29,19 +29,7 @@ public:
     virtual void visit(MemberExpr* me) override;
     virtual void visit(UnaryOpExpr* uoe) override;
     /*-----------------------Declarations node----------------------------------*/
-    virtual void visit(TranslationUnitDecl* tud) override;
-    virtual void visit(LabelDecl* ld) override;
-    virtual void visit(ValueDecl* vd) override;
-    virtual void visit(DeclaratorDecl* dd) override;
-    virtual void visit(VarDecl* vd) override;
-    virtual void visit(ParmVarDecl* pvd) override;
-    virtual void visit(FunctionDecl* fd) override;
-    virtual void visit(FieldDecl* fd) override;
-    virtual void visit(EnumConstantDecl* ecd) override;
-    virtual void visit(IndirectFieldDecl* ifd) override;
-    virtual void visit(TypedefDecl* tnd) override;
-    virtual void visit(EnumDecl* ed) override;
-    virtual void visit(RecordDecl* rd) override;
+    Type* onActTypeSpec(int ts);
     /*-----------------------statemnts node----------------------------------*/
     virtual void visit(LabelStmt* ls) override;
     virtual void visit(CaseStmt* cs) override;

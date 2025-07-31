@@ -42,9 +42,12 @@ private:
     SemaAnalyzer* sema_;
     SymbolTableContext* sys_;
 
-    // 错误处理策略，遇到错误时中止编译程序
-    void error(const std::string& val);
-    void error(Token *tk, const std::string& val);
+    // 语法错误处理策略，遇到错误时中止编译程序
+    void sytaxError(const std::string& val);
+    void sytaxError(Token *tk, const std::string& val);
+    // 语义错误处理策略
+    void semaError(const std::string& val);
+    void semaError(Token *tk, const std::string& val);
 
     /*-----------------------------Expressions-----------------------------------------*/
     Expr* parsePrimaryExpr();

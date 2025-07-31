@@ -149,6 +149,7 @@ public:
 
     // typespecifier
     bool isTypeSpecifier() const;
+    bool isTypeQualifier() const;
 
 private:
     Token(TokenKind type, SourceLocation loc, const std::string& value)
