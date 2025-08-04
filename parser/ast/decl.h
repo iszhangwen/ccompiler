@@ -78,6 +78,7 @@ protected:
 
 public:
     static TranslationUnitDecl* NewObj(const DeclGroup& dc);
+    virtual void accept(ASTVisitor* vt) override;
     void addDecl(const DeclGroup& dc) {dcs_.insert(dcs_.end(), dc.begin(), dc.end());}
     void addDecl(Decl* dc) {dcs_.push_back(dc);}
     const DeclGroup& getDecls() const {return dcs_;}
@@ -121,6 +122,7 @@ protected:
     : NamedDecl(NK_LabelDecl, id){}
 public:
     static LabelDecl* NewObj(Symbol* id);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
@@ -136,6 +138,7 @@ protected:
 
 public:
     static ValueDecl* NewObj(Symbol* id, QualType ty);
+    virtual void accept(ASTVisitor* vt) override;
     QualType getQualType() {return ty_;}
     void setQualType(QualType qt) {ty_ = qt;}
 };
@@ -152,6 +155,7 @@ protected:
     : ValueDecl(NK_DeclaratorDecl, id, ty), sc_(sc){}
 public:
     static DeclaratorDecl* NewObj(Symbol* id, QualType ty, int sc);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 // 变量声明：需要包含存储类，作用域，初始化表达式等
@@ -166,6 +170,7 @@ protected:
     : DeclaratorDecl(NK_ValueDecl, id, ty, sc), initExpr_(ex){}
 public:
     static VarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getExpr() {return initExpr_;}
     void setExpr(Expr* ex) {initExpr_ = ex;}
 };
@@ -178,6 +183,7 @@ protected:
     : VarDecl(id, ty, sc, ex){}
 public:
     static ParmVarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 // 函数声明: 
@@ -191,6 +197,7 @@ protected:
     : DeclaratorDecl(id, ty, sc), param_(param), body_(body){}
 public:
     static FunctionDecl* NewObj(Symbol* id, QualType ty, int sc, DeclGroup param, Stmt* body);
+    virtual void accept(ASTVisitor* vt) override;
     Stmt* getBody() {return body_;}
     void setBody(Stmt* body) {body_ = body;}
 };
@@ -206,6 +213,7 @@ protected:
     : ValueDecl(NodeKind::NK_FieldDecl, id, type), parent_(parent), offset_(offset) {}
 public:
     static FieldDecl* NewObj(Symbol* id, QualType type, Decl* parent, unsigned offset);
+    virtual void accept(ASTVisitor* vt) override;
     RecordDecl* getParent() { return reinterpret_cast<RecordDecl*>(parent_);  }
     unsigned getOffset() const { return offset_; }
 };
@@ -218,6 +226,7 @@ protected:
     : ValueDecl(NodeKind::NK_EnumConstantDecl, id, qt), initExpr_(val) {}
 public:
     static EnumConstantDecl* NewObj(Symbol* id, Expr* val);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getInitExpr() const { return initExpr_;}
 };
 
@@ -229,6 +238,7 @@ protected:
     : NamedDecl(NodeKind::NK_TypedefDecl, id), ty_(ty) {}
 public:
     static TypedefDecl* NewObj(Symbol* id, QualType ty);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 class TagDecl : public NamedDecl
@@ -250,6 +260,7 @@ protected:
 
 public:
     static EnumDecl* NewObj(Symbol* id, bool isDefinition);
+    virtual void accept(ASTVisitor* vt) override;
     void addConstant(EnumConstantDecl* constant) {constants_.push_back(constant); }
     DeclGroup getConstants() {return constants_;}
 };
@@ -264,6 +275,7 @@ protected:
 
 public:
     static RecordDecl* NewObj(Symbol* id, bool isDefinition, bool isUnion);
+    virtual void accept(ASTVisitor* vt) override;
     void addField(Decl* field) {fields_.push_back(field);}
     void addField(DeclGroup fields) { fields_.insert(fields_.end(), fields.begin(), fields.end());}
     DeclGroup getFields() {return fields_;}

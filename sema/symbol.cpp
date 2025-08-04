@@ -169,10 +169,10 @@ bool SymbolTableContext::isTypeSpecifier(Token* tk)
     }
     /*typedef-name*/
     Symbol* sym = lookup(Symbol::NORMAL, tk->value_);
-    if (!sym) {
-        return false;
+    if (sym) {
+        return true;
     }
-
+    return false;
 }
 
 bool SymbolTableContext::isTypeQualifier(Token* tk)

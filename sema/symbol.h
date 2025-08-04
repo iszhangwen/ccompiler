@@ -90,7 +90,7 @@ public:
     Symbol* insertLabel(const std::string&, NamedDecl*);
     Symbol* insertRecord(const std::string&, Type*, NamedDecl*);
     Symbol* insertMember(const std::string&, Type*, NamedDecl*);
-    Symbol* insertNormal(const std::string&, Type*, NamedDecl*, bool);
+    Symbol* insertNormal(const std::string&, Type*, NamedDecl*);
     Symbol* lookup(Symbol::SymbolType, const std::string&);
     // 作用域管理函数
     Scope* getCurScope() {return curScope_;}

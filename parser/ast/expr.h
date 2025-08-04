@@ -25,6 +25,7 @@ protected:
     : Expr(NodeKind::NK_DeclRefExpr, qt), decl_(dc) {}
 public:
     static DeclRefExpr* NewObj(QualType qt, NamedDecl* dc);
+    virtual void accept(ASTVisitor* vt) override;
     NamedDecl* getNameDecl() const {
         return decl_;
     }
@@ -41,6 +42,7 @@ protected:
     : Expr(NodeKind::NK_IntegerLiteral, qt), val_(val){}
 public:
     static IntegerLiteral* NewObj(Token*);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 class CharacterLiteral : public Expr 
@@ -51,6 +53,7 @@ protected:
     : Expr(NodeKind::NK_CharacterLiteral, qt), val_(val) {}
 public:
     static CharacterLiteral* NewObj(Token*);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 class FloatingLiteral : public Expr 
@@ -61,6 +64,7 @@ protected:
     : Expr(NodeKind::NK_FloatingLiteral, qt), val_(val) {}
 public:
     static FloatingLiteral* NewObj(Token*);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 class StringLiteral : public Expr 
@@ -71,6 +75,7 @@ protected:
     : Expr(NodeKind::NK_StringLiteral, qt), val_(val) {}
 public:
     static StringLiteral* NewObj(Token*);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 class ParenExpr : public Expr 
@@ -81,6 +86,7 @@ protected:
     : Expr(NodeKind::NK_ParenExpr, val->getType()), val_(val) {}
 public:
     static ParenExpr* NewObj(Expr* val);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getSubExpr() const {
         return dynamic_cast<Expr*>(val_);
     }
@@ -108,6 +114,7 @@ protected:
     : Expr(NodeKind::NK_UnaryOperator, qt), val_(val), op_(op) {}
 public:
     static UnaryOpExpr* NewObj(Expr* val, OpCode op);
+    virtual void accept(ASTVisitor* vt) override;
     static UnaryOpExpr* NewObj(QualType qt, Expr* val, OpCode op);
     OpCode getOpCode() const {
         return op_;
@@ -134,6 +141,7 @@ protected:
     base_(base), index_(index) {} 
 public:
     static ArraySubscriptExpr* NewObj(Expr* base, Expr* index);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getBaseExpr() const {
         return dynamic_cast<Expr*>(base_);
     }
@@ -163,6 +171,7 @@ protected:
     }
 public:
     static CallExpr* NewObj(Expr* fn, const std::vector<Expr*>& params);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getCallee() {
         return static_cast<Expr*>(fn_);
     }
@@ -196,6 +205,7 @@ protected:
     : Expr(NodeKind::NK_MemberExpr, qt), base_(base), memberDecl_(member), isArrow_(isArrow) {}
 public:
     static MemberExpr* NewObj(Expr* base, bool isArrow, NamedDecl* member, QualType qt);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getBase() {
         return static_cast<Expr*>(base_);
     }
@@ -219,6 +229,7 @@ protected:
     : Expr(NodeKind::NK_CompoundLiteralExpr, qt), init_(ex) {}
 public:
     static CompoundLiteralExpr* NewObj(QualType qt, Expr* ex);
+    virtual void accept(ASTVisitor* vt) override;
     Expr *getInitExpr() { 
         return dynamic_cast<Expr*>(init_);
     }
@@ -252,6 +263,7 @@ protected:
     : Expr(NodeKind::NK_CastExpr, qt), ck_(ck) {}
 public:
     static CastExpr* NewObj(QualType qt, Expr* ex, CastKind ck);
+    virtual void accept(ASTVisitor* vt) override;
     Expr *getCastExpr() { 
         return dynamic_cast<Expr*>(val_);
     }
@@ -299,6 +311,7 @@ protected:
 public:
     static BinaryOpExpr* NewObj(Expr* LE, Expr* RE, OpCode op);
     static BinaryOpExpr* NewObj(Expr* LE, Expr* RE, OpCode op, QualType qt);
+    virtual void accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {
         return op_;
     }
@@ -319,17 +332,18 @@ public:
     }
 };
 
-class ConditionalOperator : public Expr 
+class ConditionalExpr : public Expr 
 {
     Stmt* cond_;
     Stmt* then_;    
     Stmt* else_; 
 protected:
-    ConditionalOperator(Expr* co, Expr* th, Expr* el, QualType qt)
+    ConditionalExpr(Expr* co, Expr* th, Expr* el, QualType qt)
     : Expr(NodeKind::NK_ConditionalOperator, qt), cond_(co), then_(th), else_(el) {}
 public:
-    static ConditionalOperator* NewObj(Expr* co, Expr* th, Expr* el);
-    static ConditionalOperator* NewObj(Expr* co, Expr* th, Expr* el, QualType qt);
+    static ConditionalExpr* NewObj(Expr* co, Expr* th, Expr* el);
+    static ConditionalExpr* NewObj(Expr* co, Expr* th, Expr* el, QualType qt);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getCond() {
         return dynamic_cast<Expr*>(cond_);
     }

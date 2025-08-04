@@ -78,7 +78,7 @@ private:
     DeclGroup parseDeclaration();
     QualType parseDeclarationSpec(int* sc, int* fs);
     Decl* parseInitDeclarator(QualType qt, int sc, int fs);
-    Declarator parseInitDeclarator(QualType qt, int sc, int fs);
+    //Declarator parseInitDeclarator(QualType qt, int sc, int fs);
     // 6.7.1 storage-class-specifier
     void parseStorageClassSpec(int* sc, TokenKind);
     // 6.7.2 type-specifier
@@ -104,7 +104,7 @@ private:
     void parseParameterDeclaration();
     void parseIdentifierList();
     // 6.7.6 type-name
-    void parseTypeName();
+    QualType parseTypeName();
     void parseAbstractDeclarator();
     void parseDirectAbstractDeclarator();
     // 6.7.7 typedef-name
@@ -130,4 +130,13 @@ public:
     virtual ~Parser();
     // 解析根节点
     void parseTranslationUnit();
+    // 获取语法树
+    TranslationUnitDecl* getTranslationUnitDecl() {return unit_;}
+    // 获取符号表上下文
+    SymbolTableContext* getSymbolTableContext() {return sys_;}
+    void dump(ASTVisitor* av) {
+        if (av) {
+            unit_->accept(av);
+        }
+    }
 };

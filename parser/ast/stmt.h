@@ -31,7 +31,7 @@ protected:
     : Stmt(NodeKind::NK_LabelStmt), key_(key), val_(val) {}
 public:
     static LabelStmt* NewObj(NamedDecl* key, Stmt* val);
-
+    virtual void accept(ASTVisitor* vt) override;
     NamedDecl* getLabel() {return key_;}
     void setLabel(NamedDecl* key) {
         key_ = key;
@@ -54,6 +54,7 @@ protected:
     : Stmt(NodeKind::NK_CaseStmt), cond_(cond), val_(val) {}
 public:
     static CaseStmt* NewObj(Expr* cond, Stmt* val);
+    virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     Expr* getCond() {
         return cond_;
@@ -78,6 +79,7 @@ protected:
     : Stmt(NodeKind::NK_DefaultStmt), val_(val) {}
 public:
     static DefaultStmt* NewObj(Expr* cond, Stmt* val);
+    virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     Expr* getCond() {
         return nullptr; // DefaultStmt没有条件表达式
@@ -102,6 +104,7 @@ protected:
     : Stmt(NodeKind::NK_CompoundStmt), vals_(vals) {}
 public:
     static CompoundStmt* NewObj(const std::vector<Stmt*>& vals);
+    virtual void accept(ASTVisitor* vt) override;
     std::vector<Stmt*> getStmts() const {
         return vals_;
     }
@@ -137,6 +140,7 @@ protected:
     : Stmt(NodeKind::NK_DeclStmt), dc_(dc) {}
 public:
     static DeclStmt* NewObj(Decl* dc);
+    virtual void accept(ASTVisitor* vt) override;
     Decl* getDecl() {
         return dc_;
     }
@@ -153,6 +157,7 @@ protected:
     : Stmt(NodeKind::NK_ExprStmt), ex_(ex){}
 public:
     static ExprStmt* NewObj(Expr* ex);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getExpr() {
         return ex_;
     }
@@ -162,16 +167,17 @@ public:
 };
 
 /*------------------------------控制流-条件语句---------------------------------------------*/
-class IFStmt : public Stmt 
+class IfStmt : public Stmt 
 {
     Expr* cond_;
     Stmt* then_;
     Stmt* else_;
 protected:
-    IFStmt(Expr* cond, Stmt* th, Stmt* el = nullptr)
+    IfStmt(Expr* cond, Stmt* th, Stmt* el = nullptr)
     : Stmt(NodeKind::NK_IfStmt), cond_(cond), then_(th), else_(el) {}
 public:
-    static IFStmt* NewObj(Expr* cond, Stmt* th, Stmt* el = nullptr);
+    static IfStmt* NewObj(Expr* cond, Stmt* th, Stmt* el = nullptr);
+    virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     Expr* getCond() {
         return cond_;
@@ -202,6 +208,7 @@ protected:
     : Stmt(NodeKind::NK_SwitchStmt), cond_(cond), val_(val) {}
 public:
     static SwitchStmt* NewObj(Expr* cond, Stmt* val);
+    virtual void accept(ASTVisitor* vt) override;
      Expr* getCond() {
         return cond_;
     }
@@ -227,6 +234,7 @@ protected:
     : Stmt(NodeKind::NK_WhileStmt), cond_(cond), val_(val) {}
 public:
     static WhileStmt* NewObj(Expr* cond, Stmt* val);
+    virtual void accept(ASTVisitor* vt) override;
      Expr* getCond() {
         return cond_;
     }
@@ -254,6 +262,7 @@ protected:
     : Stmt(NodeKind::NK_DoStmt), cond_(cond), val_(val) {}
 public:
     static DoStmt* NewObj(Expr* cond, Stmt* val);
+    virtual void accept(ASTVisitor* vt) override;
      Expr* getCond() {
         return cond_;
     }
@@ -279,6 +288,7 @@ protected:
     : Stmt(NodeKind::NK_ForStmt), init_(init), cond_(cond), update_(update), val_(val) {}
 public:
     static ForStmt* NewObj(Expr* init, Expr* cond, Expr* update, Stmt* val);
+    virtual void accept(ASTVisitor* vt) override;
 };
 
 
@@ -291,6 +301,7 @@ protected:
     : Stmt(NodeKind::NK_GotoStmt), label_(label) {}
 public:
     static GotoStmt* NewObj(Stmt* label);
+    virtual void accept(ASTVisitor* vt) override;
     Stmt* getLabel() {
         return label_;
     }
@@ -307,6 +318,7 @@ protected:
     : Stmt(NodeKind::NK_ContinueStmt), label_(label) {}
 public:
     static ContinueStmt* NewObj(Stmt* label);
+    virtual void accept(ASTVisitor* vt) override;
     Stmt* getLabel() {
         return label_;
     }
@@ -323,6 +335,7 @@ protected:
     : Stmt(NodeKind::NK_BreakStmt), label_(label) {}
 public:
     static BreakStmt* NewObj(Stmt* label);
+    virtual void accept(ASTVisitor* vt) override;
     Stmt* getLabel() {
         return label_;
     }
@@ -339,6 +352,7 @@ protected:
     : Stmt(NodeKind::NK_ReturnStmt), retVal_(retVal) {}
 public:
     static ReturnStmt* NewObj(Expr* retVal);
+    virtual void accept(ASTVisitor* vt) override;
     Expr* getReturnValue() {
         return retVal_;
     }

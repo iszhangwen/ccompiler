@@ -5,6 +5,7 @@
 class Expr;
 class Decl;
 class Stmt;
+class Type;
 class TranslationUnitDecl;
 class LabelDecl;
 class NamedDecl;

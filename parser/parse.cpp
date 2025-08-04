@@ -321,16 +321,16 @@ Expr* Parser::parsePostfixExpr()
             seq_->expect(TokenKind::Identifier);
             Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
             if (!sym) {
-                error("symbol undefined!");
+                semaError("symbol undefined!");
                 break;
             }
             Type* ty = sym->getType();
-            if (ty && ty->getDecl()) {
+            if (ty) {
                 //auto lex = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
-                node = MemberExpr::NewObj(node, nullptr, false);
+                //node = MemberExpr::NewObj(node, nullptr, false);
             }
             else {
-                error("symbol type undefined!");
+                semaError("symbol type undefined!");
                 break;
             }
         }
@@ -338,16 +338,16 @@ Expr* Parser::parsePostfixExpr()
             seq_->expect(TokenKind::Identifier);
             Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
             if (!sym) {
-                error("symbol undefined!");
+                semaError("symbol undefined!");
                 break;
             }
             Type* ty = sym->getType();
-            if (ty && ty->getDecl()) {
+            if (ty) {
                 //auto lex = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
-                node = MemberExpr::NewObj(node, nullptr, true);
+                //node = MemberExpr::NewObj(node, nullptr, true);
             }
             else {
-                error("symbol type undefined!");
+                semaError("symbol type undefined!");
                 break;
             }
         }
@@ -635,7 +635,7 @@ Expr* Parser::parseConditionalExpr()
         Expr* th = parseExpr();
         seq_->expect(TokenKind::Colon_);
         Expr* el = parseConditionalExpr();
-        node = ConditionalOperator::NewObj(node, th, el);
+        node = ConditionalExpr::NewObj(node, th, el);
     }
     return node;
 }
@@ -749,14 +749,10 @@ Expr* Parser::parseConstansExpr()
 */
 Expr* Parser::parseParenExpr()
 {
-    if (!seq_->match(TokenKind::LParent_)) {
-        sytaxError(seq_->cur(), "expect Lparen, but not Lparen!");
-        return nullptr;
-    }
-    
+    seq_->expect(TokenKind::LParent_);    
     Expr* node = nullptr;
     if (sys_->isTypeName(seq_->peek())) {
-        //QualType qt = parseTypeName();
+        QualType qt = parseTypeName();
         seq_->expect(TokenKind::RParent_);
         if (seq_->match(TokenKind::LCurly_Brackets_)) {
             //node = parseInitlizerList();
@@ -967,11 +963,6 @@ Decl* Parser::parseInitDeclarator(QualType qt, int sc, int fs)
         parseInitializer();
     }
     return dc;
-}
-
-Declarator parseInitDeclarator(QualType qt, int sc, int fs)
-{
-    return Declarator();
 }
 
 void Parser::parseStorageClassSpec(int* sc, TokenKind tk)
@@ -1420,10 +1411,11 @@ void Parser::parseIdentifierList()
 /*(6.7.6) type-name:
  specifier-qualifier-list abstract-declaratoropt
 */
-void Parser::parseTypeName()
+QualType Parser::parseTypeName()
 {
     parseSpecQualList();
     parseAbstractDeclarator();
+    return QualType();
 }
 
 /* (6.7.6) abstract-declarator:
@@ -1659,7 +1651,7 @@ Stmt* Parser::parseSelectionStmt()
         seq_->expect(TokenKind::RParent_);
         Stmt* th = parseStmt();
         Stmt* el = (seq_->match(TokenKind::Else)) ? parseStmt() : nullptr;
-        node = IFStmt::NewObj(cond, th, el);
+        node = IfStmt::NewObj(cond, th, el);
         break;
     }
 
@@ -1772,11 +1764,12 @@ Stmt* Parser::parseJumpStmt()
  已经解析过了declaration-specifiers declarator， declaration-listopt不支持， 只解析 compound-statement
 */
 Decl* Parser::parseFunctionDefinitionBody(Decl* dc)
-{
+{/*
     FunctionDecl* fd= dynamic_cast<FunctionDecl*>(dc);
     Stmt* body = parseCompoundStmt();
     fd->setBody(body);
-    return fd;
+    return fd;*/
+    return nullptr;
 }
 
 
