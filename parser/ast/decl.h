@@ -64,7 +64,7 @@ class Decl : public AstNode
 {
 public:
     virtual ~Decl(){};
-    virtual void accept(std::shared_ptr<ASTVisitor> vt) {}
+    virtual void accept(ASTVisitor* vt) {}
 
 protected:
     Decl(NodeKind nk): AstNode(nk) {}
@@ -83,7 +83,7 @@ public:
     virtual void accept(ASTVisitor* vt) override;
     void addDecl(const DeclGroup& dc) {decls_.insert(decls_.end(), dc.begin(), dc.end());}
     void addDecl(Decl* dc) {decls_.push_back(dc);}
-    const DeclGroup& getDecls() const {return decls_;}
+    DeclGroup& getDecls() {return decls_;}
     void setDecls(const DeclGroup& dc) {decls_ = dc;}
     size_t size() const {return decls_.size();}
 };

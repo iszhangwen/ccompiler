@@ -175,8 +175,5 @@ public:
     Token* next();
     Token* cur() const;
     Token* peek(size_t n = 1) const; 
-    bool match(TokenKind);
-    void expect(TokenKind);
-    bool test(TokenKind);
     void reset();
 };

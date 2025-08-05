@@ -1,6 +1,9 @@
 #include "astvisitor.h"
 #include "analyzer.h"
 #include "ast/type.h"
+#include "ast/decl.h"
+#include "ast/stmt.h"
+#include "ast/expr.h"
 #include <iostream>
 
 void CodegenASTVisitor::visit(IntegerLiteral* c) 
@@ -63,6 +66,12 @@ void CodegenASTVisitor::visit(UnaryOpExpr* uoe)
 void CodegenASTVisitor::visit(TranslationUnitDecl* ld) 
 {
     std::cout << " TranslationUnitDecl" << std::endl;
+    std::cout << " Decls size: " << ld->size() << std::endl;
+    for (auto dc : ld->getDecls()) {
+        if (dc) {
+            dc->accept(this);
+        }
+    }
 }
 void CodegenASTVisitor::visit(LabelDecl* ld) 
 {

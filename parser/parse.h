@@ -25,6 +25,12 @@ private:
     TranslationUnitDecl* unit_;
     SemaAnalyzer* sema_;
     SymbolTableContext* sys_;
+    
+    // Token序列处理
+    bool match(TokenKind);
+    void expect(TokenKind);
+    bool test(TokenKind);
+    void reset();
 
     // 语法错误处理策略，遇到错误时中止编译程序
     void sytaxError(const std::string& val);
@@ -32,6 +38,8 @@ private:
     // 语义错误处理策略
     void semaError(const std::string& val);
     void semaError(Token *tk, const std::string& val);
+    // 调试打印
+    void dumplog();
 
     /*-----------------------------Expressions-----------------------------------------*/
     Expr* parsePrimaryExpr();

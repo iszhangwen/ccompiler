@@ -127,33 +127,6 @@ Token *TokenSequence::cur() const
     return peek(0);
 }
 
-bool TokenSequence::match(TokenKind tk)
-{
-    if (peek()->kind_ == tk)
-    {
-        next();
-        return true;
-    }
-    return false;
-}
-
-void TokenSequence::expect(TokenKind tk)
-{
-    if (peek()->kind_ == tk)
-    {
-        next();
-        return;
-    }
-    std::stringstream ss;
-    ss << "Expect " << Token::TokenKindMap.at(tk) << " but " << Token::TokenKindMap.at(peek()->kind_);
-    throw CCError(ss.str());
-}
-
-bool TokenSequence::test(TokenKind tk)
-{
-    return peek()->kind_ == tk;
-}
-
 void TokenSequence::reset()
 {
     if (pos_ >= 0) {
