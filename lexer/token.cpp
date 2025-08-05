@@ -153,3 +153,10 @@ bool TokenSequence::test(TokenKind tk)
 {
     return peek()->kind_ == tk;
 }
+
+void TokenSequence::reset()
+{
+    if (pos_ >= 0) {
+        pos_--;
+    }
+}

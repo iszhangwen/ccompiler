@@ -718,7 +718,7 @@ DeclGroup Parser::parseDeclaration()
         }
         return res;
     }
-
+    std::cout << "-------------\n";
     // 解析第一个声明符
     Declarator declarator("", qt, sc, fs);
     Decl* dc = parseInitDeclarator(declarator);
@@ -726,11 +726,11 @@ DeclGroup Parser::parseDeclaration()
         //res.push_back(parseFunctionDefinitionBody(fstDecl));
         return res;
     } else {
-        res.push_back(fstDecl);
+        //res.push_back(fstDecl);
     }
 
     while (seq_->match(TokenKind::Comma_)) {
-            res.push_back(parseInitDeclarator(qt, sc, fs));
+            res.push_back(parseInitDeclarator(declarator));
     }
     seq_->expect(TokenKind::Semicolon_);
     return res;
@@ -859,18 +859,16 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
             if (ts & ~COM_RECORD) {
                 sytaxError("unexpect struct or union!");
             }
-            ts |= TypeSpecifier::STRUCTORUNION;
             ty = parseStructOrUnionSpec(seq_->cur()->kind_ == TokenKind::Struct);
-            break;
+            return QualType(ty, tq);
 
         // (6.7.2) type-specifier->enum-specifier
         case TokenKind::Enum:
             if (ts & ~COM_ENUM) {
                 sytaxError("unexpect enum!");
             }
-            ts |= TypeSpecifier::ENUM;
             ty = parseEnumSpec();
-            break;
+            return QualType(ty, tq);
 
         //(6.7.3) type-qualifier:
         case TokenKind::Const:    tq |= TypeQualifier::CONST; break;
@@ -892,7 +890,8 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
                 }
                 break;
             } else {
-                sys_->getBuiltTypeByTypeSpec(ts);
+                ty = sys_->getBuiltTypeByTypeSpec(ts);
+                seq_->reset();
             }
 
         default:
@@ -919,12 +918,12 @@ Decl* Parser::parseInitDeclarator(Declarator dc)
     }
     // 判断当前是否处于函数原型作用域
     bool isFuncProto = (sys_->isScopeType(Scope::FUNC_PROTOTYPE));
-    Decl* res = nullptr;//VarDecl::NewObj(dc.getName(), dc.getType(), dc.getStorageClass(), initExpr);
+    Decl* res = new VarDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass(), initExpr);
 
     // 插入符号表
     Symbol* sym = nullptr;
     if (!dc.getName().empty()) {
-        sym = sys_->insertNormal(dc.getName(), dc.getType(), res);
+        sym = nullptr;//sys_->insertNormal(dc.getName(), dc.getType(), res);
     }
     return res;
 }
@@ -983,7 +982,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
         return nullptr;
     }
     if (sym) {
-        return sym->getType();
+        return nullptr;//sym->getType();
     }
     Type* ty = nullptr; //::NewObj(isStruct, nullptr);
     sys_->insertRecord(key, ty, nullptr);
@@ -1003,12 +1002,12 @@ Type* Parser::parseStructDeclarationList(Symbol* sym)
     if (!sym) {
         return nullptr;
     }
-    RecordType* ty = dynamic_cast<RecordType*>(sym->getType());
-    RecordDecl* dc = RecordDecl::NewObj(sym, true, ty->isStructType());
+    RecordType* ty = nullptr;//<RecordType*>(sym->getType());
+    RecordDecl* dc = nullptr;//RecordDecl::NewObj(sym, true, ty->isStructType());
     do {
         QualType qt = parseSpecQualList();
         DeclGroup path = parseStructDeclaratorList(qt, dc);
-        dc->addField(path);
+        //dc->addField(path);
         seq_->match(TokenKind::Semantics);
     }while (seq_->test(TokenKind::RCurly_Brackets_));
     ty->setTagDecl(dc);
@@ -1040,7 +1039,7 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
         Expr* initEx = nullptr;
         if (seq_->match(TokenKind::Colon_)) {
             initEx = parseConstansExpr();
-            dc = FieldDecl::NewObj(nullptr, qt, parent, 0);
+            dc = nullptr;//FieldDecl::NewObj(nullptr, qt, parent, 0);
         }
         else {
             //NamedDecl* tmp = dynamic_cast<NamedDecl*>(parseDeclarator(qt, 0, 0));
@@ -1048,7 +1047,7 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
             if (seq_->match(TokenKind::Colon_)) {
                 initEx = parseConstansExpr();
             }
-            dc = FieldDecl::NewObj(tmp->getSymbol(), qt, parent, 0);
+            dc = nullptr;//FieldDecl::NewObj(tmp->getSymbol(), qt, parent, 0);
         }
         res.push_back(dc);
 
@@ -1082,7 +1081,7 @@ Type* Parser::parseEnumSpec()
         }
         // 符号表查找到了但是未定义
         else if (!sym->getType()->isCompleteType()) {
-            Type* ty = sym->getType();
+            Type* ty = nullptr;//->getType();
             return parseEnumeratorList(sym, ty);
         }
         // 其他情况：符号表查找到了但是已经定义了：重定义错误
@@ -1099,7 +1098,7 @@ Type* Parser::parseEnumSpec()
     }
     // 返回类型，若由符号则返回，否则创建
     if (!sym) {
-        return sym->getType();
+        return nullptr;// sym->getType();
     }
     Type* ty = EnumType::NewObj(nullptr);
     sys_->insertRecord(key, ty, nullptr);
@@ -1114,7 +1113,7 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
 {
     // 打开块作用域
     ScopeManager scm(this, Scope::BLOCK);
-    EnumDecl* dc = EnumDecl::NewObj(sym, true);
+    EnumDecl* dc = nullptr;//::NewObj(sym, true);
     while (true) {
         dc->addConstant(parseEnumerator(QualType()));
         // 匹配到逗号
@@ -1146,15 +1145,16 @@ EnumConstantDecl* Parser::parseEnumerator(QualType qt)
 {
     // 解析符号
     seq_->expect(TokenKind::Identifier);
-    Symbol* sym = 
+    Symbol* sym = nullptr;
     // 解析表达式
     Expr* ex = nullptr;
     if (seq_->match(TokenKind::Assign_)) {
         ex = parseConstansExpr();
     }
-    EnumConstantDecl dc = EnumConstantDecl::NewObj(sym, ex);
+    EnumConstantDecl* dc = nullptr;//EnumConstantDecl::NewObj(sym, ex);
     // 插入符号表
     sys_->insertMember(seq_->cur()->value_, nullptr, nullptr);
+    return nullptr;
 }
 
 /* (6.7.3) type-qualifier:
@@ -1233,7 +1233,8 @@ QualType Parser::modifyBaseType(QualType oldBase, QualType newBase, QualType cur
     if (curType == oldBase) {
         return newBase;
     }
-    return curType->setQualType(modifyBaseType(oldBase, newBase, curType->getQualType()));
+    curType->setQualType(modifyBaseType(oldBase, newBase, curType->getQualType()));
+    return curType;
 }
 
 Expr* Parser::parseArrayLen()
@@ -1509,7 +1510,7 @@ Stmt* Parser::parseLabeledStmt()
     {
     case TokenKind::Identifier:
     {
-        LabelDecl* key = LabelDecl::NewObj(tk->value_);
+        LabelDecl* key = nullptr;//LabelDecl::NewObj(tk->value_);
         // 添加到符号表
         sys_->insertLabel(tk->value_, key);
         seq_->expect(TokenKind::Colon_);
@@ -1715,8 +1716,8 @@ void Parser::parseTranslationUnit()
         {
             continue;
         }
-        auto rpath = parseDeclaration();
-        res.insert(res.begin(), rpath.begin(), rpath.end());
+        auto path = parseDeclaration();
+        res.insert(res.begin(), path.begin(), path.end());
     }
-    unit_ = TranslationUnitDecl::NewObj(res);
+    unit_ = new TranslationUnitDecl(res);
 }

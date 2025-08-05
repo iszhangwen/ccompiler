@@ -22,6 +22,19 @@ class Scope;
 
 struct Declarator
 {
+    enum DeclaratorKind {
+        DK_UNDEFINED,
+        DK_ARRAY,
+        DK_VAR,
+        DK_PARAM,
+        DK_FUNC,
+        DK_ENUMCONSTANT,
+        DK_FIELD,
+        DK_INDIRECTFILED,
+        DK_TYPEDEFNAME,
+    };
+    // 标识符类型
+    DeclaratorKind dk_;
     // 标识符名称
     std::string name_; 
     // 声明的类型
@@ -32,7 +45,19 @@ struct Declarator
     int funcSpec_;   
     // 构造函数
     Declarator(const std::string& name, QualType type, int sc, int fs)
-    : name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
+    : dk_(DK_UNDEFINED), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
+
+    void setKind(DeclaratorKind dk) {dk_ = dk_;}
+    void setName(std::string name) {name_ = name;}
+    void setType(QualType ty) {type_ = ty;}
+    void setStorageClass(int sc) {storageClass_ = sc;}
+    void setFuncSpec(int funcSpec) {funcSpec_ = funcSpec;}
+
+    DeclaratorKind getKind() {return dk_;}
+    std::string getName() {return name_;}
+    QualType getType() {return type_;}
+    int getStorageClass() {return storageClass_;}
+    int getFuncSpec() {return funcSpec_;}
 };
 
 class Decl : public AstNode
@@ -106,14 +131,14 @@ public:
 class DeclaratorDecl : public ValueDecl 
 {
 private:
-    StorageClass sc_;
+    int sc_;
 public:
-    DeclaratorDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, StorageClass sc)
+    DeclaratorDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, int sc)
     : ValueDecl(nk, name, sco, ty), sc_(sc) {}
     virtual void accept(ASTVisitor* vt) override;
 
-    StorageClass getStorageClass() {return sc_;}
-    void setStorageClass(StorageClass sc) {sc_ = sc;}
+    int getStorageClass() {return sc_;}
+    void setStorageClass(int sc) {sc_ = sc;}
 };
 
 // 变量声明：需要包含存储类，作用域，初始化表达式等
@@ -122,9 +147,9 @@ class VarDecl : public DeclaratorDecl
 private:
     Expr* initExpr_; // 初始化表达式
 public:
-    VarDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, StorageClass sc, Expr* ex=nullptr)
+    VarDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, int sc, Expr* ex=nullptr)
     : DeclaratorDecl(nk, name, sco, ty, sc), initExpr_(ex) {}
-    VarDecl(const std::string& name, Scope* sco, QualType ty, StorageClass sc, Expr* ex=nullptr)
+    VarDecl(const std::string& name, Scope* sco, QualType ty, int sc, Expr* ex=nullptr)
     : DeclaratorDecl(NK_VarDecl, name, sco, ty, sc), initExpr_(ex) {}
     virtual void accept(ASTVisitor* vt) override;
 
@@ -136,7 +161,7 @@ public:
 class ParmVarDecl final : public VarDecl 
 {
 public:
-    ParmVarDecl(const std::string& name, Scope* sco, QualType ty, StorageClass sc, Expr* ex=nullptr)
+    ParmVarDecl(const std::string& name, Scope* sco, QualType ty, int sc, Expr* ex=nullptr)
     : VarDecl(NK_ParmVarDecl, name, sco, ty, sc, ex) {}
     virtual void accept(ASTVisitor* vt) override;
 };
@@ -145,11 +170,11 @@ public:
 class FunctionDecl : public DeclaratorDecl
 {
 private:
-    FuncSpecifier fs_;
+    int fs_;
     std::vector<ParmVarDecl*> parmVarList_;
     CompoundStmt* body_;
 public:
-    FunctionDecl(const std::string& name, Scope* sco, QualType ty, StorageClass sc, FuncSpecifier fs, std::vector<ParmVarDecl*> param, CompoundStmt* body)
+    FunctionDecl(const std::string& name, Scope* sco, QualType ty, int sc, int fs, std::vector<ParmVarDecl*> param, CompoundStmt* body)
     : DeclaratorDecl(NK_FunctionDecl, name, sco, ty, sc), fs_(fs), parmVarList_(param), body_(body) {}
     virtual void accept(ASTVisitor* vt) override;
 

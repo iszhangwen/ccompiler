@@ -108,5 +108,5 @@ public:
     // 设置内置类型
     void initBuiltType();
     // 获取内置类型
-    QualType getBuiltTypeByTypeSpec(int);
+    Type* getBuiltTypeByTypeSpec(int);
 };

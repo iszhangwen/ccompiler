@@ -221,7 +221,7 @@ void SymbolTableContext::initBuiltType()
     insert(Symbol::NORMAL, "long_double_complex", ComplexType::NewObj(ComplexType::LONG_DOUBLE), nullptr);
 }
 
-QualType SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
+Type* SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
 {
     std::string key;
     if (tq & VOID) {
@@ -260,5 +260,5 @@ QualType SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
         key.append("int");
     }
     Symbol* sym = lookup(Symbol::NORMAL, key);
-    return sym ? sym->getType() : nullptr;
+    return sym ? sym->getType().getPtr() : nullptr;
 }

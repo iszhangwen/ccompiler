@@ -178,4 +178,5 @@ public:
     bool match(TokenKind);
     void expect(TokenKind);
     bool test(TokenKind);
+    void reset();
 };
