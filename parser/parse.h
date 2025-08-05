@@ -9,22 +9,6 @@
 
 class Parser;
 
-// 状态机解析type specifier
-class ParseTypeSpec {
-public:
-    enum TSState {
-        START,
-        FOUND_SIGNED_UNSIGNED,
-        FOUND_SHORT,
-        FOUND_LONG,
-        FOUND_LONG2,
-        FOUND_TYPE,
-        FOUND_UDT_TYPE,
-        ERROR
-    };
-    void operator()(TSState& curState, int* ts, TokenKind cond);
-};
-
 // RAII实现作用域管理
 class ScopeManager {
     Parser* parent_;
@@ -77,12 +61,11 @@ private:
     // 6.7 declaration
     DeclGroup parseDeclaration();
     QualType parseDeclarationSpec(int* sc, int* fs);
-    Decl* parseInitDeclarator(QualType qt, int sc, int fs);
+    Decl* parseInitDeclarator(Declarator);
     //Declarator parseInitDeclarator(QualType qt, int sc, int fs);
     // 6.7.1 storage-class-specifier
-    void parseStorageClassSpec(int* sc, TokenKind);
+    void parseStorageClassSpec(StorageClass val, int* sc);
     // 6.7.2 type-specifier
-    void parseTypeSpec(int*, TokenKind, ParseTypeSpec::TSState);
     Type* parseStructOrUnionSpec(bool isStruct);
     Type* parseStructDeclarationList(Symbol*);
     QualType parseSpecQualList();
@@ -94,13 +77,16 @@ private:
     // 6.7.3 type-qualifier
     int parseTypeQualList();
     // 6.7.4 function-specifier
-    void parseFunctionSpec(int* fs, TokenKind);
+    void parseFunctionSpec(FuncSpecifier val, int* fs);
     // 6.7.5 declarator
-    Decl* parseDeclarator(QualType qt, int sc, int fs);
-    void parseDirectDeclarator();
+    void parseDeclarator(Declarator&);
+    // 复杂声明时，由于最后解析函数或数组声明，需要对变量类型做修正。
+    QualType modifyBaseType(QualType, QualType, QualType);
+    Expr* parseArrayLen();
+    QualType parseFuncOrArrayDeclarator(QualType qt);
     QualType parsePointer(QualType);
     void parseParameterTypeList();
-    void parseParameterList();
+    std::vector<ParmVarDecl*> parseParameterList();
     void parseParameterDeclaration();
     void parseIdentifierList();
     // 6.7.6 type-name
@@ -110,7 +96,7 @@ private:
     // 6.7.7 typedef-name
     void parseTypedefName();
     // 6.7.8 initializer
-    void parseInitializer();
+    Expr* parseInitializer();
     void parseInitializerList();
     void parseDesignation();
     void parseDesignator();
@@ -130,10 +116,6 @@ public:
     virtual ~Parser();
     // 解析根节点
     void parseTranslationUnit();
-    // 获取语法树
-    TranslationUnitDecl* getTranslationUnitDecl() {return unit_;}
-    // 获取符号表上下文
-    SymbolTableContext* getSymbolTableContext() {return sys_;}
     void dump(ASTVisitor* av) {
         if (av) {
             unit_->accept(av);

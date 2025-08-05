@@ -16,7 +16,6 @@ Type* SemaAnalyzer::onActTypeSpec(int ts)
     bool isInt = (ts & TypeSpecifier::INT);
     bool isFloat = (ts & TypeSpecifier::FLOAT);
     bool isDouble = (ts & TypeSpecifier::DOUBLE);
-    bool isLongDouble = (ts & TypeSpecifier::LONGDOUBLE);
     bool isBool = (ts & TypeSpecifier::_BOOL);
     bool isComplex = (ts & TypeSpecifier::_COMPLEX);
     // 空类型

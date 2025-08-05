@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <ast/type.h>
 
 class NamedDecl;
 class Type;
@@ -24,15 +25,15 @@ private:
     SymbolType st_;
     std::string key_;
     Scope* sc_;
-    Type* ty_;
+    QualType qty_;
     NamedDecl* dc_;
     bool isType_; // 是否是类型声明
 protected:
-    Symbol(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc, bool isType = false)
-    : st_(st), sc_(s), key_(k), ty_(t), dc_(dc), isType_(isType){}
+    Symbol(SymbolType st, Scope* s, const std::string& k, QualType t, NamedDecl* dc, bool isType = false)
+    : st_(st), sc_(s), key_(k), qty_(t), dc_(dc), isType_(isType){}
 
 public:
-    static Symbol* NewObj(SymbolType st, Scope* s, const std::string& k, Type* t, NamedDecl* dc, bool isType = false);
+    static Symbol* NewObj(SymbolType st, Scope* s, const std::string& k, QualType t, NamedDecl* dc, bool isType = false);
     static std::string getTag(SymbolType, const std::string&);
     std::string getTag();
 
@@ -42,13 +43,13 @@ public:
     Scope* getScope() {return sc_;}
     void setScope(Scope* sc) {sc_ = sc;}
 
-    Type* getType() { return ty_;}
-    void setType(Type* ty) {ty_ = ty;}
+    QualType getType() { return qty_;}
+    void setType(QualType ty) {qty_ = ty;}
 
     NamedDecl* getDecl() { return dc_;}
     void setDecl(NamedDecl* dc) {dc_ = dc;}
 
-    
+    bool isTypeName() {return isType_;}
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 
@@ -69,11 +70,11 @@ private:
     Scope* parent_;
     ScopeType sct_;
     std::unordered_map<std::string, Symbol*> table_;
-    Scope(ScopeType st, Scope* parent);
 
 public:
-    static Scope* NewObj(ScopeType st, Scope* parent);
+    Scope(ScopeType st, Scope* parent);
     Scope* getParent() {return parent_;}
+    ScopeType getScopeType() {return sct_;}
     int getLevel() const {return level_;}
     Symbol* lookup(Symbol::SymbolType, const std::string&);
     bool insert(Symbol*); 
@@ -83,22 +84,29 @@ public:
 */
 class SymbolTableContext {
     Scope* curScope_;
-    Symbol* insert(Symbol::SymbolType, const std::string&, Type*, NamedDecl*);
+    Symbol* insert(Symbol::SymbolType, const std::string&, QualType, NamedDecl*, bool isType = false);
+    Symbol* insert(Symbol::SymbolType, const std::string&, Type*, NamedDecl*, bool isType = false);
 public:
     SymbolTableContext(): curScope_(nullptr) {}
     // 符号查询和插入
     Symbol* insertLabel(const std::string&, NamedDecl*);
-    Symbol* insertRecord(const std::string&, Type*, NamedDecl*);
-    Symbol* insertMember(const std::string&, Type*, NamedDecl*);
-    Symbol* insertNormal(const std::string&, Type*, NamedDecl*);
+    Symbol* insertRecord(const std::string&, QualType, NamedDecl*);
+    Symbol* insertMember(const std::string&, QualType, NamedDecl*);
+    Symbol* insertNormal(const std::string&, QualType, NamedDecl*, bool isType = false);
     Symbol* lookup(Symbol::SymbolType, const std::string&);
     // 作用域管理函数
     Scope* getCurScope() {return curScope_;}
     void enterScope(Scope::ScopeType);
     void exitScope();
+    bool isScopeType(Scope::ScopeType st) {return curScope_->getScopeType() == st;}
 
     // 类型检测
     bool isTypeName(Token* tk);
     bool isTypeSpecifier(Token* tk);
     bool isTypeQualifier(Token* tk);
+
+    // 设置内置类型
+    void initBuiltType();
+    // 获取内置类型
+    QualType getBuiltTypeByTypeSpec(int);
 };

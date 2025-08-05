@@ -189,29 +189,37 @@ public:
         SIGNED,
         UNSIGNED
     };
-    enum Category {
-        CHAR,
+
+    enum Width {
+        BYTE,
         SHORT,
-        INT,
+        NORMAL,
         LONG,
         LONG2
     };
+
+    enum Category {
+        CHAR,
+        INT,
+    };
 private:
     Sign signed_;
+    Width width_;
     Category category_;
 protected:
-    IntegerType(Sign sig, Category cate)
-    : Type(Type::INTEGER, QualType(this), true), signed_(sig), category_(cate) {}
+    IntegerType(Sign sig, Width wid, Category cate)
+    : Type(Type::INTEGER, QualType(this), true), signed_(sig), width_(wid), category_(cate) {}
 public:
-    static IntegerType* NewObj(Sign sig, Category cate);
+    static IntegerType* NewObj(Sign sig, Width wid, Category cate);
     // 判断是否是整数类型
     bool isSigned() const {return (Sign::SIGNED == signed_);}
     bool isUnSigned() const {return (Sign::UNSIGNED == signed_);}
+    bool isShort() const {return (Width::SHORT == width_);}
+    bool isNormal() const {return (Width::NORMAL == width_);}
+    bool isLong() const {return (Width::LONG == width_);}
+    bool isLongLong() const {return (Width::LONG2 == width_);}
     bool isChar() const {return (Category::CHAR == category_);}
-    bool isShort() const {return (Category::SHORT == category_);}
     bool isInt() const {return (Category::INT == category_);}
-    bool isLong() const {return (Category::LONG == category_);}
-    bool isLongLong() const {return (Category::LONG2 == category_);}
 };
 
 // 浮点类型

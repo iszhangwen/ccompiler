@@ -205,21 +205,21 @@ enum TypeSpecifier
     NONE = 0,
     VOID =     (1 << 1),
     CHAR =     (1 << 2),
-    INT =      (1 << 3),
-    FLOAT =    (1 << 4),
-    DOUBLE =   (1 << 5),
-    SHORT =    (1 << 6),
-    LONG =     (1 << 7),
-    LONGLONG = (1 << 8),
+    SHORT =    (1 << 3),
+    INT =      (1 << 4),
+    LONG =     (1 << 5),
+    LONGLONG = (1 << 6),
+    FLOAT =    (1 << 7),
+    DOUBLE =   (1 << 8),
     SIGNED =   (1 << 9),
     UNSIGNED = (1 << 10),
     _BOOL =    (1 << 11),
     _COMPLEX = (1 << 12),
-    STRUCT =   (1 << 13),
-    UNION =    (1 << 14),
-    ENUM =     (1 << 15),
-    LONGDOUBLE = (1 << 16)
+    STRUCTORUNION =   (1 << 13),
+    ENUM =     (1 << 14),
+    TYPEDEFNAME = (1 << 15),
 };
+
 enum TypeQualifier 
 {
     CONST =    (1 << 1),

@@ -133,9 +133,9 @@ BoolType* BoolType::NewObj()
     return new BoolType();
 }
 
-IntegerType* IntegerType::NewObj(Sign sig, Category cate)
+IntegerType* IntegerType::NewObj(Sign sig, Width wid, Category cate)
 {
-    return new IntegerType(sig, cate);
+    return new IntegerType(sig, wid, cate);
 }
 
 RealFloatingType* RealFloatingType::NewObj(Category cate)

@@ -18,41 +18,21 @@
 #include "type.h"
 #include <token.h>
 
-class Symbol;
+class Scope;
 
-class Declarator
+struct Declarator
 {
-public:
-    enum DeclaratorKind {
-        DK_Identifier, // 标识符
-        DK_Pointer, // 指针
-        DK_Array, // 数组
-        DK_Function, // 函数
-        DK_Paren, // 括号
-        DK_Abstract // 抽象声明
-    };
-private:
-    DeclaratorKind dk_;
-    std::string name_; // 标识符名称
-    QualType type_; // 声明的类型
-    int storageClass_; // 存储类
-    int funcSpec_; // 函数说明符    
-public:
-    Declarator(){}
-    Declarator(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs)
-    : dk_(dk), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
-    DeclaratorKind getKind() const { return dk_; }
-    const std::string& getName() const { return name_; }
-    QualType getType() const { return type_; }
-    int getStorageClass() const { return storageClass_; }
-    int getFuncSpec() const { return funcSpec_; }   
-    void setType(QualType qt) { type_ = qt; }
-    void setName(const std::string& name) { name_ = name; }
-    void setStorageClass(int sc) { storageClass_ = sc; }    
-    void setFuncSpec(int fs) { funcSpec_ = fs; }    
-    static Declarator* NewObj(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs) {
-        return new Declarator(dk, name, type, sc, fs);
-    }
+    // 标识符名称
+    std::string name_; 
+    // 声明的类型
+    QualType type_; 
+    // 存储类
+    int storageClass_; 
+    // 函数说明符  
+    int funcSpec_;   
+    // 构造函数
+    Declarator(const std::string& name, QualType type, int sc, int fs)
+    : name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
 };
 
 class Decl : public AstNode
@@ -68,77 +48,56 @@ protected:
 // 翻译单元
 class TranslationUnitDecl final : public Decl
 {
-    DeclGroup dcs_;
-protected:
-    TranslationUnitDecl(const DeclGroup& dc)
-    : Decl(NK_TranslationUnitDecl), dcs_(dc){}
-
-    TranslationUnitDecl()
-    : Decl(NK_TranslationUnitDecl){}
+private:
+    DeclGroup decls_;
 
 public:
-    static TranslationUnitDecl* NewObj(const DeclGroup& dc);
+    TranslationUnitDecl(const DeclGroup& dc)
+    : Decl(NK_TranslationUnitDecl), decls_(dc){}
+
     virtual void accept(ASTVisitor* vt) override;
-    void addDecl(const DeclGroup& dc) {dcs_.insert(dcs_.end(), dc.begin(), dc.end());}
-    void addDecl(Decl* dc) {dcs_.push_back(dc);}
-    const DeclGroup& getDecls() const {return dcs_;}
-    void setDecls(const DeclGroup& dc) {dcs_ = dc;}
-    size_t size() const {return dcs_.size();}
-    Decl* getDecl(size_t index) const {
-        if (index < dcs_.size()) {
-            return dcs_[index];
-        }
-        return nullptr; // 如果索引越界，返回nullptr
-    }
-    void removeDecl(size_t index) {
-        if (index < dcs_.size()) {
-            dcs_.erase(dcs_.begin() + index);
-        }
-    }
-    // 获取声明的数量
-    size_t getDeclCount() const {
-        return dcs_.size();
-    }
+    void addDecl(const DeclGroup& dc) {decls_.insert(decls_.end(), dc.begin(), dc.end());}
+    void addDecl(Decl* dc) {decls_.push_back(dc);}
+    const DeclGroup& getDecls() const {return decls_;}
+    void setDecls(const DeclGroup& dc) {decls_ = dc;}
+    size_t size() const {return decls_.size();}
 };
 
 // 所有具有名称的基类, 命名实体具备链接属性
 class NamedDecl : public Decl
 {
-    Symbol* sym_;
-protected:
-    NamedDecl(NodeKind nk, Symbol* id)
-    : Decl(nk), sym_(id){}
-
+private:
+    Scope* scope_;
+    std::string name_;
 public:
-    Symbol* getSymbol() {return sym_;}
-    void setSymbol(Symbol* id) {sym_ = id;}
+    NamedDecl(NodeKind nk, const std::string& name, Scope* sco)
+    : Decl(nk), name_(name), scope_(sco) {}
+    std::string getName() {return name_;}
+    void setName(const std::string& name) {name_ = name;}
+
+    Scope* getScope(){return scope_;}
+    void setScope(Scope* sc) {scope_ = sc;}
 };
 
 // 标签声明:需要记录标签的名称和位置
 class LabelDecl final : public NamedDecl
 {
-protected:
-    LabelDecl(Symbol* id)
-    : NamedDecl(NK_LabelDecl, id){}
 public:
-    static LabelDecl* NewObj(Symbol* id);
+    LabelDecl(const std::string& name, Scope* sco)
+    : NamedDecl(NK_LabelDecl, name, sco) {}
     virtual void accept(ASTVisitor* vt) override;
 };
 
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
 class ValueDecl : public NamedDecl 
 {
+private:
     QualType ty_;
-protected:
-    ValueDecl(NodeKind nk, Symbol* id, QualType ty)
-    :NamedDecl(nk, id), ty_(ty){}
-
-    ValueDecl(Symbol* id, QualType ty)
-    :NamedDecl(NK_ValueDecl, id), ty_(ty){}
-
 public:
-    static ValueDecl* NewObj(Symbol* id, QualType ty);
+    ValueDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty)
+    : NamedDecl(nk, name, sco), ty_(ty) {}
     virtual void accept(ASTVisitor* vt) override;
+
     QualType getQualType() {return ty_;}
     void setQualType(QualType qt) {ty_ = qt;}
 };
@@ -146,138 +105,144 @@ public:
 // 带有声明说明符的声明，声明说明符包括：存储说明符，类型限定符，类型说明符，比如变量，函数，参数等，
 class DeclaratorDecl : public ValueDecl 
 {
-    int sc_;
-protected:
-    DeclaratorDecl(NodeKind nk, Symbol* id, QualType ty, int sc)
-    : ValueDecl(nk, id, ty), sc_(sc){}
-
-    DeclaratorDecl(Symbol* id, QualType ty, int sc)
-    : ValueDecl(NK_DeclaratorDecl, id, ty), sc_(sc){}
+private:
+    StorageClass sc_;
 public:
-    static DeclaratorDecl* NewObj(Symbol* id, QualType ty, int sc);
+    DeclaratorDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, StorageClass sc)
+    : ValueDecl(nk, name, sco, ty), sc_(sc) {}
     virtual void accept(ASTVisitor* vt) override;
+
+    StorageClass getStorageClass() {return sc_;}
+    void setStorageClass(StorageClass sc) {sc_ = sc;}
 };
 
 // 变量声明：需要包含存储类，作用域，初始化表达式等
 class VarDecl : public DeclaratorDecl
 {
+private:
     Expr* initExpr_; // 初始化表达式
-protected:
-    VarDecl(NodeKind nk, Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
-    : DeclaratorDecl(nk, id, ty, sc), initExpr_(ex){}
-
-    VarDecl(Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
-    : DeclaratorDecl(NK_ValueDecl, id, ty, sc), initExpr_(ex){}
 public:
-    static VarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
+    VarDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, StorageClass sc, Expr* ex=nullptr)
+    : DeclaratorDecl(nk, name, sco, ty, sc), initExpr_(ex) {}
+    VarDecl(const std::string& name, Scope* sco, QualType ty, StorageClass sc, Expr* ex=nullptr)
+    : DeclaratorDecl(NK_VarDecl, name, sco, ty, sc), initExpr_(ex) {}
     virtual void accept(ASTVisitor* vt) override;
-    Expr* getExpr() {return initExpr_;}
-    void setExpr(Expr* ex) {initExpr_ = ex;}
+
+    Expr* getInitExpr() {return initExpr_;}
+    void setInitExpr(Expr* ex) {initExpr_ = ex;}
 };
 
 /// 函数参数声明，需要默认值
 class ParmVarDecl final : public VarDecl 
 {
-protected:
-    ParmVarDecl(Symbol* id, QualType ty, int sc, Expr* ex=nullptr)
-    : VarDecl(id, ty, sc, ex){}
 public:
-    static ParmVarDecl* NewObj(Symbol* id, QualType ty, int sc, Expr* ex=nullptr);
+    ParmVarDecl(const std::string& name, Scope* sco, QualType ty, StorageClass sc, Expr* ex=nullptr)
+    : VarDecl(NK_ParmVarDecl, name, sco, ty, sc, ex) {}
     virtual void accept(ASTVisitor* vt) override;
 };
 
 // 函数声明: 
 class FunctionDecl : public DeclaratorDecl
 {
-    int fs_;
-    DeclGroup param_;
-    Stmt* body_;
-protected:
-    FunctionDecl(Symbol* id, QualType ty, int sc, DeclGroup param, Stmt* body)
-    : DeclaratorDecl(id, ty, sc), param_(param), body_(body){}
+private:
+    FuncSpecifier fs_;
+    std::vector<ParmVarDecl*> parmVarList_;
+    CompoundStmt* body_;
 public:
-    static FunctionDecl* NewObj(Symbol* id, QualType ty, int sc, DeclGroup param, Stmt* body);
+    FunctionDecl(const std::string& name, Scope* sco, QualType ty, StorageClass sc, FuncSpecifier fs, std::vector<ParmVarDecl*> param, CompoundStmt* body)
+    : DeclaratorDecl(NK_FunctionDecl, name, sco, ty, sc), fs_(fs), parmVarList_(param), body_(body) {}
     virtual void accept(ASTVisitor* vt) override;
-    Stmt* getBody() {return body_;}
-    void setBody(Stmt* body) {body_ = body;}
+
+    std::vector<ParmVarDecl*> getParmVarDeclList() {return parmVarList_;}
+    void setParmVarDeclList(std::vector<ParmVarDecl*>& vars) {parmVarList_ = vars;}
+
+    CompoundStmt* getBody() {return body_;}
+    void setBody(CompoundStmt* body) {body_ = body;}
 };
 
 /// Represents a member of a struct/union
 class FieldDecl : public ValueDecl
 {
-    Decl* parent_;  // 所属的结构体/联合体
+private:
+    RecordDecl* parent_;  // 所属的结构体/联合体
     unsigned offset_;     // 字段在内存中的偏移量
 
-protected:
-    FieldDecl(Symbol* id, QualType type, Decl* parent, unsigned offset)
-    : ValueDecl(NodeKind::NK_FieldDecl, id, type), parent_(parent), offset_(offset) {}
 public:
-    static FieldDecl* NewObj(Symbol* id, QualType type, Decl* parent, unsigned offset);
+    FieldDecl(const std::string& name, Scope* sco, QualType ty, RecordDecl* parent, unsigned offset)
+    : ValueDecl(NK_FieldDecl, name, sco, ty), parent_(parent), offset_(offset) {}
     virtual void accept(ASTVisitor* vt) override;
+
     RecordDecl* getParent() { return reinterpret_cast<RecordDecl*>(parent_);  }
     unsigned getOffset() const { return offset_; }
+
+    unsigned getOffset() {return offset_;}
+    void setOffset(unsigned offset) {offset_ = offset;}
 };
 
 class EnumConstantDecl : public ValueDecl
 {
+private:
     Expr* initExpr_;
-protected:
-    EnumConstantDecl(Symbol* id,QualType qt, Expr* val)
-    : ValueDecl(NodeKind::NK_EnumConstantDecl, id, qt), initExpr_(val) {}
+
 public:
-    static EnumConstantDecl* NewObj(Symbol* id, Expr* val);
+    EnumConstantDecl(const std::string& name, Scope* sco, QualType ty, Expr* val)
+    : ValueDecl(NK_EnumConstantDecl, name, sco, ty), initExpr_(val) {}
     virtual void accept(ASTVisitor* vt) override;
-    Expr* getInitExpr() const { return initExpr_;}
+
+    Expr* getInitExpr() {return initExpr_;}
+    void setInitExpr(Expr* ex) {initExpr_ = ex;}
 };
 
-class TypedefDecl : public NamedDecl 
+class TypedefDecl : public ValueDecl 
 {
-    QualType ty_;
-protected:
-    TypedefDecl(Symbol* id, QualType ty)
-    : NamedDecl(NodeKind::NK_TypedefDecl, id), ty_(ty) {}
 public:
-    static TypedefDecl* NewObj(Symbol* id, QualType ty);
+    TypedefDecl(const std::string& name, Scope* sco, QualType ty)
+    : ValueDecl(NK_TypedefDecl, name, sco, ty) {}
     virtual void accept(ASTVisitor* vt) override;
 };
 
 class TagDecl : public NamedDecl
 {
+private:
     bool isDefinition_;  // 是否是定义（而非前向声明）
-protected:
-    TagDecl(NodeKind kind, Symbol* id, bool isDefinition)
-        : NamedDecl(kind, id), isDefinition_(isDefinition) {}
+
 public:
+    TagDecl(NodeKind nk, const std::string& name, Scope* sco,bool isDefinition)
+    : NamedDecl(nk, name, sco), isDefinition_(isDefinition) {}
     bool isDefinition() const { return isDefinition_;}
+    void setDefinition(bool flag) {isDefinition_ = flag;}
 };
 
 class EnumDecl : public TagDecl 
 {
-    DeclGroup constants_;  // 枚举常量列表
-protected:
-    EnumDecl(Symbol* id, bool isDefinition)
-        : TagDecl(NodeKind::NK_EnumDecl, id, isDefinition) {}
+private:
+    std::vector<EnumConstantDecl*> members_;  // 枚举常量列表
 
 public:
-    static EnumDecl* NewObj(Symbol* id, bool isDefinition);
+    EnumDecl(const std::string& name, Scope* sco, bool isDefinition, const std::vector<EnumConstantDecl*>& members)
+    : TagDecl(NK_EnumDecl, name, sco, isDefinition), members_(members) {}
     virtual void accept(ASTVisitor* vt) override;
-    void addConstant(EnumConstantDecl* constant) {constants_.push_back(constant); }
-    DeclGroup getConstants() {return constants_;}
+
+    void addConstant(EnumConstantDecl* constant) {members_.push_back(constant); }
+    std::vector<EnumConstantDecl*> getConstants() {return members_;}
+    void setConstants(std::vector<EnumConstantDecl*>& dcs) {members_ = dcs;}
 };
 
 class RecordDecl : public TagDecl 
 {
-    DeclGroup fields_;  // 字段列表
+private:
     bool isUnion_;      // 是否是 union
-protected:
-    RecordDecl(Symbol* id, bool isDefinition, bool isUnion)
-    : TagDecl(NodeKind::NK_RecordDecl, id, isDefinition), isUnion_(isUnion) {}
+    std::vector<FieldDecl*> filedDecls_; // 字段列表
 
 public:
-    static RecordDecl* NewObj(Symbol* id, bool isDefinition, bool isUnion);
+    RecordDecl(const std::string& name, Scope* sco, bool isDefinition, bool isUnion, std::vector<FieldDecl*> fields)
+    : TagDecl(NK_RecordDecl, name, sco, isDefinition), isUnion_(isUnion), filedDecls_(fields) {}
     virtual void accept(ASTVisitor* vt) override;
-    void addField(Decl* field) {fields_.push_back(field);}
-    void addField(DeclGroup fields) { fields_.insert(fields_.end(), fields.begin(), fields.end());}
-    DeclGroup getFields() {return fields_;}
-    bool isUnion() const {return isUnion_; }
+
+    void addField(FieldDecl* field) {filedDecls_.push_back(field);}
+    void setFiledDecls(std::vector<FieldDecl*>& fields) {filedDecls_ = fields;}
+    std::vector<FieldDecl*> getFiledDecls() {return filedDecls_;}
+
+    bool isUnion() const {return isUnion_;}
+    void setIsUnion(bool flag) {isUnion_ = flag;}
 };
