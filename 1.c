@@ -1,8 +1,2 @@
-struct test;
+typedef int (*a)(), b;
 
-enum EU;
-
-enum EU {
-    A = 90,
-    B = 91
-};

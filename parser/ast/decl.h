@@ -66,15 +66,18 @@ class Decl : public AstNode
 {
 private:
     Scope* scope_;
+
+protected:
+    Decl(NodeKind nk, Scope* sco)
+    : AstNode(nk), scope_(sco) {}
+
 public:
     virtual ~Decl(){};
     virtual void accept(ASTVisitor* vt) {}
     Scope* getScope(){return scope_;}
     void setScope(Scope* sc) {scope_ = sc;}
 
-protected:
-    Decl(NodeKind nk, Scope* sco)
-    : AstNode(nk), scope_(sco) {}
+    bool isFunctionDecl() {return getKind() == NK_FunctionDecl;}
 };
 
 // 翻译单元
@@ -177,6 +180,8 @@ private:
     std::vector<ParmVarDecl*> parmVarList_;
     CompoundStmt* body_;
 public:
+    FunctionDecl(const std::string& name, Scope* sco, QualType ty, int sc, int fs)
+    : DeclaratorDecl(NK_FunctionDecl, name, sco, ty, sc), fs_(fs), body_(nullptr) {}
     FunctionDecl(const std::string& name, Scope* sco, QualType ty, int sc, int fs, std::vector<ParmVarDecl*> param, CompoundStmt* body)
     : DeclaratorDecl(NK_FunctionDecl, name, sco, ty, sc), fs_(fs), parmVarList_(param), body_(body) {}
     virtual void accept(ASTVisitor* vt) override;

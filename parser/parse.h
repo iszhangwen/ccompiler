@@ -95,11 +95,11 @@ private:
     QualType parsePointer(QualType);
     void parseParameterTypeList();
     std::vector<ParmVarDecl*> parseParameterList();
-    void parseParameterDeclaration();
+    ParmVarDecl* parseParameterDeclaration();
     void parseIdentifierList();
     // 6.7.6 type-name
     QualType parseTypeName();
-    void parseAbstractDeclarator();
+    void parseAbstractDeclarator(Declarator&);
     void parseDirectAbstractDeclarator();
     // 6.7.7 typedef-name
     void parseTypedefName();
@@ -117,7 +117,7 @@ private:
     Stmt* parseIterationStmt();
     Stmt* parseJumpStmt();
     /*-------------------------------External definitions-------------------------------*/
-    Decl* parseFunctionDefinitionBody(Decl*);
+    void parseFunctionDefinitionBody(FunctionDecl*);
 
 public:
     explicit Parser(const std::string& filename);

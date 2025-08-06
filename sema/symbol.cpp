@@ -47,6 +47,7 @@ Symbol* Scope::lookup(Symbol::SymbolType st, const std::string& key)
     }
 
     if (parent_) {
+        std::cout << " find from parent " << std::endl;
         return parent_->lookup(st, key);
     }
     return nullptr;
@@ -107,7 +108,10 @@ Symbol* SymbolTableContext::insertNormal(const std::string& key, QualType ty, Na
 
 Symbol* SymbolTableContext::lookup(Symbol::SymbolType st, const std::string& key)
 {
-    return curScope_->lookup(st, key);
+    if (curScope_) {
+        return curScope_->lookup(st, key);
+    }
+    return nullptr;
 }  
 
 void SymbolTableContext::enterScope(Scope::ScopeType st)

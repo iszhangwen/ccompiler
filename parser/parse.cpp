@@ -141,7 +141,7 @@ void Parser::semaError(Token *tk, const std::string& val)
         << std::endl;
     #undef RED
     #undef CANCEL
-    std::cerr << ss.str();
+    throw CCError(ss.str());
 }
 void Parser::dumplog(std::string val = "")
 {
@@ -825,19 +825,24 @@ DeclGroup Parser::parseDeclaration()
         }
         return res;
     }
+     dumplog("2");
     // 解析第一个声明符
     Declarator declarator("", qt, sc, fs);
     Decl* dc = parseInitDeclarator(declarator);
-    if (qt->isFunctionType() && test(TokenKind::LCurly_Brackets_)) {
-        //res.push_back(parseFunctionDefinitionBody(fstDecl));
+    res.push_back(dc);
+    dumplog("1");
+    // 解析函数定义
+    if (dc->isFunctionDecl() && match(TokenKind::LCurly_Brackets_)) {
+        FunctionDecl* fc = dynamic_cast<FunctionDecl*>(dc);
+        parseFunctionDefinitionBody(fc);
+        expect(TokenKind::RCurly_Brackets_);
         return res;
-    } else {
-        res.push_back(dc);
-    }
-
+    } 
+     dumplog("3");
     while (match(TokenKind::Comma_)) {
-            res.push_back(parseInitDeclarator(declarator));
+        res.push_back(parseInitDeclarator(declarator));
     }
+     dumplog("4");
     expect(TokenKind::Semicolon_);
     return res;
 }
@@ -1037,16 +1042,45 @@ Decl* Parser::parseInitDeclarator(Declarator dc)
     if (match(TokenKind::Assign_)) {
         initExpr = parseInitializer();
     }
-    // 判断当前是否处于函数原型作用域
-    bool isFuncProto = (sys_->isScopeType(Scope::FUNC_PROTOTYPE));
-    Decl* res = new VarDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass(), initExpr);
+    // 根据Declarator生成Decl
+    // 判断是否是typedefined
+    if (dc.getStorageClass() & StorageClass::TYPEDEF) {
+        if (initExpr) {
+            sytaxError("typedef can not have initializer!");
+        }
+        TypedefDecl* res = nullptr;
+        if (sys_->lookup(Symbol::NORMAL, dc.getName())) {
+            semaError("has defined typedef!");
+        } else {
+            res = new TypedefDecl(dc.getName(), sys_->getCurScope(), dc.getType());
+            sys_->insertNormal(dc.getName(), dc.getType(), res, true);
+        }
+        
+        return res;
+    }
+    // 判断是否是函数声明
+    if (dc.getType() && dc.getType()->isFunctionType()) {
+        if (initExpr) {
+            sytaxError("function can not have initializer!");
+        }
+        Symbol* sym = sys_->lookup(Symbol::NORMAL, dc.getName());
+        if (sym) {
+            // 已经声明了函数，类型要相同 TODO
 
-    // 插入符号表
-    Symbol* sym = nullptr;
-    if (!dc.getName().empty()) {
-        sym = nullptr;//sys_->insertNormal(dc.getName(), dc.getType(), res);
+        }
+        FunctionDecl* res = new FunctionDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass(), dc.getFuncSpec());
+        return res;
+    }
+    // 若既不是函数声明，也不是typedef，则是变量声明
+    VarDecl* res = nullptr;
+    if (sys_->lookup(Symbol::NORMAL, dc.getName())) {
+        semaError("has defined var!");
+    } else {
+        res = new VarDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass(), initExpr);
+        sys_->insertNormal(dc.getName(), dc.getType(), res);
     }
     return res;
+
 }
 
 void Parser::parseStorageClassSpec(StorageClass val, int* sc)
@@ -1336,6 +1370,15 @@ void Parser::parseFunctionSpec(FuncSpecifier val, int* fs)
 
 /*declarator:
  pointeropt direct-declarator
+ (6.7.6) direct-declarator:
+ identifier
+ ( declarator )
+ direct-declarator [ type-qualifier-listopt assignment-expressionopt ]
+ direct-declarator [ static type-qualifier-listopt assignment-expression ]
+ direct-declarator [ type-qualifier-list static assignment-expression ]
+ direct-declarator [ type-qualifier-listopt *]
+ direct-declarator ( parameter-type-list )
+ direct-declarator ( identifier-listopt )
 */
 void Parser::parseDeclarator(Declarator& dc)
 {
@@ -1369,9 +1412,15 @@ QualType Parser::modifyBaseType(QualType oldBase, QualType newBase, QualType cur
     return curType;
 }
 
+/*
+ direct-declarator [ type-qualifier-listopt assignment-expressionopt ]
+ direct-declarator [ static type-qualifier-listopt assignment-expression ]
+ direct-declarator [ type-qualifier-list static assignment-expression ]
+ direct-declarator [ type-qualifier-listopt *]
+*/
 Expr* Parser::parseArrayLen()
 {
-    return nullptr;
+    return parseAssignExpr();
 }
 
 QualType Parser::parseFuncOrArrayDeclarator(QualType base)
@@ -1383,7 +1432,7 @@ QualType Parser::parseFuncOrArrayDeclarator(QualType base)
         return ArrayType::NewObj(base, len);
     }
     else if (match(TokenKind::LParent_)) {
-        sys_->enterScope(Scope::FUNC_PROTOTYPE);
+        // 声明阶段函数参数不加入到原型作用域，定义时才加入
         auto paramList = parseParameterList();
         sys_->exitScope();
         expect(TokenKind::RParent_);
@@ -1415,41 +1464,34 @@ void Parser::parseParameterTypeList()
     }
 }
 
+/* (6.7.6) parameter-list:
+ parameter-declaration
+ parameter-list , parameter-declaration
+*/
 std::vector<ParmVarDecl*> Parser::parseParameterList()
 {
-    parseParameterDeclaration();
+    std::vector<ParmVarDecl*> res;
+    // 解析第一个参数
+    res.push_back(parseParameterDeclaration());
     while (match(TokenKind::Comma_)) {
-        parseParameterDeclaration();
+        res.push_back(parseParameterDeclaration());
     }
-    return std::vector<ParmVarDecl*>();
+    return res;
 }
 
 /* (6.7.5) parameter-declaration:
  declaration-specifiers declarator
  declaration-specifiers abstract-declaratoropt
 */
-void Parser::parseParameterDeclaration()
+ParmVarDecl* Parser::parseParameterDeclaration()
 {
     QualType qt = parseDeclarationSpec(nullptr, nullptr);
-    if (match(TokenKind::Identifier)) {
-        // 解析标识符
-        expect(TokenKind::Identifier);
-    }
-    else if (match(TokenKind::LParent_)) {
-        // 解析括号表达式
-        expect(TokenKind::LParent_);
-        //parseDeclarator(qt);
-        expect(TokenKind::RParent_);
-    }
-    else {
-        parseAbstractDeclarator();
-    }
-    // 解析可选的函数参数列表
-    if (match(TokenKind::LParent_)) {
-        expect(TokenKind::LParent_);
-        parseParameterTypeList();
-        expect(TokenKind::RParent_);
-    }
+    Declarator dc("", qt, 0, 0);
+    // 首先解析declarator
+    parseDeclarator(dc);
+    // 有名字的参数
+    ParmVarDecl* param = new ParmVarDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass());
+    return param;
 }
 
 /* (6.7.5) identifier-list:
@@ -1470,54 +1512,25 @@ void Parser::parseIdentifierList()
 */
 QualType Parser::parseTypeName()
 {
-    parseSpecQualList();
-    parseAbstractDeclarator();
     return QualType();
 }
 
 /* (6.7.6) abstract-declarator:
  pointer
  pointeropt direct-abstract-declarator
+ (6.7.7) direct-abstract-declarator:
+ ( abstract-declarator )
+ direct-abstract-declaratoropt [ type-qualifier-listopt assignment-expressionopt ]
+ direct-abstract-declaratoropt [ static type-qualifier-listopt assignment-expression ]
+ direct-abstract-declaratoropt [ type-qualifier-list static assignment-expression ]
+ direct-abstract-declaratoropt [ * ]
+ direct-abstract-declaratoropt ( parameter-type-listopt )
 */
-void Parser::parseAbstractDeclarator()
+void Parser::parseAbstractDeclarator(Declarator& dc)
 {
-    //parsePointer();
-    parseDirectAbstractDeclarator();
+
 }
 
-void Parser::parseDirectAbstractDeclarator()
-{
-    if (match(TokenKind::LParent_)) {
-        expect(TokenKind::LParent_);
-        parseAbstractDeclarator();
-        expect(TokenKind::RParent_);
-    }
-    else if (match(TokenKind::LSquare_Brackets_)) {
-        expect(TokenKind::LSquare_Brackets_);
-        if (match(TokenKind::RSquare_Brackets_)) {
-            // 数组长度不确定
-            expect(TokenKind::RSquare_Brackets_);
-        } else {
-            parseConstansExpr();
-            expect(TokenKind::RSquare_Brackets_);
-        }
-    }
-    else if (match(TokenKind::LCurly_Brackets_)) {
-        // 解析函数声明
-        expect(TokenKind::LCurly_Brackets_);
-        parseParameterTypeList();
-        expect(TokenKind::RCurly_Brackets_);
-    }
-    else {
-        sytaxError("expect direct abstract declarator, but not!");
-    }
-    // 解析可选的函数参数列表
-    if (match(TokenKind::LParent_)) {
-        expect(TokenKind::LParent_);
-        parseParameterTypeList();
-        expect(TokenKind::RParent_);
-    }
-}
 
 /* (6.7.7) typedef-name:
  identifier
@@ -1824,13 +1837,37 @@ Stmt* Parser::parseJumpStmt()
  declaration-specifiers declarator declaration-listopt compound-statement
  已经解析过了declaration-specifiers declarator， declaration-listopt不支持， 只解析 compound-statement
 */
-Decl* Parser::parseFunctionDefinitionBody(Decl* dc)
-{/*
-    FunctionDecl* fd= dynamic_cast<FunctionDecl*>(dc);
-    Stmt* body = parseCompoundStmt();
-    fd->setBody(body);
-    return fd;*/
-    return nullptr;
+void Parser::parseFunctionDefinitionBody(FunctionDecl* dc)
+{
+    // 打开函数原型作用域，将参数添加到函数声明中
+    ScopeManager scm(this, Scope::FUNC_PROTOTYPE);
+
+    /*
+    //ScopeManager sm(this, Scope::FUNCTION);
+    auto func = dynamic_cast<FunctionDecl*>(dc);
+    if (!func) {
+        sytaxError("function declaration expected!");
+        return;
+    }
+    auto fty = dynamic_cast<FunctionType*>(qt.getPtr());
+    if (fty->isVariadic()) {
+        semaError("variadic function not supported!");
+        return;
+    }
+    // 处理函数参数
+    for (auto param : fty->getParams()) {
+        if (!param->getDecl()) {
+            semaError("parameter declaration expected!");
+            return;
+        }
+        if (!sys_->insert(param->getName(), Symbol::NORMAL, param->getType(), param)) {
+            semaError("redefinition of parameter '" + param->getName() + "'!");
+            return;
+        }
+    }
+    // 处理函数体
+    //func->setBody( parseCompoundStmt() );
+    return;*/
 }
 
 
@@ -1853,4 +1890,5 @@ void Parser::parseTranslationUnit()
         res.insert(res.begin(), path.begin(), path.end());
     }
     unit_ = new TranslationUnitDecl(res, sys_->getCurScope());
+    
 }

@@ -42,6 +42,13 @@ void ParmVarDecl::accept(ASTVisitor* vt)
     }
 }
 
+void FunctionDecl::accept(ASTVisitor* vt) 
+{
+    if (vt) {
+        vt->visit(this);
+    }
+}
+
 void FieldDecl::accept(ASTVisitor* vt) 
 {
     if (vt) {
