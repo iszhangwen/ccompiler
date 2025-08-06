@@ -1069,6 +1069,7 @@ Decl* Parser::parseInitDeclarator(Declarator dc)
 
         }
         FunctionDecl* res = new FunctionDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass(), dc.getFuncSpec());
+        sys_->insertNormal(dc.getName(), dc.getType(), res, true);
         return res;
     }
     // 若既不是函数声明，也不是typedef，则是变量声明
@@ -1472,7 +1473,10 @@ std::vector<ParmVarDecl*> Parser::parseParameterList()
 {
     std::vector<ParmVarDecl*> res;
     // 解析第一个参数
-    res.push_back(parseParameterDeclaration());
+    if (test(TokenKind::RParent_)) {
+        res.push_back(parseParameterDeclaration());
+    }
+    
     while (match(TokenKind::Comma_)) {
         res.push_back(parseParameterDeclaration());
     }
@@ -1877,6 +1881,7 @@ void Parser::parseFunctionDefinitionBody(FunctionDecl* dc)
 */
 void Parser::parseTranslationUnit()
 {
+    try {
     ScopeManager scm(this, Scope::FILE);
     sys_->initBuiltType();
     DeclGroup res;
@@ -1890,5 +1895,8 @@ void Parser::parseTranslationUnit()
         res.insert(res.begin(), path.begin(), path.end());
     }
     unit_ = new TranslationUnitDecl(res, sys_->getCurScope());
-    
+    }
+    catch(...) {
+        std::cout << "error\n";
+    }
 }
