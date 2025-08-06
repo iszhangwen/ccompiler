@@ -163,14 +163,14 @@ FunctionType* FunctionType::NewObj(QualType qt, bool isInline, bool isNoReturn, 
     return new FunctionType(qt, isInline, isNoReturn, params);
 }
 
-RecordType::RecordType(TagDecl* dc, bool isStruct)
-: TagType(isStruct ? Type::STRUCT : Type::UNION, dc)
+RecordType::RecordType(TagDecl* dc, bool isUnion)
+: TagType(isUnion ? Type::UNION : Type::STRUCT, dc)
 {
 }
 
-RecordType* RecordType::NewObj(TagDecl* dc, bool isStruct)
+RecordType* RecordType::NewObj(TagDecl* dc, bool isUnion)
 {
-    return new RecordType(dc, isStruct ? Type::STRUCT : Type::UNION);
+    return new RecordType(dc, isUnion);
 }
 
 EnumType::EnumType(EnumDecl* dc)

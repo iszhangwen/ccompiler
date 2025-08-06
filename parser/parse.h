@@ -39,7 +39,7 @@ private:
     void semaError(const std::string& val);
     void semaError(Token *tk, const std::string& val);
     // 调试打印
-    void dumplog();
+    void dumplog(std::string val);
 
     /*-----------------------------Expressions-----------------------------------------*/
     Expr* parsePrimaryExpr();
@@ -74,14 +74,14 @@ private:
     // 6.7.1 storage-class-specifier
     void parseStorageClassSpec(StorageClass val, int* sc);
     // 6.7.2 type-specifier
-    Type* parseStructOrUnionSpec(bool isStruct);
-    Type* parseStructDeclarationList(Symbol*);
+    QualType parseStructOrUnionSpec(bool isStruct);
+    QualType parseStructDeclarationList(Symbol*, bool isUnion);
     QualType parseSpecQualList();
-    DeclGroup parseStructDeclaratorList(QualType qt, Decl* parent);
+    std::vector<FieldDecl*> parseStructDeclaratorList(QualType qt, RecordDecl* parent);
     Decl* parseStructDeclarator(QualType qt);
-    Type* parseEnumSpec();
-    Type* parseEnumeratorList(Symbol*, Type*);
-    EnumConstantDecl* parseEnumerator(QualType qt);
+    QualType parseEnumSpec();
+    QualType parseEnumeratorList(Symbol*);
+    EnumConstantDecl* parseEnumerator(QualType qt, EnumDecl* parent);
     // 6.7.3 type-qualifier
     int parseTypeQualList();
     // 6.7.4 function-specifier

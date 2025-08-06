@@ -4,6 +4,7 @@
 #include "ast/decl.h"
 #include "ast/stmt.h"
 #include "ast/expr.h"
+#include "sema.h"
 #include <iostream>
 
 void CodegenASTVisitor::visit(IntegerLiteral* c) 
@@ -16,7 +17,7 @@ void CodegenASTVisitor::visit(FloatingLiteral* c)
 }
 void CodegenASTVisitor::visit(CharacterLiteral* c) 
 {
-    std::cout << " CharacterLiteral" << std::endl;
+    std::cout  << " CharacterLiteral" << std::endl;
 }
 void CodegenASTVisitor::visit(StringLiteral* c) 
 {
@@ -65,10 +66,11 @@ void CodegenASTVisitor::visit(UnaryOpExpr* uoe)
 /*-----------------------Declarations node----------------------------------*/
 void CodegenASTVisitor::visit(TranslationUnitDecl* ld) 
 {
-    std::cout << " TranslationUnitDecl" << std::endl;
+    std::cout  << " TranslationUnitDecl" << std::endl;
     std::cout << " Decls size: " << ld->size() << std::endl;
     for (auto dc : ld->getDecls()) {
         if (dc) {
+            std::cout << "-";
             dc->accept(this);
         }
     }
@@ -88,6 +90,11 @@ void CodegenASTVisitor::visit(DeclaratorDecl* dd)
 void CodegenASTVisitor::visit(VarDecl* vd) 
 {
     std::cout << " VarDecl" << std::endl;
+    Expr* ex = vd->getInitExpr();
+    if (ex) {
+        std::cout << "--";
+        ex->accept(this);
+    }
 }
 void CodegenASTVisitor::visit(ParmVarDecl* pvd) 
 {

@@ -46,6 +46,8 @@ struct Declarator
     // 构造函数
     Declarator(const std::string& name, QualType type, int sc, int fs)
     : dk_(DK_UNDEFINED), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
+    Declarator(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs)
+    : dk_(dk), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
 
     void setKind(DeclaratorKind dk) {dk_ = dk_;}
     void setName(std::string name) {name_ = name;}
@@ -62,12 +64,17 @@ struct Declarator
 
 class Decl : public AstNode
 {
+private:
+    Scope* scope_;
 public:
     virtual ~Decl(){};
     virtual void accept(ASTVisitor* vt) {}
+    Scope* getScope(){return scope_;}
+    void setScope(Scope* sc) {scope_ = sc;}
 
 protected:
-    Decl(NodeKind nk): AstNode(nk) {}
+    Decl(NodeKind nk, Scope* sco)
+    : AstNode(nk), scope_(sco) {}
 };
 
 // 翻译单元
@@ -77,8 +84,8 @@ private:
     DeclGroup decls_;
 
 public:
-    TranslationUnitDecl(const DeclGroup& dc)
-    : Decl(NK_TranslationUnitDecl), decls_(dc){}
+    TranslationUnitDecl(const DeclGroup& dc, Scope* sco)
+    : Decl(NK_TranslationUnitDecl, sco), decls_(dc){}
 
     virtual void accept(ASTVisitor* vt) override;
     void addDecl(const DeclGroup& dc) {decls_.insert(decls_.end(), dc.begin(), dc.end());}
@@ -92,16 +99,12 @@ public:
 class NamedDecl : public Decl
 {
 private:
-    Scope* scope_;
     std::string name_;
 public:
     NamedDecl(NodeKind nk, const std::string& name, Scope* sco)
-    : Decl(nk), name_(name), scope_(sco) {}
+    : Decl(nk, sco), name_(name){}
     std::string getName() {return name_;}
     void setName(const std::string& name) {name_ = name;}
-
-    Scope* getScope(){return scope_;}
-    void setScope(Scope* sc) {scope_ = sc;}
 };
 
 // 标签声明:需要记录标签的名称和位置
@@ -190,32 +193,39 @@ class FieldDecl : public ValueDecl
 {
 private:
     RecordDecl* parent_;  // 所属的结构体/联合体
+    Expr* initExpr_;      // 初始值表达式
     unsigned offset_;     // 字段在内存中的偏移量
 
 public:
-    FieldDecl(const std::string& name, Scope* sco, QualType ty, RecordDecl* parent, unsigned offset)
-    : ValueDecl(NK_FieldDecl, name, sco, ty), parent_(parent), offset_(offset) {}
+    FieldDecl(const std::string& name, Scope* sco, QualType ty, RecordDecl* parent, Expr* ex, unsigned offset = 0)
+    : ValueDecl(NK_FieldDecl, name, sco, ty), parent_(parent), initExpr_(ex), offset_(offset) {}
     virtual void accept(ASTVisitor* vt) override;
 
     RecordDecl* getParent() { return reinterpret_cast<RecordDecl*>(parent_);  }
-    unsigned getOffset() const { return offset_; }
+    void setParent(RecordDecl* p) {parent_ = p;}
 
     unsigned getOffset() {return offset_;}
     void setOffset(unsigned offset) {offset_ = offset;}
+
+    Expr* getInitExpr() {return initExpr_;}
+    void setInitExpr(Expr* ex) {initExpr_ = ex;}
 };
 
 class EnumConstantDecl : public ValueDecl
 {
 private:
     Expr* initExpr_;
-
+    EnumDecl* parent_;
 public:
-    EnumConstantDecl(const std::string& name, Scope* sco, QualType ty, Expr* val)
-    : ValueDecl(NK_EnumConstantDecl, name, sco, ty), initExpr_(val) {}
+    EnumConstantDecl(const std::string& name, Scope* sco, QualType ty, EnumDecl* parent, Expr* val)
+    : ValueDecl(NK_EnumConstantDecl, name, sco, ty), parent_(parent), initExpr_(val) {}
     virtual void accept(ASTVisitor* vt) override;
 
     Expr* getInitExpr() {return initExpr_;}
     void setInitExpr(Expr* ex) {initExpr_ = ex;}
+
+    EnumDecl* getParent() { return parent_; }
+    void setParent(EnumDecl* p) {parent_ = p;}
 };
 
 class TypedefDecl : public ValueDecl 
@@ -226,14 +236,14 @@ public:
     virtual void accept(ASTVisitor* vt) override;
 };
 
-class TagDecl : public NamedDecl
+class TagDecl : public ValueDecl
 {
 private:
     bool isDefinition_;  // 是否是定义（而非前向声明）
 
 public:
-    TagDecl(NodeKind nk, const std::string& name, Scope* sco,bool isDefinition)
-    : NamedDecl(nk, name, sco), isDefinition_(isDefinition) {}
+    TagDecl(NodeKind nk, const std::string& name, Scope* sco, QualType ty, bool isDefinition)
+    : ValueDecl(nk, name, sco, ty), isDefinition_(isDefinition) {}
     bool isDefinition() const { return isDefinition_;}
     void setDefinition(bool flag) {isDefinition_ = flag;}
 };
@@ -244,8 +254,10 @@ private:
     std::vector<EnumConstantDecl*> members_;  // 枚举常量列表
 
 public:
-    EnumDecl(const std::string& name, Scope* sco, bool isDefinition, const std::vector<EnumConstantDecl*>& members)
-    : TagDecl(NK_EnumDecl, name, sco, isDefinition), members_(members) {}
+    EnumDecl(const std::string& name, Scope* sco, QualType ty, bool isDefinition, const std::vector<EnumConstantDecl*>& members)
+    : TagDecl(NK_EnumDecl, name, sco, ty, isDefinition), members_(members) {}
+    EnumDecl(const std::string& name, Scope* sco, QualType ty, bool isDefinition)
+    : TagDecl(NK_EnumDecl, name, sco, ty, isDefinition) {}
     virtual void accept(ASTVisitor* vt) override;
 
     void addConstant(EnumConstantDecl* constant) {members_.push_back(constant); }
@@ -260,11 +272,14 @@ private:
     std::vector<FieldDecl*> filedDecls_; // 字段列表
 
 public:
-    RecordDecl(const std::string& name, Scope* sco, bool isDefinition, bool isUnion, std::vector<FieldDecl*> fields)
-    : TagDecl(NK_RecordDecl, name, sco, isDefinition), isUnion_(isUnion), filedDecls_(fields) {}
+    RecordDecl(const std::string& name, Scope* sco, QualType ty, bool isDefinition, bool isUnion)
+    : TagDecl(NK_RecordDecl, name, sco, ty, isDefinition), isUnion_(isUnion) {}
+    RecordDecl(const std::string& name, Scope* sco, QualType ty, bool isDefinition, bool isUnion, std::vector<FieldDecl*> fields)
+    : TagDecl(NK_RecordDecl, name, sco, ty, isDefinition), isUnion_(isUnion), filedDecls_(fields) {}
     virtual void accept(ASTVisitor* vt) override;
 
     void addField(FieldDecl* field) {filedDecls_.push_back(field);}
+    void addField(std::vector<FieldDecl*> field) {filedDecls_.insert(filedDecls_.end(), field.begin(), field.end());}
     void setFiledDecls(std::vector<FieldDecl*>& fields) {filedDecls_ = fields;}
     std::vector<FieldDecl*> getFiledDecls() {return filedDecls_;}
 

@@ -1,9 +1,8 @@
+struct test;
 
-char signed a = 'c';
-float _Complex f1 = 13.2;
-_Complex float f2 = 12.1;
+enum EU;
 
-_Complex long f12 = 12.1;
-
-double long x = 3.12;
-char signed b = 'c';
+enum EU {
+    A = 90,
+    B = 91
+};

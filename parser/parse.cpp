@@ -143,9 +143,9 @@ void Parser::semaError(Token *tk, const std::string& val)
     #undef CANCEL
     std::cerr << ss.str();
 }
-void Parser::dumplog()
+void Parser::dumplog(std::string val = "")
 {
-    Token* tk = seq_->peek();
+    Token* tk = seq_->cur();
     #define RED "\033[31m"
     #define CANCEL "\033[0m"
     std::stringstream ss;
@@ -158,6 +158,7 @@ void Parser::dumplog()
         << RED 
         << "log: " 
         << CANCEL
+        << val
         << std::endl
         << buf_->segline(tk->loc_)
         << std::string(tk->loc_.column, ' ') 
@@ -799,14 +800,28 @@ DeclGroup Parser::parseDeclaration()
     int sc = 0, fs = 0;
     QualType qt = parseDeclarationSpec(&sc, &fs);
     if (match(TokenKind::Semicolon_)) {
-        if (qt->getKind() == Type::STRUCT || qt->getKind() == Type::UNION) {
-            res.push_back(dynamic_cast<RecordType*>(qt.getPtr())->getTagDecl());
+        switch (qt->getKind())
+        {
+        case Type::STRUCT:
+        case Type::UNION:
+       {
+            RecordType* ty = dynamic_cast<RecordType*>(qt.getPtr());
+            if (ty->getTagDecl()) {
+                res.push_back(ty->getTagDecl());
+            }
+            break;
         }
-        else if (qt->getKind() == Type::ENUM) {
-            res.push_back(dynamic_cast<EnumType*>(qt.getPtr())->getTagDecl());
+        case Type::ENUM:
+        {
+            EnumType* ty = dynamic_cast<EnumType*>(qt.getPtr());
+            if (ty->getTagDecl()) {
+                res.push_back(ty->getTagDecl());
+            }
+            break;
         }
-        else {
+        default:
             sytaxError("declaration specifier incomplete!");
+            break;
         }
         return res;
     }
@@ -831,7 +846,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
 {
     int tq = 0; // 类型限定符
     int ts = 0; // 类型说明符
-    Type* ty = nullptr; // 类型：内建类型,自定义类型
+    QualType ty; // 类型：内建类型,自定义类型
     while (true)
     {
         switch (seq_->peek()->kind_)
@@ -966,8 +981,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
             if (ts & ~COM_RECORD) {
                 sytaxError("unexpect struct or union!");
             }
-            ty = parseStructOrUnionSpec(seq_->cur()->kind_ == TokenKind::Struct);
-            return QualType(ty, tq);
+            return parseStructOrUnionSpec(seq_->cur()->kind_ == TokenKind::Struct);
 
         // (6.7.2) type-specifier->enum-specifier
         case TokenKind::Enum:
@@ -975,8 +989,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
             if (ts & ~COM_ENUM) {
                 sytaxError("unexpect enum!");
             }
-            ty = parseEnumSpec();
-            return QualType(ty, tq);
+            return parseEnumSpec();
 
         //(6.7.3) type-qualifier:
         case TokenKind::Const:    seq_->next(); tq |= TypeQualifier::CONST; break;
@@ -1004,13 +1017,13 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
 
         default:
             // 遇到了标识符或者其他
-            if (!ty) {
+            if (ty.isNull()) {
                 sytaxError("incomplete type specifier!");
             }
-            return QualType(ty, tq);
+            return ty;
         }
     }
-    return QualType();
+    return ty;
 }
 
 /*init-declarator:
@@ -1042,7 +1055,7 @@ void Parser::parseStorageClassSpec(StorageClass val, int* sc)
         sytaxError("expect not storageclass, but has!");
         return;
     } 
-    else if (sc != 0) {
+    else if (*sc != 0) {
         sytaxError("duplication storageclass!");
         return;
     }
@@ -1053,28 +1066,27 @@ void Parser::parseStorageClassSpec(StorageClass val, int* sc)
  struct-or-union identifieropt { struct-declaration-list }
  struct-or-union identifier
 */
-Type* Parser::parseStructOrUnionSpec(bool isStruct)
+QualType Parser::parseStructOrUnionSpec(bool isUnion)
 {
     //符号解析
     std::string key;
-    if (match(TokenKind::Identifier)) {
+    if (match(TokenKind::Identifier)) {        
         key = seq_->cur()->value_;
     }
-
     Symbol* sym = sys_->lookup(Symbol::RECORD, key);
     // UDT定义
     if (match(TokenKind::LCurly_Brackets_)) {
         // 符号表没查找到:第一次定义
         if (!sym) {
-            Type* ty = nullptr;//RecordType::NewObj(isStruct, nullptr);
             if (!key.empty()) { // 匿名对象不插入符号表
+                QualType ty = QualType(RecordType::NewObj(nullptr, isUnion));
                 sym = sys_->insertRecord(key, ty, nullptr);
             }
-            return parseStructDeclarationList(sym);
+            return parseStructDeclarationList(sym, isUnion);
         }
         // 符号表查找到了但是类型定义不完整：存在前向声明
         else if (!sym->getType()->isCompleteType()) {
-            return parseStructDeclarationList(sym);
+            return parseStructDeclarationList(sym, isUnion);
         }
         // 符号表查找到了并且类型定义完整：重复定义
         else {
@@ -1090,9 +1102,9 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
         return nullptr;
     }
     if (sym) {
-        return nullptr;//sym->getType();
+        return sym->getType();
     }
-    Type* ty = nullptr; //::NewObj(isStruct, nullptr);
+    QualType ty = QualType(RecordType::NewObj(nullptr, isUnion));
     sys_->insertRecord(key, ty, nullptr);
     return ty;
 }
@@ -1104,21 +1116,26 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
  specifier-qualifier-list struct-declarator-list ;
  解析结构体成员
 */
-Type* Parser::parseStructDeclarationList(Symbol* sym)
+QualType Parser::parseStructDeclarationList(Symbol* sym, bool isUnion)
 {
-    ScopeManager scm(this, Scope::BLOCK);
-    if (!sym) {
-        return nullptr;
+    QualType ty;
+    std::string name;
+    if (sym) {
+        ty = sym->getType();
+        name = sym->getKey();
+    } else {
+        ty = QualType(RecordType::NewObj(nullptr, isUnion), 0);
     }
-    RecordType* ty = nullptr;//<RecordType*>(sym->getType());
-    RecordDecl* dc = nullptr;//RecordDecl::NewObj(sym, true, ty->isStructType());
+    RecordDecl* dc = new RecordDecl(name, sys_->getCurScope(), ty, true, isUnion);
+    ScopeManager scm(this, Scope::BLOCK);
     do {
-        QualType qt = parseSpecQualList();
-        DeclGroup path = parseStructDeclaratorList(qt, dc);
-        //dc->addField(path);
-        match(TokenKind::Semantics);
-    }while (test(TokenKind::RCurly_Brackets_));
-    ty->setTagDecl(dc);
+        auto path = parseStructDeclaratorList(parseSpecQualList(), dc);
+        expect(TokenKind::Semicolon_);
+        dc->addField(path);
+    }while (!match(TokenKind::RCurly_Brackets_));
+    if (ty.getPtr()) {
+        dynamic_cast<RecordType*>(ty.getPtr())->setTagDecl(dc);
+    }
     return ty;
 }
 
@@ -1139,27 +1156,25 @@ QualType Parser::parseSpecQualList()
  declarator
  declaratoropt : constant-expression
 */
-DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
+std::vector<FieldDecl*> Parser::parseStructDeclaratorList(QualType qt, RecordDecl* parent)
 {
-    DeclGroup res;
+    std::vector<FieldDecl*> res;
     do {
-        Decl* dc = nullptr;
         Expr* initEx = nullptr;
+        Declarator declaraor("", qt, 0, 0);
         if (match(TokenKind::Colon_)) {
             initEx = parseConstansExpr();
-            dc = nullptr;//FieldDecl::NewObj(nullptr, qt, parent, 0);
         }
         else {
-            //NamedDecl* tmp = dynamic_cast<NamedDecl*>(parseDeclarator(qt, 0, 0));
-            NamedDecl* tmp = nullptr;
+            parseDeclarator(declaraor);
             if (match(TokenKind::Colon_)) {
+
                 initEx = parseConstansExpr();
             }
-            dc = nullptr;//FieldDecl::NewObj(tmp->getSymbol(), qt, parent, 0);
         }
-        res.push_back(dc);
+        res.push_back(new FieldDecl(declaraor.getName(), sys_->getCurScope(), qt, parent, initEx));
 
-    }while (match(TokenKind::Semicolon_));
+    }while (match(TokenKind::Comma_));
     return res;
 }
 
@@ -1168,7 +1183,7 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
  enum identifieropt { enumerator-list ,}
  enum identifier
 */
-Type* Parser::parseEnumSpec()
+QualType Parser::parseEnumSpec()
 {
     // 符号解析
     std::string key;
@@ -1181,16 +1196,15 @@ Type* Parser::parseEnumSpec()
     if (match(TokenKind::LCurly_Brackets_)) {
         // 符号表没有查找到，第一次定义
         if (!sym) {
-            Type* ty = EnumType::NewObj(nullptr);
-            if (key.empty()) { // 匿名对象不插入符号表
+            if (!key.empty()) { // 匿名对象不插入符号表
+                QualType ty = QualType(EnumType::NewObj(nullptr));
                 sys_->insertRecord(key, ty, nullptr);
             }
-            return parseEnumeratorList(nullptr, ty);
+            return parseEnumeratorList(sym);
         }
         // 符号表查找到了但是未定义
         else if (!sym->getType()->isCompleteType()) {
-            Type* ty = nullptr;//->getType();
-            return parseEnumeratorList(sym, ty);
+            return parseEnumeratorList(sym);
         }
         // 其他情况：符号表查找到了但是已经定义了：重定义错误
         else {
@@ -1205,10 +1219,10 @@ Type* Parser::parseEnumSpec()
         return nullptr;
     }
     // 返回类型，若由符号则返回，否则创建
-    if (!sym) {
-        return nullptr;// sym->getType();
+    if (sym) {
+        return sym->getType();
     }
-    Type* ty = EnumType::NewObj(nullptr);
+    QualType ty = QualType(EnumType::NewObj(nullptr));
     sys_->insertRecord(key, ty, nullptr);
     return ty;
 }
@@ -1217,13 +1231,22 @@ Type* Parser::parseEnumSpec()
  enumerator
  enumerator-list , enumerator
 */
-Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
+QualType Parser::parseEnumeratorList(Symbol* sym)
 {
     // 打开块作用域
+    std::string name;
+    QualType ty;
+    if (sym) {
+        name = sym->getKey();
+        ty = sym->getType();
+    } else {
+        ty = EnumType::NewObj(nullptr);
+    }
+    EnumDecl* dc = new EnumDecl(name, sys_->getCurScope(), ty, true);
     ScopeManager scm(this, Scope::BLOCK);
-    EnumDecl* dc = nullptr;//::NewObj(sym, true);
     while (true) {
-        dc->addConstant(parseEnumerator(QualType()));
+        auto child = parseEnumerator(QualType(), dc);
+        dc->addConstant(child);
         // 匹配到逗号
         if (match(TokenKind::Comma_)) {
             if (match(TokenKind::RCurly_Brackets_)) {
@@ -1238,8 +1261,9 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
         }
     }
     // 匿名对象则创建类型
-    EnumType* t = dynamic_cast<EnumType*>(ty);
-    t->setTagDecl(dc);
+    if (!ty.isNull()) {
+        dynamic_cast<EnumType*>(ty.getPtr())->setTagDecl(dc);
+    }
     return ty;
 }
 
@@ -1249,20 +1273,20 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
   (6.4.4.3) enumeration-constant:
  identifier
 */
-EnumConstantDecl* Parser::parseEnumerator(QualType qt)
+EnumConstantDecl* Parser::parseEnumerator(QualType qt, EnumDecl* parent)
 {
     // 解析符号
     expect(TokenKind::Identifier);
-    Symbol* sym = nullptr;
+    std::string name = seq_->cur()->value_;
     // 解析表达式
     Expr* ex = nullptr;
     if (match(TokenKind::Assign_)) {
         ex = parseConstansExpr();
     }
-    EnumConstantDecl* dc = nullptr;//EnumConstantDecl::NewObj(sym, ex);
+    EnumConstantDecl* dc = new EnumConstantDecl(name, sys_->getCurScope(), qt, parent, ex);
     // 插入符号表
-    sys_->insertMember(seq_->cur()->value_, nullptr, nullptr);
-    return nullptr;
+    sys_->insertMember(name, qt, dc);
+    return dc;
 }
 
 /* (6.7.3) type-qualifier:
@@ -1510,15 +1534,16 @@ void Parser::parseTypedefName()
 */
 Expr* Parser::parseInitializer()
 {
+    Expr* node = nullptr;
     if (match(TokenKind::LCurly_Brackets_)) {
         parseInitializerList();
         match(TokenKind::Comma_);
         expect(TokenKind::RCurly_Brackets_);
     }
     else {
-        parseAssignExpr();
+        node = parseAssignExpr();
     }
-    return nullptr;
+    return node;
 }
 
 /*(6.7.8) initializer-list:
@@ -1827,5 +1852,5 @@ void Parser::parseTranslationUnit()
         auto path = parseDeclaration();
         res.insert(res.begin(), path.begin(), path.end());
     }
-    unit_ = new TranslationUnitDecl(res);
+    unit_ = new TranslationUnitDecl(res, sys_->getCurScope());
 }

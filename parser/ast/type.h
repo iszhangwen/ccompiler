@@ -346,9 +346,9 @@ public:
 
 class RecordType : public TagType {
 protected:
-    RecordType(TagDecl* dc, bool isStruct);
+    RecordType(TagDecl* dc, bool isUnion);
 public:
-    static RecordType* NewObj(TagDecl* dc, bool isStruct);
+    static RecordType* NewObj(TagDecl* dc, bool isUnion);
 };
 
 class EnumType : public TagType {

@@ -33,7 +33,7 @@ std::string Symbol::getTag(SymbolType st, const std::string& key)
     return key + tail;
 }
 
-Scope::Scope(ScopeType st, Scope* parent)
+Scope::Scope(ScopeType st, Scope* parent = nullptr)
 : sct_(st), parent_(parent)
 {
     level_ = parent ? (parent->getLevel() + 1) : 1;
@@ -41,11 +41,12 @@ Scope::Scope(ScopeType st, Scope* parent)
 
 Symbol* Scope::lookup(Symbol::SymbolType st, const std::string& key)
 {
-    std::string tmp = Symbol::getTag(st, key);
-    if (table_.count(tmp)) {
-        return table_[tmp];
+    auto iter = table_.find(Symbol::getTag(st, key));
+    if (iter != table_.end()) {
+        return iter->second;
     }
-    if (!parent_) {
+
+    if (parent_) {
         return parent_->lookup(st, key);
     }
     return nullptr;
@@ -204,11 +205,11 @@ void SymbolTableContext::initBuiltType()
     insert(Symbol::NORMAL, "unsignd_char", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR), nullptr);
     // 整型
     insert(Symbol::NORMAL, "signed_short_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "signed_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
+    insert(Symbol::NORMAL, "signed_normal_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "signed_long_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "signed_long_long_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "unsignd_short_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
+    insert(Symbol::NORMAL, "unsignd_normal_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "unsignd_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "unsigned_long_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG2, IntegerType::INT), nullptr);
     // 浮点型
@@ -221,7 +222,7 @@ void SymbolTableContext::initBuiltType()
     insert(Symbol::NORMAL, "long_double_complex", ComplexType::NewObj(ComplexType::LONG_DOUBLE), nullptr);
 }
 
-Type* SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
+QualType SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
 {
     std::string key;
     if (tq & VOID) {
@@ -260,5 +261,9 @@ Type* SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
         key.append("int");
     }
     Symbol* sym = lookup(Symbol::NORMAL, key);
-    return sym ? sym->getType().getPtr() : nullptr;
+    if (sym) {
+        std::cout <<key << "\n";
+        return sym->getType();
+    }
+    return QualType(nullptr);
 }
