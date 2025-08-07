@@ -33,10 +33,6 @@ void DefaultStmt::accept(ASTVisitor* vt)
     }
 }
 
-CompoundStmt* CompoundStmt::NewObj(const std::vector<Stmt*>& vals)
-{
-    return new CompoundStmt(vals);
-}
 void CompoundStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -44,10 +40,6 @@ void CompoundStmt::accept(ASTVisitor* vt)
     }
 }
 
-DeclStmt* DeclStmt::NewObj(Decl* dc)
-{
-    return new DeclStmt(dc);
-}
 void DeclStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -55,10 +47,6 @@ void DeclStmt::accept(ASTVisitor* vt)
     }
 }
 
-ExprStmt* ExprStmt::NewObj(Expr* ex)
-{
-    return new ExprStmt(ex);
-}
 void ExprStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -154,10 +142,6 @@ void BreakStmt::accept(ASTVisitor* vt)
     }
 }
 
-ReturnStmt* ReturnStmt::NewObj(Expr* retVal)
-{
-    return new ReturnStmt(retVal);
-}
 void ReturnStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {

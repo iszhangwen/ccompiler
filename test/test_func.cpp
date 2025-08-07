@@ -1,12 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include <iostream>
 #include <doctest/doctest.h>
 
-int fun()
-{
-    std::cout << "hello world\n";
-    return 0;
-}
+#include "func.h"
+
 
 TEST_SUITE("test start")
 {
@@ -14,7 +10,7 @@ TEST_SUITE("test start")
     {
         SUBCASE("test 001")
         {
-            CHECK(fun() == 0);
+            CHECK(fun() == 1);
         }
         SUBCASE("test 002")
         {

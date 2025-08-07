@@ -36,7 +36,7 @@ struct Declarator
     // 标识符类型
     DeclaratorKind dk_;
     // 标识符名称
-    std::string name_; 
+    Token* name_;
     // 声明的类型
     QualType type_; 
     // 存储类
@@ -44,22 +44,28 @@ struct Declarator
     // 函数说明符  
     int funcSpec_;   
     // 构造函数
-    Declarator(const std::string& name, QualType type, int sc, int fs)
+    Declarator(Token* name, QualType type, int sc, int fs)
     : dk_(DK_UNDEFINED), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
-    Declarator(DeclaratorKind dk, const std::string& name, QualType type, int sc, int fs)
+    Declarator(DeclaratorKind dk, Token* name, QualType type, int sc, int fs)
     : dk_(dk), name_(name), type_(type), storageClass_(sc), funcSpec_(fs) {}
 
     void setKind(DeclaratorKind dk) {dk_ = dk_;}
-    void setName(std::string name) {name_ = name;}
+    void setToken(Token* name) {name_ = name;}
     void setType(QualType ty) {type_ = ty;}
     void setStorageClass(int sc) {storageClass_ = sc;}
     void setFuncSpec(int funcSpec) {funcSpec_ = funcSpec;}
 
     DeclaratorKind getKind() {return dk_;}
-    std::string getName() {return name_;}
+    Token* getToken() {return name_;}
     QualType getType() {return type_;}
     int getStorageClass() {return storageClass_;}
     int getFuncSpec() {return funcSpec_;}
+    std::string getName() {
+        if (name_) {
+            return name_->value_;
+        }
+        return std::string();
+    }
 };
 
 class Decl : public AstNode
@@ -129,8 +135,8 @@ public:
     : NamedDecl(nk, name, sco), ty_(ty) {}
     virtual void accept(ASTVisitor* vt) override;
 
-    QualType getQualType() {return ty_;}
-    void setQualType(QualType qt) {ty_ = qt;}
+    QualType getType() {return ty_;}
+    void setType(QualType qt) {ty_ = qt;}
 };
 
 // 带有声明说明符的声明，声明说明符包括：存储说明符，类型限定符，类型说明符，比如变量，函数，参数等，

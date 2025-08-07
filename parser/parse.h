@@ -111,8 +111,8 @@ private:
     /*--------------------------------Statements---------------------------------------*/
     Stmt* parseStmt();
     Stmt* parseLabeledStmt();
-    Stmt* parseCompoundStmt();
-    Stmt* parseExprStmt();
+    CompoundStmt* parseCompoundStmt(bool isFunc = false);
+    ExprStmt* parseExprStmt();
     Stmt* parseSelectionStmt();
     Stmt* parseIterationStmt();
     Stmt* parseJumpStmt();
@@ -125,6 +125,7 @@ public:
     // 解析根节点
     void parseTranslationUnit();
     void dump(ASTVisitor* av) {
+        std::cout << "-----------------------\n";
         if (av) {
             unit_->accept(av);
         }

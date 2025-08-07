@@ -3,12 +3,15 @@
 #include <string>
 #include <vector>
 #include "ast/ast.h"
+#include <sstream>
 
 // 使用语法制导翻译方案，翻译过程即完成语义检查过程
 // 语义分析主要有两个作用：AST构建，和语义分析
 class CodegenASTVisitor : public ASTVisitor 
 {
 public:
+    int level = 0;
+    std::stringstream ss_;
     /*-----------------------expression node----------------------------------*/
     virtual void visit(IntegerLiteral* c) override;
     virtual void visit(FloatingLiteral* c) override;
@@ -54,4 +57,15 @@ public:
     virtual void visit(ContinueStmt* cs) override;
     virtual void visit(BreakStmt* bs) override;
     virtual void visit(ReturnStmt* rs) override;    
+};
+
+// 简单实现格式化打印AST功能
+struct DumpAst
+{
+    CodegenASTVisitor* s_;
+    DumpAst(CodegenASTVisitor* st): s_(st) {
+        s_->ss_ << std::string(s_->level, ' ') << "|-";
+        s_->level++;
+    }
+    ~DumpAst() {s_->level--;}
 };

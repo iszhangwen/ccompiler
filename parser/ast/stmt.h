@@ -95,75 +95,48 @@ public:
 /*------------------------------compound-statement---------------------------------------------*/
 class CompoundStmt : public Stmt
 {
+private:
     std::vector<Stmt*> vals_;
-protected:
+
+public:
     CompoundStmt()
     : Stmt(NodeKind::NK_CompoundStmt) {}
-
     CompoundStmt(const std::vector<Stmt*>& vals)
     : Stmt(NodeKind::NK_CompoundStmt), vals_(vals) {}
-public:
-    static CompoundStmt* NewObj(const std::vector<Stmt*>& vals);
     virtual void accept(ASTVisitor* vt) override;
-    std::vector<Stmt*> getStmts() const {
-        return vals_;
-    }
-    void setStmts(const std::vector<Stmt*>& vals) {
-        vals_ = vals;
-    }
-    void addStmt(Stmt* st) {
-        vals_.push_back(st);
-    }
-    void clearStmts() {
-        vals_.clear();
-    }
-    size_t size() const {
-        return vals_.size();
-    }
-    Stmt* getStmt(size_t index) const {
-        if (index < vals_.size()) {
-            return vals_[index];
-        }
-        return nullptr; // 如果索引越界，返回nullptr
-    }
-    void removeStmt(size_t index) {
-        if (index < vals_.size()) {
-            vals_.erase(vals_.begin() + index);
-        }
-    }
+
+    std::vector<Stmt*> getStmts() const {return vals_;}
+    void setStmts(const std::vector<Stmt*>& vals) {vals_ = vals;}
+    void addStmt(Stmt* st) {vals_.push_back(st);}
+    void clearStmts() {vals_.clear();}
+    size_t size() const {return vals_.size();}
 };
 
-class DeclStmt : public Stmt {
+class DeclStmt : public Stmt 
+{
+private:
     Decl* dc_;
-protected:
+public:
     DeclStmt(Decl* dc)
     : Stmt(NodeKind::NK_DeclStmt), dc_(dc) {}
-public:
-    static DeclStmt* NewObj(Decl* dc);
     virtual void accept(ASTVisitor* vt) override;
-    Decl* getDecl() {
-        return dc_;
-    }
-    void setDecl(Decl* dc) {
-        dc_ = dc;
-    } 
+
+    Decl* getDecl() {return dc_;}
+    void setDecl(Decl* dc) {dc_ = dc;} 
 };
 
 /*------------------------------表达式语句------------------------------------------------*/
-class ExprStmt : public Stmt {
+class ExprStmt : public Stmt 
+{
+private:
     Expr* ex_;
-protected:
+public:
     ExprStmt(Expr* ex)
     : Stmt(NodeKind::NK_ExprStmt), ex_(ex){}
-public:
-    static ExprStmt* NewObj(Expr* ex);
     virtual void accept(ASTVisitor* vt) override;
-    Expr* getExpr() {
-        return ex_;
-    }
-    void setExpr(Expr* ex) {
-        ex_ = ex;
-    }
+
+    Expr* getExpr() {return ex_;}
+    void setExpr(Expr* ex) {ex_ = ex;}
 };
 
 /*------------------------------控制流-条件语句---------------------------------------------*/
@@ -179,24 +152,14 @@ public:
     static IfStmt* NewObj(Expr* cond, Stmt* th, Stmt* el = nullptr);
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* co) {
-        cond_ = co;
-    }
-    Stmt* getThen() {
-        return then_;
-    }
-    void setThen(Stmt* th) {
-        then_ = th;
-    }
-    Stmt* getElse() {
-        return else_;
-    }
-    void setElse(Stmt* el) {
-        else_ = el;
-    }
+    Expr* getCond() {return cond_;}
+    void setCond(Expr* co) {cond_ = co;}
+
+    Stmt* getThen() {return then_;}
+    void setThen(Stmt* th) {then_ = th;}
+
+    Stmt* getElse() {return else_;}
+    void setElse(Stmt* el) {else_ = el;}
 };
 
 class SwitchStmt : public Stmt 
@@ -346,19 +309,15 @@ public:
 
 class ReturnStmt : public Stmt 
 {
-    Expr* retVal_; // 返回值表达式
-protected:
-    ReturnStmt(Expr* retVal)
-    : Stmt(NodeKind::NK_ReturnStmt), retVal_(retVal) {}
+private:
+    ExprStmt* retVal_; // 返回值表达式
 public:
-    static ReturnStmt* NewObj(Expr* retVal);
+    ReturnStmt(ExprStmt* retVal)
+    : Stmt(NodeKind::NK_ReturnStmt), retVal_(retVal) {}
     virtual void accept(ASTVisitor* vt) override;
-    Expr* getReturnValue() {
-        return retVal_;
-    }
-    void setReturnValue(Expr* retVal) {
-        retVal_ = retVal;
-    }
+
+    ExprStmt* getReturnValue() {return retVal_;}
+    void setReturnValue(ExprStmt* retVal) {retVal_ = retVal;}
     // 获取返回值表达式的类型
     QualType getReturnType() const;
 };

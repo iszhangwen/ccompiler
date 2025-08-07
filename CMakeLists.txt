@@ -3,7 +3,7 @@ project(ccompiler LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 add_compile_options(-g)
-add_compile_options(-fsanitize=address)
+# add_compile_options(-fsanitize=address)
 
 option(TOOL "set to switch to build tools..." OFF)
 option(CCP "set to switch to build SRC..." ON)

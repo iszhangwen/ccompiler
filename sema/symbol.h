@@ -102,8 +102,14 @@ public:
 
     // 类型检测
     bool isTypeName(Token* tk);
+
+    // 声明符检测
+    bool isDeclarationSpecifier(Token*);
+    bool isStorageClass(Token* tk);
     bool isTypeSpecifier(Token* tk);
     bool isTypeQualifier(Token* tk);
+    bool isFunctionSpecifier(Token* tk);
+    bool isAlignmentSpecifier(Token* tk);
 
     // 设置内置类型
     void initBuiltType();

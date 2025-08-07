@@ -16,6 +16,7 @@ int main(int argc, char **argv)
         parse.parseTranslationUnit();
         CodegenASTVisitor cc;
         parse.dump(&cc);
+        std::cout << cc.ss_.str();
     }
     catch(std::exception& e)
     {

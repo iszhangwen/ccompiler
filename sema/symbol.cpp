@@ -47,7 +47,6 @@ Symbol* Scope::lookup(Symbol::SymbolType st, const std::string& key)
     }
 
     if (parent_) {
-        std::cout << " find from parent " << std::endl;
         return parent_->lookup(st, key);
     }
     return nullptr;
@@ -142,6 +141,11 @@ bool SymbolTableContext::isTypeName(Token* tk)
     return (isTypeSpecifier(tk) || isTypeQualifier(tk));
 }
 
+bool SymbolTableContext::isDeclarationSpecifier(Token* tk)
+{
+    return (isStorageClass(tk) || isTypeSpecifier(tk) || isTypeQualifier(tk) || isFunctionSpecifier(tk) || isAlignmentSpecifier(tk));
+}
+
 bool SymbolTableContext::isTypeSpecifier(Token* tk)
 {
     if (!tk) {
@@ -197,6 +201,49 @@ bool SymbolTableContext::isTypeQualifier(Token* tk)
     }
     return false;
 }   
+
+bool SymbolTableContext::isStorageClass(Token* tk)
+{
+    switch (tk->kind_)
+    {
+    case TokenKind::Typedef:
+    case TokenKind::Extern:
+    case TokenKind::Static:
+    case TokenKind::T_Thread_local:
+    case TokenKind::Auto:
+    case TokenKind::Register:
+        return true;
+    
+    default:
+        break;
+    }
+    return false;
+}
+
+bool SymbolTableContext::isFunctionSpecifier(Token* tk)
+{
+    switch (tk->kind_)
+    {
+    case TokenKind::Inline:
+    case TokenKind::T_Noreturn:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
+bool SymbolTableContext::isAlignmentSpecifier(Token* tk)
+{
+    switch (tk->kind_)
+    {
+    case TokenKind::T_Alignas:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
 
 void SymbolTableContext::initBuiltType()
 {
@@ -266,7 +313,6 @@ QualType SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
     }
     Symbol* sym = lookup(Symbol::NORMAL, key);
     if (sym) {
-        std::cout <<key << "\n";
         return sym->getType();
     }
     return QualType(nullptr);
