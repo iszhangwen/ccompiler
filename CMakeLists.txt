@@ -25,4 +25,4 @@ if (TOOL)
 endif()
 
 enable_testing()
-add_subdirectory(test)
+

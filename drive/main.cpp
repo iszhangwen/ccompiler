@@ -1,7 +1,6 @@
 #include <iostream>
 #include "scanner.h"
 #include "parse.h"
-#include "astvisitor.h"
 
 int main(int argc, char **argv)
 {
@@ -14,9 +13,7 @@ int main(int argc, char **argv)
     try {
         Parser parse(argv[1]);
         parse.parseTranslationUnit();
-        CodegenASTVisitor cc;
-        parse.dump(&cc);
-        std::cout << cc.ss_.str();
+        parse.dump();
     }
     catch(std::exception& e)
     {

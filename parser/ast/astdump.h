@@ -2,12 +2,12 @@
 
 #include <string>
 #include <vector>
-#include "ast/ast.h"
+#include "ast.h"
 #include <sstream>
 
 // 使用语法制导翻译方案，翻译过程即完成语义检查过程
 // 语义分析主要有两个作用：AST构建，和语义分析
-class CodegenASTVisitor : public ASTVisitor 
+class DumpAstVisitor : public ASTVisitor 
 {
 public:
     int level = 0;
@@ -62,8 +62,8 @@ public:
 // 简单实现格式化打印AST功能
 struct DumpAst
 {
-    CodegenASTVisitor* s_;
-    DumpAst(CodegenASTVisitor* st): s_(st) {
+    DumpAstVisitor* s_;
+    DumpAst(DumpAstVisitor* st): s_(st) {
         s_->ss_ << std::string(s_->level, ' ') << "|-";
         s_->level++;
     }

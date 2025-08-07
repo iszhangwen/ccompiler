@@ -1,9 +1,5 @@
 #include "stmt.h"
 
-LabelStmt* LabelStmt::NewObj(NamedDecl* key, Stmt* val)
-{
-    return new LabelStmt(key, val);
-}
 void LabelStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -11,10 +7,6 @@ void LabelStmt::accept(ASTVisitor* vt)
     }
 }
 
-CaseStmt* CaseStmt::NewObj(Expr* cond, Stmt* val)
-{
-    return new CaseStmt(nullptr, val);
-}
 void CaseStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -22,10 +14,6 @@ void CaseStmt::accept(ASTVisitor* vt)
     }
 }
 
-DefaultStmt* DefaultStmt::NewObj(Expr* cond, Stmt* val)
-{
-    return new DefaultStmt(nullptr, val);
-}
 void DefaultStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -65,10 +53,6 @@ void IfStmt::accept(ASTVisitor* vt)
     }
 }
 
-SwitchStmt* SwitchStmt::NewObj(Expr* cond, Stmt* val)
-{
-    return new SwitchStmt(cond, val);
-}
 void SwitchStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {
@@ -109,10 +93,6 @@ void ForStmt::accept(ASTVisitor* vt)
     }
 }
 
-GotoStmt* GotoStmt::NewObj(Stmt* label)
-{
-    return new GotoStmt(label);
-}
 void GotoStmt::accept(ASTVisitor* vt) 
 {
     if (vt) {

@@ -1,84 +1,82 @@
-#include "astvisitor.h"
-#include "analyzer.h"
-#include "ast/type.h"
-#include "ast/decl.h"
-#include "ast/stmt.h"
-#include "ast/expr.h"
+#include "astdump.h"
+#include "type.h"
+#include "decl.h"
+#include "stmt.h"
+#include "expr.h"
 #include "sema.h"
-#include <iostream>
 
-void CodegenASTVisitor::visit(IntegerLiteral* c) 
+void DumpAstVisitor::visit(IntegerLiteral* c) 
 {
     DumpAst dast(this);
     ss_ << " IntegerLiteral" << "\n";
 }
-void CodegenASTVisitor::visit(FloatingLiteral* c) 
+void DumpAstVisitor::visit(FloatingLiteral* c) 
 {
     DumpAst dast(this);
     ss_ << " FloatingLiteral" << "\n";
 }
-void CodegenASTVisitor::visit(CharacterLiteral* c) 
+void DumpAstVisitor::visit(CharacterLiteral* c) 
 {
     DumpAst dast(this);
     ss_  << " CharacterLiteral" << "\n";
 }
-void CodegenASTVisitor::visit(StringLiteral* c) 
+void DumpAstVisitor::visit(StringLiteral* c) 
 {
     DumpAst dast(this);
     ss_ << " StringLiteral" << "\n";
 }
-void CodegenASTVisitor::visit(DeclRefExpr* dre) 
+void DumpAstVisitor::visit(DeclRefExpr* dre) 
 {
     DumpAst dast(this);
     ss_ << " DeclRefExpr" << "\n";
 }
-void CodegenASTVisitor::visit(ParenExpr* pe) 
+void DumpAstVisitor::visit(ParenExpr* pe) 
 {
     DumpAst dast(this);
     ss_ << " ParenExpr" << "\n";
 }
-void CodegenASTVisitor::visit(BinaryOpExpr* boe) 
+void DumpAstVisitor::visit(BinaryOpExpr* boe) 
 {
     DumpAst dast(this);
     ss_ << " BinaryOpExpr" << "\n";
 }
-void CodegenASTVisitor::visit(ConditionalExpr* ce) 
+void DumpAstVisitor::visit(ConditionalExpr* ce) 
 {
     DumpAst dast(this);
     ss_ << " ConditionalExpr" << "\n";
 }
-void CodegenASTVisitor::visit(CompoundLiteralExpr* cle) 
+void DumpAstVisitor::visit(CompoundLiteralExpr* cle) 
 {
     DumpAst dast(this);
     ss_ << " CompoundLiteralExpr" << "\n";
 }
-void CodegenASTVisitor::visit(CastExpr* ce) 
+void DumpAstVisitor::visit(CastExpr* ce) 
 {
     DumpAst dast(this);
     ss_ << " CastExpr" << "\n";
 }
-void CodegenASTVisitor::visit(ArraySubscriptExpr* ase) 
+void DumpAstVisitor::visit(ArraySubscriptExpr* ase) 
 {
     DumpAst dast(this);
     ss_ << " ArraySubscriptExpr" << "\n";
 }
-void CodegenASTVisitor::visit(CallExpr* ce) 
+void DumpAstVisitor::visit(CallExpr* ce) 
 {
     DumpAst dast(this);
     ss_ << " CallExpr" << "\n";
 }
-void CodegenASTVisitor::visit(MemberExpr* me) 
+void DumpAstVisitor::visit(MemberExpr* me) 
 {
     DumpAst dast(this);
     ss_ << " MemberExpr" << "\n";
 }
-void CodegenASTVisitor::visit(UnaryOpExpr* uoe) 
+void DumpAstVisitor::visit(UnaryOpExpr* uoe) 
 {
     DumpAst dast(this);
     ss_ << " UnaryOpExpr" << "\n";
 }
 /*-----------------------Declarations node----------------------------------*/
-void CodegenASTVisitor::visit(TranslationUnitDecl* ld) 
+void DumpAstVisitor::visit(TranslationUnitDecl* ld) 
 {
     ss_   << " TranslationUnitDecl" << "size = " << ld->size() << "\n";
     level++;
@@ -89,22 +87,22 @@ void CodegenASTVisitor::visit(TranslationUnitDecl* ld)
     }
     level--;
 }
-void CodegenASTVisitor::visit(LabelDecl* ld) 
+void DumpAstVisitor::visit(LabelDecl* ld) 
 {
     DumpAst dast(this);
     ss_ << " LabelDecl" << "\n";
 }
-void CodegenASTVisitor::visit(ValueDecl* vd) 
+void DumpAstVisitor::visit(ValueDecl* vd) 
 {
     DumpAst dast(this);
     ss_ << " ValueDecl" << "\n";
 }
-void CodegenASTVisitor::visit(DeclaratorDecl* dd) 
+void DumpAstVisitor::visit(DeclaratorDecl* dd) 
 {
     DumpAst dast(this);
     ss_ << " DeclaratorDecl" << "\n";
 }
-void CodegenASTVisitor::visit(VarDecl* vd) 
+void DumpAstVisitor::visit(VarDecl* vd) 
 {
     DumpAst dast(this);
     ss_ << " VarDecl" << "\n";
@@ -115,12 +113,12 @@ void CodegenASTVisitor::visit(VarDecl* vd)
     }
     level--;
 }
-void CodegenASTVisitor::visit(ParmVarDecl* pvd) 
+void DumpAstVisitor::visit(ParmVarDecl* pvd) 
 {
     DumpAst dast(this);
     ss_  << " ParmVarDecl" << "\n";
 }
-void CodegenASTVisitor::visit(FunctionDecl* fd) 
+void DumpAstVisitor::visit(FunctionDecl* fd) 
 {
     DumpAst dast(this);
     ss_   << " FunctionDecl" << "\n";
@@ -138,58 +136,83 @@ void CodegenASTVisitor::visit(FunctionDecl* fd)
 
     level--;
 }
-void CodegenASTVisitor::visit(FieldDecl* fd) 
+void DumpAstVisitor::visit(FieldDecl* fd) 
 {
     DumpAst dast(this);
     ss_ << " FieldDecl" << "\n";
 }
-void CodegenASTVisitor::visit(EnumConstantDecl* ecd) 
+void DumpAstVisitor::visit(EnumConstantDecl* ecd) 
 {
     DumpAst dast(this);
     ss_ << " EnumConstantDecl" << "\n";
 }
-void CodegenASTVisitor::visit(IndirectFieldDecl* ifd) 
+void DumpAstVisitor::visit(IndirectFieldDecl* ifd) 
 {
     DumpAst dast(this);
     ss_ << " IndirectFieldDecl" << "\n";
 }
-void CodegenASTVisitor::visit(TypedefDecl* tnd) 
+void DumpAstVisitor::visit(TypedefDecl* tnd) 
 {
     DumpAst dast(this);
     ss_ << " TypedefDecl" << "\n";
 }
-void CodegenASTVisitor::visit(EnumDecl* ed) 
+void DumpAstVisitor::visit(EnumDecl* ed) 
 {
     DumpAst dast(this);
     ss_ << " EnumDecl" << "\n";
 }
-void CodegenASTVisitor::visit(RecordDecl* rd)  
+void DumpAstVisitor::visit(RecordDecl* rd)  
 {
     DumpAst dast(this);
     ss_ << " RecordDecl" << "\n";
 }
 /*-----------------------statemnts node----------------------------------*/
-void CodegenASTVisitor::visit(LabelStmt* ls) 
+void DumpAstVisitor::visit(LabelStmt* ls) 
 {
     DumpAst dast(this);
     ss_ << " LabelStmt" << "\n";
+    if (ls) {
+        if (ls->getStmt()) {
+            ls->getStmt()->accept(this);
+        }
+    }
 }
-void CodegenASTVisitor::visit(CaseStmt* cs) 
+void DumpAstVisitor::visit(CaseStmt* cs) 
 {
     DumpAst dast(this);
     ss_ << " CaseStmt" << "\n";
+    if (cs) {
+        if (cs->getCond()) {
+            cs->getCond()->accept(this);
+        }
+        if (cs->getStmt()) {
+            cs->getStmt()->accept(this);
+        }
+    }
 }
-void CodegenASTVisitor::visit(DefaultStmt* ds) 
+void DumpAstVisitor::visit(DefaultStmt* ds) 
 {
     DumpAst dast(this);
     ss_ << " DefaultStmt" << "\n";
+    if (ds) {
+        if (ds->getStmt()) {
+            ds->getStmt()->accept(this);
+        }
+    }
 }
-void CodegenASTVisitor::visit(CompoundStmt* cs) 
+void DumpAstVisitor::visit(CompoundStmt* cs) 
 {
     DumpAst dast(this);
     ss_ << " CompoundStmt" << "\n";
+    if (cs) {
+        for (auto p : cs->getStmts()) {
+            if (p) {
+                p->accept(this);
+            }
+        }
+    }
 }
-void CodegenASTVisitor::visit(DeclStmt* ds) 
+void DumpAstVisitor::visit(DeclStmt* ds) 
 {
     DumpAst dast(this);
     ss_ << " DeclStmt" << "\n";
@@ -199,52 +222,76 @@ void CodegenASTVisitor::visit(DeclStmt* ds)
     }
     level--;
 }
-void CodegenASTVisitor::visit(ExprStmt* es) 
+void DumpAstVisitor::visit(ExprStmt* es) 
 {
     DumpAst dast(this);
     ss_  << " ExprStmt" << "\n";
 }
-void CodegenASTVisitor::visit(IfStmt* is) 
+void DumpAstVisitor::visit(IfStmt* is) 
 {
     DumpAst dast(this);
     ss_ << " IfStmt" << "\n";
+    if (is) {
+        if (is->getCond()) {
+            is->getCond()->accept(this);
+        }
+        if (is->getThen()) {
+            is->getThen()->accept(this);
+        }
+        if (is->getElse()) {
+            is->getElse()->accept(this);
+        }
+    }
 }
-void CodegenASTVisitor::visit(SwitchStmt* ss) 
+void DumpAstVisitor::visit(SwitchStmt* ss) 
 {
     DumpAst dast(this);
     ss_ << " SwitchStmt" << "\n";
+    if (ss) {
+        if (ss->getCond()) {
+            ss->getCond()->accept(this);
+        }
+        if (ss->getStmt()) {
+            ss->getStmt()->accept(this);
+        }
+    }
 }
-void CodegenASTVisitor::visit(WhileStmt* ws) 
+void DumpAstVisitor::visit(WhileStmt* ws) 
 {
     DumpAst dast(this);
     ss_ << " WhileStmt" << "\n";
 }
-void CodegenASTVisitor::visit(DoStmt* ds) 
+void DumpAstVisitor::visit(DoStmt* ds) 
 {
     DumpAst dast(this);
     ss_ << " DoStmt" << "\n";
 }
-void CodegenASTVisitor::visit(ForStmt* fs) 
+void DumpAstVisitor::visit(ForStmt* fs) 
 {
     DumpAst dast(this);
     ss_ << " ForStmt" << "\n";
 }
-void CodegenASTVisitor::visit(GotoStmt* gs) 
+void DumpAstVisitor::visit(GotoStmt* gs) 
 {
     DumpAst dast(this);
     ss_ << " GotoStmt" << "\n";
+    if (gs) {
+        if (gs->getLabel()) {
+            gs->getLabel()->accept(this);
+        }
+    }
 }
-void CodegenASTVisitor::visit(ContinueStmt* cs) 
+void DumpAstVisitor::visit(ContinueStmt* cs) 
 {
     DumpAst dast(this);
     ss_ << " ContinueStmt" << "\n";
 }
-void CodegenASTVisitor::visit(BreakStmt* bs) 
+void DumpAstVisitor::visit(BreakStmt* bs) 
 {
     DumpAst dast(this);
     ss_ << " BreakStmt" << "\n";
 }
-void CodegenASTVisitor::visit(ReturnStmt* rs)     
+void DumpAstVisitor::visit(ReturnStmt* rs)     
 {
     DumpAst dast(this);
     ss_  << " ReturnStmt" << "\n";

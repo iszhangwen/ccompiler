@@ -24,72 +24,51 @@ public:
 /*------------------------------labeled-statement---------------------------------------------*/
 class LabelStmt : public Stmt 
 {
+private:
     NamedDecl* key_;
     Stmt* val_;
-protected:
+public:
     LabelStmt(NamedDecl* key, Stmt* val)
     : Stmt(NodeKind::NK_LabelStmt), key_(key), val_(val) {}
-public:
-    static LabelStmt* NewObj(NamedDecl* key, Stmt* val);
+
     virtual void accept(ASTVisitor* vt) override;
     NamedDecl* getLabel() {return key_;}
-    void setLabel(NamedDecl* key) {
-        key_ = key;
-    }
+    void setLabel(NamedDecl* key) {key_ = key;}
 
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setLabel(Stmt* val) {
-        val_ = val;
-    }
+    Stmt* getStmt() {return val_;}
+    void setLabel(Stmt* val) {val_ = val;}
 };
 
 class CaseStmt : public Stmt 
 {
+private:
     Expr* cond_;
     Stmt* val_;
-protected:
+public:
     CaseStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_CaseStmt), cond_(cond), val_(val) {}
-public:
-    static CaseStmt* NewObj(Expr* cond, Stmt* val);
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* cond) {
-        cond_ = cond;
-    }
+    Expr* getCond() {return cond_;}
+    void setCond(Expr* cond) {cond_ = cond;}
 
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setLabel(Stmt* val) {
-        val_ = val;
-    }
+    Stmt* getStmt() {return val_;}
+    void setLabel(Stmt* val) {val_ = val;}
 };
 
 class DefaultStmt : public Stmt 
 {
+private:
     Stmt* val_;
-protected:
+public:
     DefaultStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_DefaultStmt), val_(val) {}
-public:
-    static DefaultStmt* NewObj(Expr* cond, Stmt* val);
+
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    Expr* getCond() {
-        return nullptr; // DefaultStmt没有条件表达式
-    }
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setLabel(Stmt* val) {
-        val_ = val;
-    }
+    Expr* getCond() {return nullptr; }
+    Stmt* getStmt() {return val_;}
+    void setLabel(Stmt* val) {val_ = val;}
 };
 
 /*------------------------------compound-statement---------------------------------------------*/
@@ -166,24 +145,14 @@ class SwitchStmt : public Stmt
 {
     Expr* cond_;
     Stmt* val_;
-protected:
+public:
     SwitchStmt(Expr* cond, Stmt* val)
     : Stmt(NodeKind::NK_SwitchStmt), cond_(cond), val_(val) {}
-public:
-    static SwitchStmt* NewObj(Expr* cond, Stmt* val);
     virtual void accept(ASTVisitor* vt) override;
-     Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* co) {
-        cond_ = co;
-    }
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setStmt(Stmt* val) {
-        val_ = val;
-    }
+    Expr* getCond() {return cond_;}
+    void setCond(Expr* co) {cond_ = co;}
+    Stmt* getStmt() {return val_;}
+    void setStmt(Stmt* val) {val_ = val;}
 };
 
 
@@ -258,19 +227,15 @@ public:
 /*------------------------------控制流-跳转语句---------------------------------------------*/
 class GotoStmt : public Stmt 
 {
+private:
     Stmt* label_;
-protected:
+public:
     GotoStmt(Stmt* label)
     : Stmt(NodeKind::NK_GotoStmt), label_(label) {}
-public:
-    static GotoStmt* NewObj(Stmt* label);
+
     virtual void accept(ASTVisitor* vt) override;
-    Stmt* getLabel() {
-        return label_;
-    }
-    void setLabel(Stmt* lb) {
-        label_ = lb;
-    }
+    Stmt* getLabel() {return label_;}
+    void setLabel(Stmt* lb) {label_ = lb;}
 };
 
 class ContinueStmt : public Stmt 

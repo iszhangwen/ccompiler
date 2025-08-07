@@ -1662,34 +1662,36 @@ Stmt* Parser::parseStmt()
 Stmt* Parser::parseLabeledStmt()
 {
     Stmt* node = nullptr;
-    Token* tk = seq_->next();
-    switch (tk->kind_)
+    switch (seq_->peek()->kind_)
     {
     case TokenKind::Identifier:
     {
-        LabelDecl* key = nullptr;//LabelDecl::NewObj(tk->value_);
+        seq_->next();
+        LabelDecl* key = new LabelDecl(seq_->cur()->value_, sys_->getCurScope());
         // 添加到符号表
-        sys_->insertLabel(tk->value_, key);
+        sys_->insertLabel(seq_->cur()->value_, key);
         expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
-        node = LabelStmt::NewObj(key, body);
+        node = new LabelStmt(key, body);
         break;
     }
     
     case TokenKind::Case:
     {
+        seq_->next();
         Expr* cond = parseConstansExpr();
         expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
-        node = CaseStmt::NewObj(cond, body);
+        node = new CaseStmt(cond, body);
         break;
     }
 
     case TokenKind::Default:
     {
+        seq_->next();
         expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
-        node = DefaultStmt::NewObj(nullptr, body);
+        node = new DefaultStmt(nullptr, body);
         break;
     }
 
@@ -1751,10 +1753,11 @@ ExprStmt* Parser::parseExprStmt()
 Stmt* Parser::parseSelectionStmt()
 {
     Stmt* node = nullptr;
-    switch (seq_->next()->kind_)
+    switch (seq_->peek()->kind_)
     {
     case TokenKind::If:
     {   
+        seq_->next();
         expect(TokenKind::LParent_);
         Expr* cond = parseExpr();
         expect(TokenKind::RParent_);
@@ -1766,11 +1769,12 @@ Stmt* Parser::parseSelectionStmt()
 
     case TokenKind::Switch:
     {
+        seq_->next();
         expect(TokenKind::LParent_);
         Expr* cond = parseExpr();
         expect(TokenKind::RParent_);
         Stmt* body = parseStmt();
-        node = SwitchStmt::NewObj(cond, body);
+        node = new SwitchStmt(cond, body);
         break;
     }
     
@@ -1839,7 +1843,7 @@ Stmt* Parser::parseJumpStmt()
         expect(TokenKind::Identifier);
         Symbol* sym = sys_->lookup(Symbol::LABEL, seq_->cur()->value_);
         expect(TokenKind::Semicolon_);
-        node = GotoStmt::NewObj(nullptr);
+        node = new GotoStmt(nullptr);
         break;
     }
 

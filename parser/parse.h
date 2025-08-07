@@ -4,6 +4,7 @@
 #include <ast/stmt.h>
 #include <ast/expr.h>
 #include <ast/type.h>
+#include <ast/astdump.h>
 #include <scanner.h>
 #include <sema.h>
 
@@ -124,10 +125,11 @@ public:
     virtual ~Parser();
     // 解析根节点
     void parseTranslationUnit();
-    void dump(ASTVisitor* av) {
-        std::cout << "-----------------------\n";
-        if (av) {
-            unit_->accept(av);
+    void dump() {
+        DumpAstVisitor ad;
+        if (unit_) {
+            unit_->accept(&ad);
         }
+        std::cout << ad.ss_.str() << std::endl;
     }
 };
