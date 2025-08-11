@@ -1,7 +1,7 @@
 #include "scanner.h"
 #include <sstream>
 
-bool scanner::isLetter(char ch)
+bool Scanner::isLetter(char ch)
 {
     if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_') {
         return true;
@@ -9,7 +9,7 @@ bool scanner::isLetter(char ch)
     return false;
 }
 
-bool scanner::isDecimal(char ch)
+bool Scanner::isDecimal(char ch)
 {
     if (ch >= '0' && ch <= '9') {
         return true;
@@ -17,7 +17,7 @@ bool scanner::isDecimal(char ch)
     return false;
 }
 
-bool scanner::isHexacimal(char ch)
+bool Scanner::isHexacimal(char ch)
 {
     if ((ch >= '0' && ch <= '9') || (ch <= 'f' && ch >= 'a') || (ch <= 'F' && ch >= 'A')) {
         return true;
@@ -25,21 +25,21 @@ bool scanner::isHexacimal(char ch)
     return false;
 }
 
-bool scanner::isOctal(char ch) {
+bool Scanner::isOctal(char ch) {
     if (ch >= '0' && ch <= '7') {
         return true;
     }
     return false;
 }
 
-bool scanner::isBinary(char ch) {
+bool Scanner::isBinary(char ch) {
     if (ch == '0' || ch == '1') {
         return true;
     }
     return false;
 }
 
-bool scanner::isProcessMumberic(char ch)
+bool Scanner::isProcessMumberic(char ch)
 {
     if (isLetter(ch) || isDecimal(ch) || ch == '.') {
         return true;
@@ -47,7 +47,7 @@ bool scanner::isProcessMumberic(char ch)
     return false;
 }
 
-bool scanner::isEscapeChar(char ch)
+bool Scanner::isEscapeChar(char ch)
 {
     switch (ch)
     {
@@ -68,7 +68,7 @@ bool scanner::isEscapeChar(char ch)
     }
 }
 
-bool scanner::isUCN(char ch)
+bool Scanner::isUCN(char ch)
 {
     if (ch == '\\' && (buf_->peek() == 'u' || buf_->peek() == 'U')) {
         return true;
@@ -77,7 +77,7 @@ bool scanner::isUCN(char ch)
 }
 
 // UCN 字符串范围
-bool scanner::skipUCN(int len)
+bool Scanner::skipUCN(int len)
 {
     bool flag = true;
     for (int i = 0; i < len; i++) {
@@ -88,7 +88,7 @@ bool scanner::skipUCN(int len)
     return flag;
 }
 
-bool scanner::skipEscape(char ch)
+bool Scanner::skipEscape(char ch)
 {
     switch (ch)
     {
@@ -107,7 +107,7 @@ bool scanner::skipEscape(char ch)
     }
 }
 
-Token *scanner::scanIdentifier()
+Token *Scanner::scanIdentifier()
 {
     char ch = buf_->nextch();
     while (isLetter(ch) || isDecimal(ch) || isUCN(ch)) {
@@ -125,7 +125,7 @@ Token *scanner::scanIdentifier()
 }
 
 
-Token *scanner::scanNumberLiteral()
+Token *Scanner::scanNumberLiteral()
 {
     char ch = buf_->nextch();
     // 若下一个字符是预处理数字，则移动指针。
@@ -142,7 +142,7 @@ Token *scanner::scanNumberLiteral()
     return makeToken(TokenKind::Numeric_Constant_);
 }
 
-Token *scanner::scanStringLiteral()
+Token *Scanner::scanStringLiteral()
 {
     do {
         if (buf_->match('\"')) {
@@ -162,7 +162,7 @@ Token *scanner::scanStringLiteral()
     error("unExpect stringLiteral!");
 }
 
-Token *scanner::scanCharLiter()
+Token *Scanner::scanCharLiter()
 {
     char ch = buf_->nextch();
     switch (ch)
@@ -197,7 +197,7 @@ Token *scanner::scanCharLiter()
     }
 }
 
-Token *scanner::scanLineComment()
+Token *Scanner::scanLineComment()
 {
     char ch =  buf_->nextch();
     while (ch != '\n' && ch != EOF) {
@@ -206,7 +206,7 @@ Token *scanner::scanLineComment()
     return makeToken(TokenKind::Comment_);
 }
 
-Token *scanner::scanFullComment()
+Token *Scanner::scanFullComment()
 {
     char ch = buf_->nextch();
     while (ch != EOF) {
@@ -219,12 +219,12 @@ Token *scanner::scanFullComment()
     return makeToken(TokenKind::Error_);
 }
 
-void scanner::error(const std::string& val)
+void Scanner::error(const std::string& val)
 {
    error(buf_->loc(), val);
 }
 
-void scanner::error(SourceLocation loc, const std::string& val)
+void Scanner::error(SourceLocation loc, const std::string& val)
 {
     #define RED "\033[31m"
     #define CANCEL "\033[0m"
@@ -252,12 +252,12 @@ void scanner::error(SourceLocation loc, const std::string& val)
     throw CCError(ss.str());
 }
 
-Token *scanner::makeToken(TokenKind kind)
+Token *Scanner::makeToken(TokenKind kind)
 {
     return Token::newObj(kind, buf_->loc(), buf_->seg());
 }
 
-scanner::scanner(Source* buf)
+Scanner::Scanner(Source* buf)
 : buf_(buf)
 {
     if (buf_ == nullptr)
@@ -266,7 +266,7 @@ scanner::scanner(Source* buf)
     }
 }
 
-Token *scanner::scan()
+Token *Scanner::scan()
 {
     // 跳过空白行
     while (isspace(buf_->curch())) {
@@ -527,6 +527,10 @@ Token *scanner::scan()
         buf_->nextch();
         return makeToken(TokenKind::Comma_);
 
+    case '#':
+        buf_->nextch();
+        return makeToken(TokenKind::Pound_);
+
     case EOF:
         buf_->nextch();
         return makeToken(TokenKind::EOF_);
@@ -537,7 +541,7 @@ Token *scanner::scan()
     }
 }
 
-TokenSequence scanner::tokenize()
+TokenSequence Scanner::tokenize()
 {
     TokenSequence seq;
     Token *tk = scan();

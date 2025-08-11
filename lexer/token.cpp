@@ -73,6 +73,25 @@ const std::unordered_map<TokenKind, std::string> Token::TokenKindMap =
     #undef X_MACROS
 };
 
+const std::unordered_map<std::string, TokenKind> Token::PreprocessKeyWordMap
+{
+    {"if", TokenKind::T_If},
+    {"ifdef", TokenKind::T_Ifdef},
+    {"ifndef", TokenKind::T_Ifndef},
+
+    {"elif", TokenKind::T_Elif},
+    {"else", TokenKind::T_Else},
+    {"endif", TokenKind::T_Endif},
+
+    {"include", TokenKind::T_Include},
+    {"define", TokenKind::T_Define},
+    {"undef", TokenKind::T_Undefine},
+
+    {"line", TokenKind::T_Line},
+    {"error", TokenKind::T_Error},
+    {"pragma", TokenKind::T_Pragma}
+};
+
 bool Token::isEOF() const
 {
     return kind_ == TokenKind::EOF_;
@@ -132,4 +151,42 @@ void TokenSequence::reset()
     if (pos_ >= 0) {
         pos_--;
     }
+}
+
+void TokenSequence::push_back(Token* tk)
+{
+    if (tk == nullptr) {
+        return;
+    }
+    // 检测是否为预处理器指令
+    if (size() <= 0 || cur()->kind_ != TokenKind::Pound_) {
+        seq_.push_back(tk);
+        return;
+    }
+    // 预处理指令 ##
+    if (tk->kind_ == TokenKind::Pound_)
+    {
+        cur()->value_ += tk->value_; ;
+        cur()->kind_ = TokenKind::Pasting_;
+        return;
+    }
+    // 处理预处理指令 #Idenfier
+    else if (tk->kind_ == TokenKind::Identifier) {
+        // 检查是否为预处理器指令
+        auto iter = Token::PreprocessKeyWordMap.find(tk->value_);
+        if (iter != Token::PreprocessKeyWordMap.end()) {
+            cur()->value_ = tk->value_;
+            cur()->kind_ = iter->second;
+        }
+        // 如果不是预处理器指令，则将其作为普通宏指令 
+        else {
+            cur()->value_ = tk->value_;
+            cur()->kind_ = TokenKind::T_Macro;
+        }
+    }
+    // 其他类型的Token直接添加
+    else {
+        seq_.push_back(tk);
+    }
+    return;
 }

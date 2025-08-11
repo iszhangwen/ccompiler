@@ -36,7 +36,7 @@ ScopeManager::~ScopeManager()
 Parser::Parser(const std::string& filename)
 {
     buf_ = new Source(filename);
-    seq_ = new TokenSequence(scanner(buf_).tokenize());
+    seq_ = new TokenSequence(Scanner(buf_).tokenize());
     sys_ = new SymbolTableContext();
     sema_ = new SemaAnalyzer(sys_);
 }

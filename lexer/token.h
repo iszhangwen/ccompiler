@@ -115,6 +115,19 @@
     X_MACROS(Error_, "error")\
     X_MACROS(Invalid_, "invalid")\
     X_MACROS(NewLine, "newline")\
+    X_MACROS(T_Include, "include")\
+    X_MACROS(T_Define, "define")\
+    X_MACROS(T_Undefine, "undefine")\
+    X_MACROS(T_If, "if")\
+    X_MACROS(T_Ifdef, "ifdef")\
+    X_MACROS(T_Ifndef, "ifndef")\
+    X_MACROS(T_Elif, "elif")\
+    X_MACROS(T_Else, "else")\
+    X_MACROS(T_Endif, "endif")\
+    X_MACROS(T_Line, "line")\
+    X_MACROS(T_Error, "error")\
+    X_MACROS(T_Pragma, "pragma")\
+    X_MACROS(T_Macro, "macro")\
     X_MACROS(EOF_, "EOF")\
 
 enum class TokenKind
@@ -143,6 +156,7 @@ public:
     // static member 
     static const std::unordered_map<std::string, TokenKind> KeyWordMap;
     static const std::unordered_map<TokenKind, std::string> TokenKindMap;
+    static const std::unordered_map<std::string, TokenKind> PreprocessKeyWordMap;
 
     // func
     bool isEOF() const;
@@ -150,6 +164,7 @@ public:
     // typespecifier
     bool isTypeSpecifier() const;
     bool isTypeQualifier() const;
+
 
 private:
     Token(TokenKind type, SourceLocation loc, const std::string& value)
@@ -166,7 +181,9 @@ private:
     std::vector<Token*> seq_;
 
 public:
-    void push_back(Token* tk) {seq_.push_back(tk);}
+    void push_back(Token* tk);
+
+    // 预处理器函数处理
 
     // 辅助函数
     size_t size() const {return seq_.size();}

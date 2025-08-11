@@ -6,7 +6,7 @@
 #include "../base/error.h"
 
 // 扫描器从SourceBuffer读取字符，返回Token
-class scanner {
+class Scanner {
 private:
     Source *buf_;
     static bool isLetter(char);
@@ -39,7 +39,7 @@ private:
     void error(SourceLocation loc, const std::string& val);
 
 public:
-    explicit scanner(Source* buf);
+    explicit Scanner(Source* buf);
     // 核心扫描函数
     Token *scan();
     TokenSequence tokenize();
