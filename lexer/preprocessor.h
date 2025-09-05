@@ -99,25 +99,30 @@ public:
     };
 
 private:
+    Source *buf_;
     State currentState_{State::Normal};
     MacroManager macroManager_;
     FileManager fileManager_;
     ConditionStateManager conditionStateManager_;
-
+    // 错误报告处理
+    void PreprocessorError(SourceLocation loc, const std::string& val);
     // 处理宏定义
-    void handleMacroDefinition(TokenSequence& tokens);
+    void handleMacroDefinition();
+    // 处理取消宏定义
+    void handleMacroUnDefinition();
     // 处理条件编译指令
-    void handleConditionDirective(TokenSequence& tokens);
+    void handleConditionDirective();
     // 处理包含文件指令
-    void handleIncludeDirective(TokenSequence& tokens);
+    void handleIncludeDirective();
     // 处理注释
-    void handleComment(TokenSequence& tokens);
+    void handleComment();
     // 处理字符串和字符字面量
-    void handleStringAndCharacterLiterals(TokenSequence& tokens);
-    // 处理预处理指令
-    void processDirective(Token* token, TokenSequence& tokens);
+    void handleStringAndCharacterLiterals();
+    // 展开宏定义
+    void handleExpandMacro();
+    //
+    void process(TokenSequence& is, TokenSequence& os)
 public:
-    Preprocessor() = default;
-    ~Preprocessor() = default;
-    void preprocess(const std::string& input);
-}
+    Preprocessor(){}
+    TokenSequence preprocess(Source* buf);
+};

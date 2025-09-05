@@ -137,60 +137,58 @@ enum class TokenKind
     #undef X_MACROS
 };
 
-class Token {
-public:
+struct Token 
+{
     // token kind
-    const TokenKind kind_;
-
+    TokenKind kind_;
     // token value
-    const std::string value_;
-
+    std::string value_;
     // loc
-    const SourceLocation loc_;
-
-    // creat a new Token
-    static Token *newObj(TokenKind type);
-    static Token *newObj(TokenKind type, SourceLocation loc);
-    static Token *newObj(TokenKind type, SourceLocation loc, const std::string& value);
-
+    SourceLocation loc_;
+    // 是否是行首
+    bool isLineBegin_;
     // static member 
     static const std::unordered_map<std::string, TokenKind> KeyWordMap;
     static const std::unordered_map<TokenKind, std::string> TokenKindMap;
     static const std::unordered_map<std::string, TokenKind> PreprocessKeyWordMap;
-
-    // func
+    // EOF
     bool isEOF() const;
-
+    static Token* getEOFToken();
     // typespecifier
     bool isTypeSpecifier() const;
     bool isTypeQualifier() const;
-
-
-private:
-    Token(TokenKind type, SourceLocation loc, const std::string& value)
-    : kind_(type), loc_(loc), value_(value){}
-
-    Token(TokenKind type, SourceLocation loc)
-    : Token(type, loc, ""){}
+    // 检测是否是注释
+    bool isComment() const;
+    // 预处理指令
+    bool isProcessDirective() const;
+    // 资源控制
+    Token(TokenKind type, bool isBeg, SourceLocation loc, const std::string& value)
+    : kind_(type), isLineBegin_(isBeg), loc_(loc), value_(value){}
+    Token(TokenKind type, bool isBeg, SourceLocation loc)
+    : Token(type, isBeg, loc, ""){}
+    Token(TokenKind type, bool isBeg)
+    : Token(type, isBeg, SourceLocation()){}
+    Token(TokenKind type)
+    : Token(type, false){}
 };
 
 class TokenSequence 
 {
 private:
     int pos_{-1};
-    std::vector<Token*> seq_;
+    std::vector<Token> seq_;
 
 public:
-    void push_back(Token* tk);
+    void push_back(Token tk);
 
-    // 预处理器函数处理
-
+    // 跳到新行开始
+    void skipNewLine();
     // 辅助函数
-    size_t size() const {return seq_.size();}
-    void dump() const;
+    size_t size() {return seq_.size();}
+    void dump();
     // 提供给语法分析器的辅助函数
     Token* next();
-    Token* cur() const;
-    Token* peek(size_t n = 1) const; 
+    Token* cur();
+    Token* peek(size_t n = 1); 
     void reset();
 };

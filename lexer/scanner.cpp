@@ -107,7 +107,7 @@ bool Scanner::skipEscape(char ch)
     }
 }
 
-Token *Scanner::scanIdentifier()
+Token Scanner::scanIdentifier()
 {
     char ch = buf_->nextch();
     while (isLetter(ch) || isDecimal(ch) || isUCN(ch)) {
@@ -125,7 +125,7 @@ Token *Scanner::scanIdentifier()
 }
 
 
-Token *Scanner::scanNumberLiteral()
+Token Scanner::scanNumberLiteral()
 {
     char ch = buf_->nextch();
     // 若下一个字符是预处理数字，则移动指针。
@@ -142,7 +142,7 @@ Token *Scanner::scanNumberLiteral()
     return makeToken(TokenKind::Numeric_Constant_);
 }
 
-Token *Scanner::scanStringLiteral()
+Token Scanner::scanStringLiteral()
 {
     do {
         if (buf_->match('\"')) {
@@ -162,7 +162,7 @@ Token *Scanner::scanStringLiteral()
     error("unExpect stringLiteral!");
 }
 
-Token *Scanner::scanCharLiter()
+Token Scanner::scanCharLiter()
 {
     char ch = buf_->nextch();
     switch (ch)
@@ -197,7 +197,7 @@ Token *Scanner::scanCharLiter()
     }
 }
 
-Token *Scanner::scanLineComment()
+Token Scanner::scanLineComment()
 {
     char ch =  buf_->nextch();
     while (ch != '\n' && ch != EOF) {
@@ -206,7 +206,7 @@ Token *Scanner::scanLineComment()
     return makeToken(TokenKind::Comment_);
 }
 
-Token *Scanner::scanFullComment()
+Token Scanner::scanFullComment()
 {
     char ch = buf_->nextch();
     while (ch != EOF) {
@@ -252,9 +252,9 @@ void Scanner::error(SourceLocation loc, const std::string& val)
     throw CCError(ss.str());
 }
 
-Token *Scanner::makeToken(TokenKind kind)
+Token Scanner::makeToken(TokenKind kind)
 {
-    return Token::newObj(kind, buf_->loc(), buf_->seg());
+    return Token(kind, buf_->islinehead(), buf_->loc(), buf_->seg());
 }
 
 Scanner::Scanner(Source* buf)
@@ -266,7 +266,7 @@ Scanner::Scanner(Source* buf)
     }
 }
 
-Token *Scanner::scan()
+Token Scanner::scan()
 {
     // 跳过空白行
     while (isspace(buf_->curch())) {
@@ -544,8 +544,8 @@ Token *Scanner::scan()
 TokenSequence Scanner::tokenize()
 {
     TokenSequence seq;
-    Token *tk = scan();
-    while (!tk->isEOF())
+    Token tk = scan();
+    while (!tk.isEOF())
     {
         seq.push_back(tk);
         tk = scan();
@@ -553,3 +553,11 @@ TokenSequence Scanner::tokenize()
     seq.push_back(tk);
     return seq;
 }
+
+TokenSequence Scanner::tokenize(Source* buf)
+{
+    Scanner sc(buf);
+    return sc.tokenize();
+}
+
+

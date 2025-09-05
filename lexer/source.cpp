@@ -124,6 +124,19 @@ bool Source::is_end() const
     return curch() == EOF;
 }
 
+bool Source::islinehead() const
+{
+    std::string line = segline();
+    int col = loc_.first.column;
+    for (int i = 0; i < col; i++)
+    {
+        if (!isspace(line[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::string Source::segline() const
 {
     int row = loc_.first.line;

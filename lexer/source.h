@@ -53,6 +53,8 @@ public:
     bool match(char ch);
     // 返回文件是否已读取完毕
     bool is_end() const;
+    // 返回是否是行首第一个非空字符
+    bool islinehead() const;
     // 返回当前标记的行字符串, 主要是为了输出错误信息
     std::string segline() const;
     std::string segline(SourceLocation loc) const;

@@ -1012,20 +1012,30 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
 
         // (6.7.7) typedef-name 判断当前是否已有其他方式
         case TokenKind::Identifier:
-            if (ts == 0) {
-                if (sys_->isTypeName(seq_->next())) {
+            // 若ID是标识符,则结束解析
+            if (sys_->isTypeName(seq_->peek())) {
+                seq_->next();
+                if (ty.isNull() && !ts) {
                     Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
                     ty = sym ? sym->getType() : QualType(nullptr);
                 } else {
-                    sytaxError("expect type, but not!");
+                    sytaxError("expect type-name, but not!");
                 }
                 break;
-            } else {
-                ty = sys_->getBuiltTypeByTypeSpec(ts);
             }
-
         default:
-            // 遇到了标识符或者其他
+            // ERROR: 同时有自定义类型和内置类型：类型重复
+            if (!ty.isNull() && ts) {
+                sytaxError("duplication type!");
+            }
+            // ERROR: 既没有自定义类型也没有内置类型：缺失类型
+            else if (ty.isNull() && !ts) {
+                sytaxError(seq_->peek(), "expect type, but not!");
+            }
+            // 没有自定义类型有内置类型：计算内置类型
+            else if (ty.isNull() && ts) {
+                ty = sys_->getBuiltTypeByTypeSpec(ts);
+            } 
             return ty;
         }
     }

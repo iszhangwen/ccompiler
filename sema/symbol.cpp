@@ -41,7 +41,8 @@ Scope::Scope(ScopeType st, Scope* parent = nullptr)
 
 Symbol* Scope::lookup(Symbol::SymbolType st, const std::string& key)
 {
-    auto iter = table_.find(Symbol::getTag(st, key));
+    std::string tag = Symbol::getTag(st, key);
+    auto iter = table_.find(tag);
     if (iter != table_.end()) {
         return iter->second;
     }
@@ -253,15 +254,15 @@ void SymbolTableContext::initBuiltType()
     insert(Symbol::NORMAL, "_Bool", BoolType::NewObj(), nullptr);
     // char型
     insert(Symbol::NORMAL, "signed_char", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::BYTE, IntegerType::CHAR), nullptr);
-    insert(Symbol::NORMAL, "unsignd_char", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR), nullptr);
+    insert(Symbol::NORMAL, "unsigned_char", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR), nullptr);
     // 整型
     insert(Symbol::NORMAL, "signed_short_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "signed_normal_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "signed_long_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "signed_long_long_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_short_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_normal_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
+    insert(Symbol::NORMAL, "unsigned_short_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
+    insert(Symbol::NORMAL, "unsigned_normal_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
+    insert(Symbol::NORMAL, "unsigned_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
     insert(Symbol::NORMAL, "unsigned_long_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG2, IntegerType::INT), nullptr);
     // 浮点型
     insert(Symbol::NORMAL, "float", RealFloatingType::NewObj(RealFloatingType::FLOAT), nullptr);

@@ -3,21 +3,6 @@
 #include <sstream>
 #include "../base/error.h"
 
-Token *Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
-{
-    return new Token(type, loc, value);
-}
-
-Token *Token::newObj(TokenKind type, SourceLocation loc)
-{
-    return Token::newObj(type, loc, "");
-}
-
-Token *Token::newObj(TokenKind type)
-{
-    return Token::newObj(TokenKind::EOF_, SourceLocation());
-}
-
 const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
     {"alignof",       TokenKind::Alignof,	   },
     {"auto",          TokenKind::Auto,	       },
@@ -97,11 +82,47 @@ bool Token::isEOF() const
     return kind_ == TokenKind::EOF_;
 }
 
+Token* Token::getEOFToken()
+{
+    static Token tk = Token(TokenKind::EOF_);
+    return &tk;
+}
+
 bool Token::isTypeQualifier() const
 {
     if (kind_ == TokenKind::Const
     || kind_ == TokenKind::Volatile
     || kind_ == TokenKind::Restrict) {
+        return true;
+    }
+    return false;
+}
+
+bool Token::isComment() const
+{
+    if (kind_ == TokenKind::Comment_)
+    {
+        return true;
+    }
+    return false;
+}
+
+bool Token::isProcessDirective() const
+{
+    if ((kind_ == TokenKind::T_If)
+    || (kind_ == TokenKind::T_Ifdef)
+    || (kind_ == TokenKind::T_Ifndef)
+    || (kind_ == TokenKind::T_Elif)
+    || (kind_ == TokenKind::T_Else)
+    || (kind_ == TokenKind::T_Endif)
+    || (kind_ == TokenKind::T_Include)
+    || (kind_ == TokenKind::T_Define)
+    || (kind_ == TokenKind::T_Undefine)
+    || (kind_ == TokenKind::T_Line)
+    || (kind_ == TokenKind::T_Error)
+    || (kind_ == TokenKind::T_Pragma)
+    || (kind_ == TokenKind::Pound_)
+    || (kind_ == TokenKind::Pasting_)) {
         return true;
     }
     return false;
@@ -117,22 +138,23 @@ bool Token::isTypeSpecifier() const
     return false;
 }
 
-void TokenSequence::dump() const {
+void TokenSequence::dump()  
+{
     std::cout << "------------------------------\n";
     for (int i = 0; i < seq_.size(); i++)
     {
-        std::cout << "kind: " << (int)seq_[i]->kind_ << " value: " << seq_[i]->value_ <<"\n";
+        std::cout << "kind: " << (int)seq_[i].kind_ << " value: " << seq_[i].value_ <<"\n";
     }
     std::cout << "------------------------------\n";
 }
 
-Token *TokenSequence::peek(size_t n) const
+Token *TokenSequence::peek(size_t n) 
 {
     if (pos_ + n >= size())
     {
-        return Token::newObj(TokenKind::EOF_);
+        return Token::getEOFToken();
     }
-    return seq_[pos_ + n];
+    return &seq_[pos_ + n];
 }
 
 Token *TokenSequence::next()
@@ -141,7 +163,7 @@ Token *TokenSequence::next()
     return cur();
 }
 
-Token *TokenSequence::cur() const
+Token *TokenSequence::cur() 
 {
     return peek(0);
 }
@@ -153,40 +175,44 @@ void TokenSequence::reset()
     }
 }
 
-void TokenSequence::push_back(Token* tk)
+void TokenSequence::skipNewLine()
 {
-    if (tk == nullptr) {
-        return;
+    while (!cur()->isLineBegin_)
+    {
+        next();
     }
+}
+
+void TokenSequence::push_back(Token tk)
+{
     // 检测是否为预处理器指令
     if (size() <= 0 || cur()->kind_ != TokenKind::Pound_) {
         seq_.push_back(tk);
         return;
     }
     // 预处理指令 ##
-    if (tk->kind_ == TokenKind::Pound_)
+    if (tk.kind_ == TokenKind::Pound_)
     {
-        cur()->value_ += tk->value_; ;
+        cur()->value_ += tk.value_; ;
         cur()->kind_ = TokenKind::Pasting_;
         return;
     }
     // 处理预处理指令 #Idenfier
-    else if (tk->kind_ == TokenKind::Identifier) {
+    else if (tk.kind_ == TokenKind::Identifier) {
         // 检查是否为预处理器指令
-        auto iter = Token::PreprocessKeyWordMap.find(tk->value_);
+        auto iter = Token::PreprocessKeyWordMap.find(tk.value_);
         if (iter != Token::PreprocessKeyWordMap.end()) {
-            cur()->value_ = tk->value_;
+            cur()->value_ = tk.value_;
             cur()->kind_ = iter->second;
         }
         // 如果不是预处理器指令，则将其作为普通宏指令 
         else {
-            cur()->value_ = tk->value_;
+            cur()->value_ = tk.value_;
             cur()->kind_ = TokenKind::T_Macro;
         }
+        return;
     }
     // 其他类型的Token直接添加
-    else {
-        seq_.push_back(tk);
-    }
+    seq_.push_back(tk);
     return;
 }

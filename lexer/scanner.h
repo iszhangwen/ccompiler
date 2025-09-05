@@ -24,15 +24,15 @@ private:
     bool skipEscape(char);
     bool match(const Token& tk);
 
-    Token *scanIdentifier();
-    Token *scanNumberLiteral();
-    Token *scanStringLiteral();
-    Token *scanCharLiter();
+    Token scanIdentifier();
+    Token scanNumberLiteral();
+    Token scanStringLiteral();
+    Token scanCharLiter();
 
-    Token *scanLineComment();
-    Token *scanFullComment();
+    Token scanLineComment();
+    Token scanFullComment();
 
-    inline Token *makeToken(TokenKind);
+    inline Token makeToken(TokenKind);
 
     // 错误打印函数
     void error(const std::string& val);
@@ -41,6 +41,7 @@ private:
 public:
     explicit Scanner(Source* buf);
     // 核心扫描函数
-    Token *scan();
+    Token scan();
     TokenSequence tokenize();
+    static TokenSequence tokenize(Source* buf);
 };

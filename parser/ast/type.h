@@ -29,9 +29,8 @@ class QualType
     Type* ty_;  // 存储类型指针
 public:
     // 构造函数
-    QualType() {}
-    QualType(Type *ptr, unsigned qual=0x00)
-        :ty_(ptr) {
+    QualType(): ty_(nullptr), ql_(0) {}
+    QualType(Type *ptr, unsigned qual=0x00):ty_(ptr) {
         // 校验类型限定符的合法性
         assert((qual & ~TypeQualifier::TQ_MASK) == 0);
         ql_ |= qual;
