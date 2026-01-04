@@ -1,9 +1,9 @@
 #pragma once
 #include <string>
-#include <ast/decl.h>
-#include <ast/stmt.h>
-#include <ast/expr.h>
-#include <ast/type.h>
+#include <decl.h>
+#include <stmt.h>
+#include <expr.h>
+#include <type.h>
 #include <scanner.h>
 #include <sema.h>
 

@@ -3,7 +3,7 @@
 #include <deque>
 #include "token.h"
 #include "source.h"
-#include "../base/error.h"
+#include "error.h"
 
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner {

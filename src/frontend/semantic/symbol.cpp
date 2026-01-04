@@ -1,5 +1,5 @@
 #include "symbol.h"
-#include <ast/decl.h>
+#include "decl.h"
 
 Symbol* Symbol::NewObj(SymbolType st, Scope* s, const std::string& k, QualType t, NamedDecl* dc, bool isType)
 {

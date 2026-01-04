@@ -1,5 +1,5 @@
 #include "analyzer.h"
-#include "ast/type.h"
+#include "type.h"
 
 // 根据传入的ts返回内建类型
 Type* SemaAnalyzer::onActTypeSpec(int ts)

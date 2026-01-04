@@ -1,6 +1,6 @@
 #include "astvisitor.h"
 #include "analyzer.h"
-#include "ast/type.h"
+#include "type.h"
 #include <iostream>
 
 void CodegenASTVisitor::visit(IntegerLiteral* c) 

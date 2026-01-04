@@ -1,1 +1,0 @@
-message("start compiler ssa module...")

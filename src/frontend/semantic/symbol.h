@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
-#include <ast/type.h>
+#include "type.h"
 
 class NamedDecl;
 class Type;

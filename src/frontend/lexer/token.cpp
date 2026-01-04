@@ -1,7 +1,7 @@
 #include "token.h"
 #include "scanner.h"
 #include <sstream>
-#include "../base/error.h"
+#include "error.h"
 
 Token *Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
 {

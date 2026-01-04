@@ -1,5 +1,5 @@
 #pragma once
-#include "ast/ast.h"
+#include <ast.h>
 
 class Type;
 // 使用语法制导翻译方案，翻译过程即完成语义检查过程
