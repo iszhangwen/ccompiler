@@ -1,6 +1,6 @@
 #include "scanner.h"
 #include <sstream>
-#include "../../support/ccerror/error.h"
+#include "ccerror.h"
 
 bool scanner::isLetter(char ch)
 {

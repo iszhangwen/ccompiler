@@ -718,7 +718,7 @@ DeclGroup Parser::parseDeclaration()
         }
         return res;
     }
-    std::cout << "-------------\n";
+
     // 解析第一个声明符
     Declarator declarator("", qt, sc, fs);
     Decl* dc = parseInitDeclarator(declarator);
