@@ -1211,22 +1211,38 @@ void Parser::parseDeclarator(Declarator& dc)
     QualType base = parsePointer(dc.getType());
     dc.setType(base);
     // （ declarator ）
-    if (seq_->match(TokenKind::LParent_)) {
+    if (seq_->match(TokenKind::Identifier)) {
+        dc.setName(seq_->cur()->value_);
+    }
+    else if (seq_->match(TokenKind::LParent_)) {
         parseDeclarator(dc);
         seq_->expect(TokenKind::RParent_);
-        QualType newBase = parseFuncOrArrayDeclarator(base);
-        // 修正符号类型
-        // 例：int* (*a)[23]; base: int*, ret.second: int**, newBase: int* [23]
-        // 实际类型是派生自int*[23]的指针类型
-        dc.setType(modifyBaseType(base, newBase, dc.getType()));
-    }
-    else if (seq_->match(TokenKind::Identifier)) {
-        dc.setName(seq_->cur()->value_);
-        dc.setType(parseFuncOrArrayDeclarator(base));
     }
     else {
-        dc.setType(parseFuncOrArrayDeclarator(base));
+        sytaxError("expect declarator, but not!");
     }
+    // 解析声明符后缀
+    while (true)
+    {
+        if (seq_->match(TokenKind::LParent_)) {
+            sys_->enterScope(Scope::FUNC_PROTOTYPE);
+            auto paramList = parseParameterList();
+            sys_->exitScope();
+            seq_->expect(TokenKind::RParent_);
+            dc.setType(FunctionType::NewObj(base, false, false, paramList));
+            // 更新声明符的类型
+            dc.setType(modifyBaseType(base, base, dc.getType()));
+        }
+        else if (seq_->match(TokenKind::LSquare_Brackets_)) {
+            dc.setType(ArrayType::NewObj(dc.getType(), parseArrayLen()));
+            // 更新声明符的类型
+            dc.setType(modifyBaseType(base, base, dc.getType()));
+        }
+        else {
+            break;
+        }
+    }
+    
 }
 QualType Parser::modifyBaseType(QualType oldBase, QualType newBase, QualType curType)
 {
