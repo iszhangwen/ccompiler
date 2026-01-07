@@ -2,9 +2,10 @@
 #include <memory>
 #include <vector>
 
+class AstNode;
+using Stmt = AstNode;
+using Decl = AstNode;
 class Expr;
-class Decl;
-class Stmt;
 class Type;
 class TranslationUnitDecl;
 class LabelDecl;
@@ -58,7 +59,7 @@ public:
     virtual ~ASTVisitor() = default;
     // 访问翻译单元节点
     virtual void visit(TranslationUnitDecl* tud) = 0;
-    // 访问申明节点
+    // 访问声明节点
     virtual void visit(LabelDecl* ld) = 0;
     virtual void visit(ValueDecl* vd) = 0;
     virtual void visit(DeclaratorDecl* dd) = 0;
@@ -179,20 +180,19 @@ public:
         NK_ReturnStmt
     };
 
-    AstNode(NodeKind nk): kind_(nk){}
+    AstNode(NodeKind nk): m_kind(nk){}
     virtual ~AstNode() = default;
     virtual void accept(ASTVisitor* vt) {}
-    virtual NodeKind getKind() const {
-        return kind_;
-    }
+    virtual NodeKind getKind() const {return m_kind;}
 
 private:
-    NodeKind kind_;
+    NodeKind m_kind;
 };
 
 // 声明说明符
 enum StorageClass 
 {
+    N_SCLASS,
     TYPEDEF =   (1 << 1),
     EXTERN =    (1 << 2),
     STATIC =    (1 << 3),
@@ -202,7 +202,7 @@ enum StorageClass
 };
 enum TypeSpecifier 
 {
-    NONE = 0,
+    N_TSPEC = 0,
     VOID =     (1 << 1),
     CHAR =     (1 << 2),
     SHORT =    (1 << 3),
@@ -222,6 +222,7 @@ enum TypeSpecifier
 
 enum TypeQualifier 
 {
+    N_TQUAL = 0,
     CONST =    (1 << 1),
     RESTRICT = (1 << 2),
     VOLATILE = (1 << 3),
@@ -229,12 +230,10 @@ enum TypeQualifier
 };
 enum FuncSpecifier 
 {
+    N_FSPEC = 0,
     INLINE = (1 << 1),
     FS_MASK = INLINE
 };
 
-class Decl;
-class Declarator;
-using DeclGroup = std::vector<Decl*>;
-using DeclaratorGroup = std::vector<Declarator>;
+using DeclGroup = std::vector<std::shared_ptr<Decl>>;
 

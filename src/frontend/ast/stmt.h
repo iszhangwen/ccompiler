@@ -1,364 +1,265 @@
 #pragma once
 #include "ast.h"
 #include "type.h"
-#include <token.h>
+#include "token.h"
 
-/* (6.8) statement:
- labeled-statement
- compound-statement
- expression-statement
- selection-statement
- iteration-statement
- jump-statement
- 按照C99文法定义，按照以上语句类型划分AST节点类型
-*/
-
-/*------------------------------基类--------------------------------------------------*/
-class Stmt : public AstNode {
-public:
-    Stmt(NodeKind kd)
-    : AstNode(kd){}
-    virtual ~Stmt(){};
-};
-
-/*------------------------------labeled-statement---------------------------------------------*/
-class LabelStmt : public Stmt 
+class LabelStmt : public Stmt
 {
-    NamedDecl* key_;
-    Stmt* val_;
-protected:
-    LabelStmt(NamedDecl* key, Stmt* val)
-    : Stmt(NodeKind::NK_LabelStmt), key_(key), val_(val) {}
 public:
-    static LabelStmt* NewObj(NamedDecl* key, Stmt* val);
+    LabelStmt()
+    : Stmt(NodeKind::NK_LabelStmt), m_key(nullptr), m_val(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    NamedDecl* getLabel() {return key_;}
-    void setLabel(NamedDecl* key) {
-        key_ = key;
-    }
+    std::shared_ptr<NamedDecl> getLabel() {return m_key;}
+    void setLabel(std::shared_ptr<NamedDecl> key) {m_key = key;}
 
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setLabel(Stmt* val) {
-        val_ = val;
-    }
+    std::shared_ptr<Stmt> getStmt() {return m_val;}
+    void setLabel(std::shared_ptr<Stmt> val) {m_val = val;}
+
+private:
+    std::shared_ptr<NamedDecl> m_key;
+    std::shared_ptr<Stmt> m_val;
 };
 
-class CaseStmt : public Stmt 
+class CaseStmt : public Stmt
 {
-    Expr* cond_;
-    Stmt* val_;
-protected:
-    CaseStmt(Expr* cond, Stmt* val)
-    : Stmt(NodeKind::NK_CaseStmt), cond_(cond), val_(val) {}
 public:
-    static CaseStmt* NewObj(Expr* cond, Stmt* val);
+    CaseStmt()
+    : Stmt(NodeKind::NK_CaseStmt), m_cond(nullptr), m_val(nullptr) {}
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* cond) {
-        cond_ = cond;
-    }
+    std::shared_ptr<Expr> getCond() {return m_cond;}
+    void setCond(std::shared_ptr<Expr> cond) {m_cond = cond;}
 
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setLabel(Stmt* val) {
-        val_ = val;
-    }
+    std::shared_ptr<Stmt> getStmt() {return m_val;}
+    void setLabel(std::shared_ptr<Stmt> val) {m_val = val;}
+
+private:
+    std::shared_ptr<Expr> m_cond;
+    std::shared_ptr<Stmt> m_val;
 };
 
-class DefaultStmt : public Stmt 
+class DefaultStmt : public Stmt
 {
-    Stmt* val_;
-protected:
-    DefaultStmt(Expr* cond, Stmt* val)
-    : Stmt(NodeKind::NK_DefaultStmt), val_(val) {}
 public:
-    static DefaultStmt* NewObj(Expr* cond, Stmt* val);
+    DefaultStmt()
+    : Stmt(NodeKind::NK_DefaultStmt), m_val(val) {}
+
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    Expr* getCond() {
-        return nullptr; // DefaultStmt没有条件表达式
-    }
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setLabel(Stmt* val) {
-        val_ = val;
-    }
+    std::shared_ptr<Expr> getCond() {return nullptr;}
+    std::shared_ptr<Stmt> getStmt() {return val_;}
+    void setLabel(std::shared_ptr<Stmt> val) {m_val = val;}
+
+private:
+    std::shared_ptr<Stmt> m_val;
 };
 
 /*------------------------------compound-statement---------------------------------------------*/
 class CompoundStmt : public Stmt
 {
-    std::vector<Stmt*> vals_;
-protected:
+public:
+    using StmtGroup = std::vector<std::shared_ptr<Stmt>>;
     CompoundStmt()
     : Stmt(NodeKind::NK_CompoundStmt) {}
 
     CompoundStmt(const std::vector<Stmt*>& vals)
-    : Stmt(NodeKind::NK_CompoundStmt), vals_(vals) {}
-public:
-    static CompoundStmt* NewObj(const std::vector<Stmt*>& vals);
+    : Stmt(NodeKind::NK_CompoundStmt), m_vals(vals) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    std::vector<Stmt*> getStmts() const {
-        return vals_;
-    }
-    void setStmts(const std::vector<Stmt*>& vals) {
-        vals_ = vals;
-    }
-    void addStmt(Stmt* st) {
-        vals_.push_back(st);
-    }
-    void clearStmts() {
-        vals_.clear();
-    }
-    size_t size() const {
-        return vals_.size();
-    }
-    Stmt* getStmt(size_t index) const {
-        if (index < vals_.size()) {
-            return vals_[index];
-        }
-        return nullptr; // 如果索引越界，返回nullptr
-    }
-    void removeStmt(size_t index) {
-        if (index < vals_.size()) {
-            vals_.erase(vals_.begin() + index);
-        }
-    }
+    StmtGroup getStmts() const {return m_vals;}
+    void setStmts(const StmtGroup& vals) {m_vals = vals;}
+    void addStmt(std::shared_ptr<Stmt> st) {m_vals.push_back(st);}
+    void clearStmts() {m_vals.clear();}
+    size_t size() const {return m_vals.size();}
+
+private:
+    StmtGroup m_vals;
 };
 
-class DeclStmt : public Stmt {
-    Decl* dc_;
-protected:
-    DeclStmt(Decl* dc)
-    : Stmt(NodeKind::NK_DeclStmt), dc_(dc) {}
+class DeclStmt : public Stmt
+{
 public:
-    static DeclStmt* NewObj(Decl* dc);
+    DeclStmt()
+    : Stmt(NodeKind::NK_DeclStmt), m_decl(nullptr) {}
+    DeclStmt(std::shared_ptr<Decl> dc)
+    : Stmt(NodeKind::NK_DeclStmt), m_decl(dc) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    Decl* getDecl() {
-        return dc_;
-    }
-    void setDecl(Decl* dc) {
-        dc_ = dc;
-    } 
+    std::shared_ptr<Decl> getDecl() {return m_decl;}
+    void setDecl(std::shared_ptr<Decl> dc) {m_decl = dc;}
+
+private:
+    std::shared_ptr<Decl> m_decl;
 };
 
 /*------------------------------表达式语句------------------------------------------------*/
-class ExprStmt : public Stmt {
-    Expr* ex_;
-protected:
-    ExprStmt(Expr* ex)
-    : Stmt(NodeKind::NK_ExprStmt), ex_(ex){}
+class ExprStmt : public Stmt
+{
 public:
-    static ExprStmt* NewObj(Expr* ex);
+    ExprStmt()
+    : Stmt(NodeKind::NK_ExprStmt), m_expr(nullptr){}
+    ExprStmt(std::shared_ptr<Expr> ex)
+    : Stmt(NodeKind::NK_ExprStmt), m_expr(ex){}
+
     virtual void accept(ASTVisitor* vt) override;
-    Expr* getExpr() {
-        return ex_;
-    }
-    void setExpr(Expr* ex) {
-        ex_ = ex;
-    }
+    std::shared_ptr<Expr> getExpr() {return m_expr;}
+    void setExpr(std::shared_ptr<Expr> ex) {m_expr = ex;}
+private:
+    std::shared_ptr<Expr> m_expr;
 };
 
-/*------------------------------控制流-条件语句---------------------------------------------*/
-class IfStmt : public Stmt 
+class IfStmt : public Stmt
 {
-    Expr* cond_;
-    Stmt* then_;
-    Stmt* else_;
-protected:
-    IfStmt(Expr* cond, Stmt* th, Stmt* el = nullptr)
-    : Stmt(NodeKind::NK_IfStmt), cond_(cond), then_(th), else_(el) {}
 public:
-    static IfStmt* NewObj(Expr* cond, Stmt* th, Stmt* el = nullptr);
+    IfStmt()
+    : Stmt(NodeKind::NK_IfStmt), m_cond(nullptr), m_then(nullptr), m_else(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* co) {
-        cond_ = co;
-    }
-    Stmt* getThen() {
-        return then_;
-    }
-    void setThen(Stmt* th) {
-        then_ = th;
-    }
-    Stmt* getElse() {
-        return else_;
-    }
-    void setElse(Stmt* el) {
-        else_ = el;
-    }
+    std::shared_ptr<Expr> getCond() {return m_cond;}
+    void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
+    std::shared_ptr<Stmt> getThen() {return m_then;}
+    void setThen(std::shared_ptr<Stmt> th) {m_then = th;}
+    std::shared_ptr<Stmt> getElse() {return m_else;}
+    void setElse(std::shared_ptr<Stmt> el) {m_else = el;}
+
+private:
+    std::shared_ptr<Expr> m_cond;
+    std::shared_ptr<Stmt> m_then;
+    std::shared_ptr<Stmt> m_else;
 };
 
-class SwitchStmt : public Stmt 
+class SwitchStmt : public Stmt
 {
-    Expr* cond_;
-    Stmt* val_;
-protected:
-    SwitchStmt(Expr* cond, Stmt* val)
-    : Stmt(NodeKind::NK_SwitchStmt), cond_(cond), val_(val) {}
 public:
-    static SwitchStmt* NewObj(Expr* cond, Stmt* val);
+    SwitchStmt()
+    : Stmt(NodeKind::NK_SwitchStmt), m_cond(nullptr), m_val(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-     Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* co) {
-        cond_ = co;
-    }
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setStmt(Stmt* val) {
-        val_ = val;
-    }
+    std::shared_ptr<Expr> getCond() {return m_cond;}
+    void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
+    std::shared_ptr<Stmt> getStmt() {return m_val;}
+    void setStmt(std::shared_ptr<Stmt> val) {m_val = val;}
+
+private:
+    std::shared_ptr<Expr> m_cond;
+    std::shared_ptr<Stmt> m_val;
 };
 
-
-/*------------------------------控制流-迭代语句---------------------------------------------*/
-class WhileStmt : public Stmt 
+class WhileStmt : public Stmt
 {
-    Expr* cond_;
-    Stmt* val_;
-protected:
-    WhileStmt(Expr* cond, Stmt* val)
-    : Stmt(NodeKind::NK_WhileStmt), cond_(cond), val_(val) {}
 public:
-    static WhileStmt* NewObj(Expr* cond, Stmt* val);
+    WhileStmt()
+    : Stmt(NodeKind::NK_WhileStmt), m_cond(nullptr), m_val(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-     Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* co) {
-        cond_ = co;
-    }
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setStmt(Stmt* val) {
-        val_ = val;
-    }
+    std::shared_ptr<Expr> getCond() {return m_cond;}
+    void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
+    std::shared_ptr<Stmt> getStmt() {return m_val;}
+    void setStmt(std::shared_ptr<Stmt> val) {m_val = val;}
     // 获取条件表达式的类型
     QualType getCondType() const;
     // 获取语句的类型
     QualType getStmtType();
+
+private:
+    std::shared_ptr<Expr> m_cond;
+    std::shared_ptr<Stmt> m_val;
 };
 
-class DoStmt : public Stmt 
+class DoStmt : public Stmt
 {
-    Expr* cond_;
-    Stmt* val_;
-protected:
-    DoStmt(Expr* cond, Stmt* val)
-    : Stmt(NodeKind::NK_DoStmt), cond_(cond), val_(val) {}
 public:
-    static DoStmt* NewObj(Expr* cond, Stmt* val);
+    DoStmt()
+    : Stmt(NodeKind::NK_DoStmt), m_cond(nullptr), m_val(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-     Expr* getCond() {
-        return cond_;
-    }
-    void setCond(Expr* co) {
-        cond_ = co;
-    }
-    Stmt* getStmt() {
-        return val_;
-    }
-    void setStmt(Stmt* val) {
-        val_ = val;
-    }
+    std::shared_ptr<Expr> getCond() {return m_cond;}
+    void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
+    std::shared_ptr<Stmt> getStmt() {return m_val;}
+    void setStmt(std::shared_ptr<Stmt> val) {m_val = val;}
+
+private:
+    std::shared_ptr<Expr> m_cond;
+    std::shared_ptr<Stmt> m_val;
 };
 
-class ForStmt : public Stmt 
+class ForStmt : public Stmt
 {
-    Expr* init_;
-    Expr* cond_;
-    Expr* update_;
-    Stmt* val_;
-protected:
-    ForStmt(Expr* init, Expr* cond, Expr* update, Stmt* val)
-    : Stmt(NodeKind::NK_ForStmt), init_(init), cond_(cond), update_(update), val_(val) {}
 public:
-    static ForStmt* NewObj(Expr* init, Expr* cond, Expr* update, Stmt* val);
+    ForStmt()
+    : Stmt(NodeKind::NK_ForStmt), m_init(nullptr), m_cond(nullptr), m_update(nullptr), m_body(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
+    // 设置默认值
+    std::shared_ptr<Expr> getInit() {return m_init;}
+    void setInit(std::shared_ptr<Expr> val) {m_init = val;}
+    std::shared_ptr<Expr> getCond() {return m_cond;}
+    void setCond(std::shared_ptr<Expr> val) {m_cond = val;}
+    std::shared_ptr<Expr> getUpdate() {return m_update;}
+    void setUpdate(std::shared_ptr<Expr> val) {m_update = val;}
+    std::shared_ptr<Stmt> getBody() {return m_body;}
+    void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
+
+private:
+    std::shared_ptr<Expr> m_init;
+    std::shared_ptr<Expr> m_cond;
+    std::shared_ptr<Expr> m_update;
+    std::shared_ptr<Stmt> m_body;
 };
 
-
-/*------------------------------控制流-跳转语句---------------------------------------------*/
-class GotoStmt : public Stmt 
+class GotoStmt : public Stmt
 {
-    Stmt* label_;
-protected:
-    GotoStmt(Stmt* label)
-    : Stmt(NodeKind::NK_GotoStmt), label_(label) {}
 public:
-    static GotoStmt* NewObj(Stmt* label);
+    GotoStmt()
+    : Stmt(NodeKind::NK_GotoStmt), m_label(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    Stmt* getLabel() {
-        return label_;
-    }
-    void setLabel(Stmt* lb) {
-        label_ = lb;
-    }
+    std::shared_ptr<Stmt> getLabel() {return m_label;}
+    void setLabel(std::shared_ptr<Stmt> lb) {m_label = lb;}
+
+private:
+    std::shared_ptr<Stmt> m_label;
 };
 
-class ContinueStmt : public Stmt 
+class ContinueStmt : public Stmt
 {
-    Stmt* label_;
-protected:
-    ContinueStmt(Stmt* label)
-    : Stmt(NodeKind::NK_ContinueStmt), label_(label) {}
 public:
-    static ContinueStmt* NewObj(Stmt* label);
+    ContinueStmt()
+    : Stmt(NodeKind::NK_ContinueStmt), m_label(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    Stmt* getLabel() {
-        return label_;
-    }
-    void setLabel(Stmt* lb) {
-        label_ = lb;
-    }
+    std::shared_ptr<Stmt> getLabel() {return m_label;}
+    void setLabel(std::shared_ptr<Stmt> lb) {m_label = lb;}
+private:
+    std::shared_ptr<Stmt> m_label;
 };
 
-class BreakStmt : public Stmt 
+class BreakStmt : public Stmt
 {
-    Stmt* label_;
-protected:
-    BreakStmt(Stmt* label)
-    : Stmt(NodeKind::NK_BreakStmt), label_(label) {}
 public:
-    static BreakStmt* NewObj(Stmt* label);
+    BreakStmt()
+    : Stmt(NodeKind::NK_BreakStmt), m_label(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    Stmt* getLabel() {
-        return label_;
-    }
-    void setLabel(Stmt* lb) {
-        label_ = lb;
-    }
+    std::shared_ptr<Stmt> getLabel() {return m_label;}
+    void setLabel(std::shared_ptr<Stmt> lb) {m_label = lb;}
+
+private:
+    std::shared_ptr<Stmt> m_label;
 };
 
-class ReturnStmt : public Stmt 
+class ReturnStmt : public Stmt
 {
-    Expr* retVal_; // 返回值表达式
-protected:
-    ReturnStmt(Expr* retVal)
-    : Stmt(NodeKind::NK_ReturnStmt), retVal_(retVal) {}
 public:
-    static ReturnStmt* NewObj(Expr* retVal);
+    ReturnStmt()
+    : Stmt(NodeKind::NK_ReturnStmt), m_retExpr(nullptr) {}
+
     virtual void accept(ASTVisitor* vt) override;
-    Expr* getReturnValue() {
-        return retVal_;
-    }
-    void setReturnValue(Expr* retVal) {
-        retVal_ = retVal;
-    }
-    // 获取返回值表达式的类型
-    QualType getReturnType() const;
+    std::shared_ptr<Expr> getRetExpr() {return m_retExpr;}
+    void setRetExpr(std::shared_ptr<Expr> retVal) {m_retExpr = retVal;}
+
+private:
+    std::shared_ptr<Expr> m_retExpr; // 返回值表达式
 };

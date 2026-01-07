@@ -13,18 +13,18 @@ class Parser;
 class ScopeManager {
     Parser* parent_;
 public:
-    ScopeManager(Parser* p, Scope::ScopeType st);
+    ScopeManager(Parser*, Scope::ScopeType st);
     ~ScopeManager();
 };
 
 class Parser {
 private:
     friend ScopeManager;
-    Source *buf_;
-    TokenSequence *seq_;
-    TranslationUnitDecl* unit_;
-    SemaAnalyzer* sema_;
-    SymbolTableContext* sys_;
+    std::shared_ptr<Source> m_source;
+    std::shared_ptr<TokenSequence> m_tokenSeq;
+    std::shared_ptr<TranslationUnitDecl> m_unit;
+    std::shared_ptr<SemaAnalyzer> m_sema;
+    std::shared_ptr<SymbolTableContext> m_systable;
 
     // 语法错误处理策略，遇到错误时中止编译程序
     void sytaxError(const std::string& val);
@@ -118,7 +118,7 @@ public:
     void parseTranslationUnit();
     void dump(ASTVisitor* av) {
         if (av) {
-            unit_->accept(av);
+            m_unit->accept(av);
         }
     }
 };

@@ -8,7 +8,7 @@ bool Type::isObjectType()
 //bool isFunctionType();
 bool Type::isCompleteType()
 {
-    return isComplete_;
+    return m_isComplete;
 }
 //6.2.5-1
 bool Type::isBoolType()
@@ -121,70 +121,6 @@ bool Type::iaDrivedDeclaratorType()
 bool Type::isTypeDefType()
 {   
     return (Type::TYPEDEF == getKind());
-}
-
-VoidType* VoidType::NewObj()
-{
-    return new VoidType();
-}
-
-BoolType* BoolType::NewObj()
-{
-    return new BoolType();
-}
-
-IntegerType* IntegerType::NewObj(Sign sig, Width wid, Category cate)
-{
-    return new IntegerType(sig, wid, cate);
-}
-
-RealFloatingType* RealFloatingType::NewObj(Category cate)
-{
-    return new RealFloatingType(cate);
-}
-ComplexType* ComplexType::NewObj(Category cate)
-{
-    return new ComplexType(cate);
-}
-PointerType* PointerType::NewObj(QualType pointee)
-{
-    return new PointerType(pointee);
-}
-ArrayType* ArrayType::NewObj(QualType qt, int len)
-{
-    return new ArrayType(qt, len);
-}
-ArrayType* ArrayType::NewObj(QualType qt, Expr* lenExpr)
-{
-    return new ArrayType(qt, lenExpr);
-}
-FunctionType* FunctionType::NewObj(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& params)
-{
-    return new FunctionType(qt, isInline, isNoReturn, params);
-}
-
-RecordType::RecordType(TagDecl* dc, bool isStruct)
-: TagType(isStruct ? Type::STRUCT : Type::UNION, dc)
-{
-}
-
-RecordType* RecordType::NewObj(TagDecl* dc, bool isStruct)
-{
-    return new RecordType(dc, isStruct ? Type::STRUCT : Type::UNION);
-}
-
-EnumType::EnumType(EnumDecl* dc)
-: TagType(Type::ENUM, dc)
-{
-}
-
-EnumType* EnumType::NewObj(EnumDecl *dc)
-{
-    return new EnumType(dc);
-}
-TypedefType* TypedefType::NewObj(QualType qt, TypedefDecl *dc)
-{
-    return new TypedefType(qt, dc);
 }
 
 

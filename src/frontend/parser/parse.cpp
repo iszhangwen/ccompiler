@@ -11,47 +11,44 @@ enum TypeSpecCombine {
     COM_SHORT =  UNSIGNED | SIGNED | INT,
     COM_LONG =  UNSIGNED | SIGNED | LONG | INT | DOUBLE | _COMPLEX,
     // 类型
-    COM_BOOL = NONE,
-    COM_VOID = NONE,
+    COM_BOOL = N_TSPEC,
+    COM_VOID = N_TSPEC,
     COM_CHAR = UNSIGNED | SIGNED,
     COM_INT =  UNSIGNED | SIGNED | SHORT | LONG | LONGLONG,
     COM_FLOAT =  _COMPLEX,
     COM_DOUBLE = LONG | _COMPLEX,
     COM_COMPLEX = FLOAT | DOUBLE | LONG,
-    COM_RECORD = NONE,
-    COM_ENUM= NONE,
-    COM_TYPEDEFNAME = NONE,
+    COM_RECORD = N_TSPEC,
+    COM_ENUM= N_TSPEC,
+    COM_TYPEDEFNAME = N_TSPEC,
 };
 
-ScopeManager::ScopeManager(Parser* p, Scope::ScopeType st) 
+ScopeManager::ScopeManager(Parser* p, Scope::ScopeType st)
 : parent_(p) 
 {
-    parent_->sys_->enterScope(st);
+    parent_->m_systable->enterScope(st);
 }
 ScopeManager::~ScopeManager() 
 {
-    parent_->sys_->exitScope();
+    parent_->m_systable->exitScope();
 }
 
 Parser::Parser(const std::string& filename)
 {
-    buf_ = new Source(filename);
-    seq_ = new TokenSequence(scanner(buf_).tokenize());
-    sys_ = new SymbolTableContext();
-    sema_ = new SemaAnalyzer(sys_);
+    m_source = std::make_shared<Source>(filename);
+    m_tokenSeq = std::make_shared<TokenSequence>(scanner(m_source).tokenize());
+    m_systable = std::make_shared<SymbolTableContext>();
+    m_sema = std::make_shared<SemaAnalyzer>(m_systable);
 }
 
 Parser:: ~Parser()
 {
-    delete buf_;
-    delete seq_;
-    delete sys_;
-    delete sema_;
+
 }
 
 void Parser::sytaxError(const std::string& val)
 {
-    sytaxError(seq_->cur(), val);
+    sytaxError(m_tokenSeq->cur(), val);
 }
 
 void Parser::sytaxError(Token *tk, const std::string& val)
@@ -70,11 +67,11 @@ void Parser::sytaxError(Token *tk, const std::string& val)
         << CANCEL
         << val 
         << std::endl
-        << buf_->segline(tk->loc_)
+        << m_source->segline(tk->loc_)
         << std::string(tk->loc_.column, ' ') 
         << "^ "  
         << RED 
-        << std::string(buf_->segline(tk->loc_).size() - tk->loc_.column - 2, '~') 
+        << std::string(m_source->segline(tk->loc_).size() - tk->loc_.column - 2, '~')
         << CANCEL 
         << std::endl;
     #undef RED
@@ -84,7 +81,7 @@ void Parser::sytaxError(Token *tk, const std::string& val)
 
 void Parser::semaError(const std::string& val)
 {
-    semaError(seq_->cur(), val);
+    semaError(m_tokenSeq->cur(), val);
 }
 
 void Parser::semaError(Token *tk, const std::string& val)
@@ -103,11 +100,11 @@ void Parser::semaError(Token *tk, const std::string& val)
         << CANCEL
         << val 
         << std::endl
-        << buf_->segline(tk->loc_)
+        << m_source->segline(tk->loc_)
         << std::string(tk->loc_.column, ' ') 
         << "^ "  
         << RED 
-        << std::string(buf_->segline(tk->loc_).size() - tk->loc_.column - 2, '~') 
+        << std::string(m_source->segline(tk->loc_).size() - tk->loc_.column - 2, '~')
         << CANCEL 
         << std::endl;
     #undef RED
@@ -126,11 +123,11 @@ void Parser::semaError(Token *tk, const std::string& val)
 Expr* Parser::parsePrimaryExpr()
 {
     Expr* node = nullptr;
-    switch (seq_->next()->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Identifier:
     {
-        Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+        Symbol* sym = m_systable->lookup(Symbol::NORMAL, m_tokenSeq->cur()->value_);
         if (!sym) {
             semaError("symbol undefined!");
             return nullptr;
@@ -146,29 +143,29 @@ Expr* Parser::parsePrimaryExpr()
     }    
 
     case TokenKind::Numeric_Constant_:
-        node = IntegerLiteral::NewObj(seq_->cur());
+        node = IntegerLiteral::NewObj(m_tokenSeq->cur());
         break;
 
     case TokenKind::Float_Constant:
-        node = FloatingLiteral::NewObj(seq_->cur());
+        node = FloatingLiteral::NewObj(m_tokenSeq->cur());
         break;
 
     case TokenKind::Character_Constant_:
-        node = CharacterLiteral::NewObj(seq_->cur());
+        node = CharacterLiteral::NewObj(m_tokenSeq->cur());
         break;
 
     case TokenKind::String_Constant_:
-        node = StringLiteral::NewObj(seq_->cur());
+        node = StringLiteral::NewObj(m_tokenSeq->cur());
         break;
     
     case TokenKind::LParent_:
         node = parseExpr();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
         node = ParenExpr::NewObj(node);
         break;
 
     default:
-        sytaxError(seq_->cur(), "unexpect PrimaryExpr!");
+        sytaxError(m_tokenSeq->cur(), "unexpect PrimaryExpr!");
         break;
     }
     return node;
@@ -183,13 +180,13 @@ Expr* Parser::parsePrimaryExpr()
 */
 Expr* Parser::parseGenericSelection()
 {
-    seq_->expect(TokenKind::T_Generic);
-    seq_->expect(TokenKind::LParent_);
+    m_tokenSeq->expect(TokenKind::T_Generic);
+    m_tokenSeq->expect(TokenKind::LParent_);
     parseAssignExpr();
-    while (seq_->match(TokenKind::Comma_)) {
+    while (m_tokenSeq->match(TokenKind::Comma_)) {
         parseGenericAssociation();
     }
-    seq_->expect(TokenKind::RParent_);
+    m_tokenSeq->expect(TokenKind::RParent_);
     return nullptr;
 }
 
@@ -199,13 +196,13 @@ Expr* Parser::parseGenericSelection()
 */
 Expr* Parser::parseGenericAssociation()
 {
-    if (seq_->match(TokenKind::Default)) {
+    if (m_tokenSeq->match(TokenKind::Default)) {
 
     }
     else {
         parseTypeName();
     }
-    seq_->match(TokenKind::Colon_);
+    m_tokenSeq->match(TokenKind::Colon_);
     parseAssignExpr();
     return nullptr;
 }
@@ -220,26 +217,26 @@ Expr* Parser::parseGenericAssociation()
 Expr* Parser::parsePostfixExpr()
 {
     Expr* node = nullptr;
-    if (seq_->peek()->kind_ == TokenKind::LParent_) {
+    if (m_tokenSeq->peek()->kind_ == TokenKind::LParent_) {
         node = parseParenExpr();
     }
     else {
         node = parsePrimaryExpr();
     }
     while (true) {
-        if (seq_->match(TokenKind::LSquare_Brackets_)) {
+        if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
             auto lex = parseExpr();
-            seq_->expect(TokenKind::RSquare_Brackets_);
+            m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
             node = ArraySubscriptExpr::NewObj(node, lex);
         }
-        else if (seq_->match(TokenKind::LParent_)) {
+        else if (m_tokenSeq->match(TokenKind::LParent_)) {
             auto lex = parseArgListExpr();
-            seq_->expect(TokenKind::RParent_);
+            m_tokenSeq->expect(TokenKind::RParent_);
             node = CallExpr::NewObj(node, lex);
         }
-        else if (seq_->match(TokenKind::Dot_)) {
-            seq_->expect(TokenKind::Identifier);
-            Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+        else if (m_tokenSeq->match(TokenKind::Dot_)) {
+            m_tokenSeq->expect(TokenKind::Identifier);
+            Symbol* sym = m_systable->lookup(Symbol::NORMAL, m_tokenSeq->cur()->value_);
             if (!sym) {
                 semaError("symbol undefined!");
                 break;
@@ -254,9 +251,9 @@ Expr* Parser::parsePostfixExpr()
                 break;
             }
         }
-        else if (seq_->match(TokenKind::Arrow_)) {
-            seq_->expect(TokenKind::Identifier);
-            Symbol* sym = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_);
+        else if (m_tokenSeq->match(TokenKind::Arrow_)) {
+            m_tokenSeq->expect(TokenKind::Identifier);
+            Symbol* sym = m_systable->lookup(Symbol::NORMAL, m_tokenSeq->cur()->value_);
             if (!sym) {
                 semaError("symbol undefined!");
                 break;
@@ -271,10 +268,10 @@ Expr* Parser::parsePostfixExpr()
                 break;
             }
         }
-        else if (seq_->match(TokenKind::Increment_)) {
+        else if (m_tokenSeq->match(TokenKind::Increment_)) {
             node = UnaryOpExpr::NewObj(node, UnaryOpExpr::Post_Increment_);
         }
-        else if (seq_->match(TokenKind::Decrement_)) {
+        else if (m_tokenSeq->match(TokenKind::Decrement_)) {
             node = UnaryOpExpr::NewObj(node, UnaryOpExpr::Post_Decrement_);
         }
         else {
@@ -288,7 +285,7 @@ std::vector<Expr*> Parser::parseArgListExpr()
 {
     std::vector<Expr*> res;
     res.push_back(parseAssignExpr());
-    while (seq_->match(TokenKind::Comma_)) {
+    while (m_tokenSeq->match(TokenKind::Comma_)) {
         res.push_back(parseAssignExpr());
     }
     return res;
@@ -310,7 +307,7 @@ Expr* Parser::parseUnaryExpr()
 {
     Expr* rex = nullptr;
     Expr* node = nullptr;
-    switch (seq_->next()->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Increment_:
         rex = parseUnaryExpr();
@@ -353,15 +350,15 @@ Expr* Parser::parseUnaryExpr()
         break;
     
     case TokenKind::Sizeof:
-        if (seq_->match(TokenKind::RParent_)) {
-            if (sys_->isTypeName(seq_->peek())) {
+        if (m_tokenSeq->match(TokenKind::RParent_)) {
+            if (m_systable->isTypeName(m_tokenSeq->peek())) {
                 parseTypeName();
                 rex = ParenExpr::NewObj(nullptr);
             }
             else {
                 rex = parseUnaryExpr();
             }
-            seq_->expect(TokenKind::RParent_);
+            m_tokenSeq->expect(TokenKind::RParent_);
         }
         else {
             rex = parseUnaryExpr();
@@ -370,9 +367,9 @@ Expr* Parser::parseUnaryExpr()
         break;
     
     case TokenKind::Alignof:
-        seq_->expect(TokenKind::LParent_);
+        m_tokenSeq->expect(TokenKind::LParent_);
         parseTypeName();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
         break;
 
     default:
@@ -395,15 +392,15 @@ Expr* Parser::parseMultiExpr()
 {
     Expr* node = parseCastExpr();
     while (true) {
-        if (seq_->match(TokenKind::Multiplication_)) {
+        if (m_tokenSeq->match(TokenKind::Multiplication_)) {
             Expr* rex = parseCastExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Multiplication_);
         } 
-        else if (seq_->match(TokenKind::Division_)) {
+        else if (m_tokenSeq->match(TokenKind::Division_)) {
             Expr* rex = parseCastExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Division_);
         } 
-        else if (seq_->match(TokenKind::Modulus_)) {
+        else if (m_tokenSeq->match(TokenKind::Modulus_)) {
             Expr* rex = parseCastExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Modulus_);
         } 
@@ -418,11 +415,11 @@ Expr* Parser::parseAddExpr()
 {
     Expr* node = parseMultiExpr();
     while (true) {
-        if (seq_->match(TokenKind::Addition_)) {
+        if (m_tokenSeq->match(TokenKind::Addition_)) {
             Expr* rex = parseMultiExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Addition_);
         } 
-        else if (seq_->match(TokenKind::Subtraction_)) {
+        else if (m_tokenSeq->match(TokenKind::Subtraction_)) {
             Expr* rex = parseMultiExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Subtraction_);
         } 
@@ -437,11 +434,11 @@ Expr* Parser::parseShiftExpr()
 {
     Expr* node = parseAddExpr();
     while (true) {
-        if (seq_->match(TokenKind::LShift_)) {
+        if (m_tokenSeq->match(TokenKind::LShift_)) {
             Expr* rex = parseAddExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::LShift_);
         } 
-        else if (seq_->match(TokenKind::RShift_)) {
+        else if (m_tokenSeq->match(TokenKind::RShift_)) {
             Expr* rex = parseAddExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::RShift_);
         } 
@@ -456,19 +453,19 @@ Expr* Parser::parseRelationalExpr()
 {
     Expr* node = parseShiftExpr();
     while (true) {
-        if (seq_->match(TokenKind::Less_)) {
+        if (m_tokenSeq->match(TokenKind::Less_)) {
             Expr* rex = parseShiftExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Less_);
         } 
-        else if (seq_->match(TokenKind::Less_Equal_)) {
+        else if (m_tokenSeq->match(TokenKind::Less_Equal_)) {
             Expr* rex = parseShiftExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Less_Equal_);
         } 
-        else if (seq_->match(TokenKind::Greater_)) {
+        else if (m_tokenSeq->match(TokenKind::Greater_)) {
             Expr* rex = parseShiftExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Greater_);
         } 
-        else if (seq_->match(TokenKind::Greater_Equal_)) {
+        else if (m_tokenSeq->match(TokenKind::Greater_Equal_)) {
             Expr* rex = parseShiftExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Greater_Equal_);
         } 
@@ -483,11 +480,11 @@ Expr* Parser::parseEqualExpr()
 {
     Expr* node = parseRelationalExpr();
     while (true) {
-        if (seq_->match(TokenKind::Equality_)) {
+        if (m_tokenSeq->match(TokenKind::Equality_)) {
             Expr* rex = parseRelationalExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Equality_);
         } 
-        else if (seq_->match(TokenKind::Inequality_)) {
+        else if (m_tokenSeq->match(TokenKind::Inequality_)) {
             Expr* rex = parseRelationalExpr();
             node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Inequality_);
         } 
@@ -501,7 +498,7 @@ Expr* Parser::parseEqualExpr()
 Expr* Parser::parseBitANDExpr()
 {
     Expr* node = parseEqualExpr();
-    while (seq_->match(TokenKind::BitWise_AND_)) {
+    while (m_tokenSeq->match(TokenKind::BitWise_AND_)) {
         Expr* rex = parseEqualExpr();
         node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_AND_);
     }
@@ -511,7 +508,7 @@ Expr* Parser::parseBitANDExpr()
 Expr* Parser::parseBitXORExpr()
 {
     Expr* node = parseBitANDExpr();
-    while (seq_->match(TokenKind::BitWise_XOR_)) {
+    while (m_tokenSeq->match(TokenKind::BitWise_XOR_)) {
         Expr* rex = parseBitANDExpr();
         node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_XOR_);
     }
@@ -521,7 +518,7 @@ Expr* Parser::parseBitXORExpr()
 Expr* Parser::parseBitORExpr()
 {
     Expr* node = parseBitXORExpr();
-    while (seq_->match(TokenKind::BitWise_OR_)) {
+    while (m_tokenSeq->match(TokenKind::BitWise_OR_)) {
         Expr* rex = parseBitXORExpr();
         node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_OR_);
     }
@@ -531,7 +528,7 @@ Expr* Parser::parseBitORExpr()
 Expr* Parser::parseLogicalANDExpr()
 {
     Expr* node = parseBitORExpr();
-    while (seq_->match(TokenKind::Logical_AND_)) {
+    while (m_tokenSeq->match(TokenKind::Logical_AND_)) {
         Expr* rex = parseBitORExpr();
         node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Logical_AND_);
     }
@@ -541,7 +538,7 @@ Expr* Parser::parseLogicalANDExpr()
 Expr* Parser::parseLogicalORExpr()
 {
     Expr* node = parseLogicalANDExpr();
-    while (seq_->match(TokenKind::Logical_OR_)) {
+    while (m_tokenSeq->match(TokenKind::Logical_OR_)) {
         Expr* rex = parseLogicalANDExpr();
         node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Logical_OR_);
     }
@@ -551,9 +548,9 @@ Expr* Parser::parseLogicalORExpr()
 Expr* Parser::parseConditionalExpr()
 {
     Expr* node = parseLogicalORExpr();
-    if (seq_->match(TokenKind::Conditional_)) {
+    if (m_tokenSeq->match(TokenKind::Conditional_)) {
         Expr* th = parseExpr();
-        seq_->expect(TokenKind::Colon_);
+        m_tokenSeq->expect(TokenKind::Colon_);
         Expr* el = parseConditionalExpr();
         node = ConditionalExpr::NewObj(node, th, el);
     }
@@ -575,7 +572,7 @@ Expr* Parser::parseAssignExpr()
     Expr* rex = nullptr;
     BinaryOpExpr::OpCode opc;
     Expr* node = parseConditionalExpr();
-    switch (seq_->next()->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Assign_:
         opc = BinaryOpExpr::Assign_;
@@ -648,7 +645,7 @@ Expr* Parser::parseExpr()
 {
     Expr* node = nullptr;
     node = parseAssignExpr();
-    while (seq_->match(TokenKind::Comma_)) {
+    while (m_tokenSeq->match(TokenKind::Comma_)) {
         auto rnode = parseAssignExpr();
         node = BinaryOpExpr::NewObj(node, rnode, BinaryOpExpr::Comma, QualType());
     }
@@ -669,18 +666,18 @@ Expr* Parser::parseConstansExpr()
 */
 Expr* Parser::parseParenExpr()
 {
-    seq_->expect(TokenKind::LParent_);    
+    m_tokenSeq->expect(TokenKind::LParent_);
     Expr* node = nullptr;
-    if (sys_->isTypeName(seq_->peek())) {
+    if (m_systable->isTypeName(m_tokenSeq->peek())) {
         QualType qt = parseTypeName();
-        seq_->expect(TokenKind::RParent_);
-        if (seq_->match(TokenKind::LCurly_Brackets_)) {
+        m_tokenSeq->expect(TokenKind::RParent_);
+        if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
             //node = parseInitlizerList();
-            while (seq_->match(TokenKind::Comma_)) {
+            while (m_tokenSeq->match(TokenKind::Comma_)) {
                 //auto rex = parseInitlizerList();
                 //node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Comma);
             }
-            seq_->expect(TokenKind::RCurly_Brackets_);
+            m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
             //node = CompoundLiteralExpr::NewObj();
         }
         else {
@@ -690,7 +687,7 @@ Expr* Parser::parseParenExpr()
     }
     else {
         auto lex = parseExpr();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
         node = ParenExpr::NewObj(lex);
     }
     return node;
@@ -706,8 +703,8 @@ DeclGroup Parser::parseDeclaration()
     DeclGroup res;
     int sc = 0, fs = 0;
     QualType qt = parseDeclarationSpec(&sc, &fs);
-    if (seq_->match(TokenKind::Semicolon_)) {
-        if (qt->getKind() == Type::STRUCT || qt->getKind() == Type::UNION) {
+    if (m_tokenSeq->match(TokenKind::Semicolon_)) {
+        if (qt->getKind() == Type::RECORD) {
             res.push_back(dynamic_cast<RecordType*>(qt.getPtr())->getTagDecl());
         }
         else if (qt->getKind() == Type::ENUM) {
@@ -722,17 +719,17 @@ DeclGroup Parser::parseDeclaration()
     // 解析第一个声明符
     Declarator declarator("", qt, sc, fs);
     Decl* dc = parseInitDeclarator(declarator);
-    if (qt->isFunctionType() && seq_->test(TokenKind::LCurly_Brackets_)) {
+    if (qt->isFunctionType() && m_tokenSeq->test(TokenKind::LCurly_Brackets_)) {
         //res.push_back(parseFunctionDefinitionBody(fstDecl));
         return res;
     } else {
         //res.push_back(fstDecl);
     }
 
-    while (seq_->match(TokenKind::Comma_)) {
+    while (m_tokenSeq->match(TokenKind::Comma_)) {
             res.push_back(parseInitDeclarator(declarator));
     }
-    seq_->expect(TokenKind::Semicolon_);
+    m_tokenSeq->expect(TokenKind::Semicolon_);
     return res;
 }
 
@@ -743,7 +740,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
     Type* ty = nullptr; // 类型：内建类型,自定义类型
     while (true)
     {
-        TokenKind tkind = seq_->next()->kind_;
+        TokenKind tkind = m_tokenSeq->next()->kind_;
         switch (tkind)
         {
         // (6.7.1) storage class specifier
@@ -859,7 +856,7 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
             if (ts & ~COM_RECORD) {
                 sytaxError("unexpect struct or union!");
             }
-            ty = parseStructOrUnionSpec(seq_->cur()->kind_ == TokenKind::Struct);
+            ty = parseStructOrUnionSpec(m_tokenSeq->cur()->kind_ == TokenKind::Struct);
             return QualType(ty, tq);
 
         // (6.7.2) type-specifier->enum-specifier
@@ -883,15 +880,15 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         // (6.7.7) typedef-name 判断当前是否已有其他方式
         case TokenKind::Identifier:
             if (ts == 0) {
-                if (sys_->isTypeName(seq_->cur())) {
+                if (m_systable->isTypeName(m_tokenSeq->cur())) {
                     //ty = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_)->getType();
                 } else {
                     sytaxError("expect type, but not!");
                 }
                 break;
             } else {
-                ty = sys_->getBuiltTypeByTypeSpec(ts);
-                seq_->reset();
+                ty = m_systable->getBuiltTypeByTypeSpec(ts);
+                m_tokenSeq->reset();
             }
 
         default:
@@ -913,12 +910,12 @@ Decl* Parser::parseInitDeclarator(Declarator dc)
 {
     parseDeclarator(dc);
     Expr* initExpr = nullptr;
-    if (seq_->match(TokenKind::Assign_)) {
+    if (m_tokenSeq->match(TokenKind::Assign_)) {
         initExpr = parseInitializer();
     }
     // 判断当前是否处于函数原型作用域
-    bool isFuncProto = (sys_->isScopeType(Scope::FUNC_PROTOTYPE));
-    Decl* res = new VarDecl(dc.getName(), sys_->getCurScope(), dc.getType(), dc.getStorageClass(), initExpr);
+    bool isFuncProto = (m_systable->isScopeType(Scope::FUNC_PROTOTYPE));
+    Decl* res = new VarDecl(dc.getName(), m_systable->getCurScope(), dc.getType(), dc.getStorageClass(), initExpr);
 
     // 插入符号表
     Symbol* sym = nullptr;
@@ -949,18 +946,18 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
 {
     //符号解析
     std::string key;
-    if (seq_->match(TokenKind::Identifier)) {
-        key = seq_->cur()->value_;
+    if (m_tokenSeq->match(TokenKind::Identifier)) {
+        key = m_tokenSeq->cur()->value_;
     }
 
-    Symbol* sym = sys_->lookup(Symbol::RECORD, key);
+    Symbol* sym = m_systable->lookup(Symbol::RECORD, key);
     // UDT定义
-    if (seq_->match(TokenKind::LCurly_Brackets_)) {
+    if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         // 符号表没查找到:第一次定义
         if (!sym) {
             Type* ty = nullptr;//RecordType::NewObj(isStruct, nullptr);
             if (!key.empty()) { // 匿名对象不插入符号表
-                sym = sys_->insertRecord(key, ty, nullptr);
+                sym = m_systable->insertRecord(key, ty, nullptr);
             }
             return parseStructDeclarationList(sym);
         }
@@ -985,7 +982,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
         return nullptr;//sym->getType();
     }
     Type* ty = nullptr; //::NewObj(isStruct, nullptr);
-    sys_->insertRecord(key, ty, nullptr);
+    m_systable->insertRecord(key, ty, nullptr);
     return ty;
 }
 
@@ -1008,8 +1005,8 @@ Type* Parser::parseStructDeclarationList(Symbol* sym)
         QualType qt = parseSpecQualList();
         DeclGroup path = parseStructDeclaratorList(qt, dc);
         //dc->addField(path);
-        seq_->match(TokenKind::Semantics);
-    }while (seq_->test(TokenKind::RCurly_Brackets_));
+        m_tokenSeq->match(TokenKind::Semantics);
+    }while (m_tokenSeq->test(TokenKind::RCurly_Brackets_));
     ty->setTagDecl(dc);
     return ty;
 }
@@ -1037,21 +1034,21 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
     do {
         Decl* dc = nullptr;
         Expr* initEx = nullptr;
-        if (seq_->match(TokenKind::Colon_)) {
+        if (m_tokenSeq->match(TokenKind::Colon_)) {
             initEx = parseConstansExpr();
             dc = nullptr;//FieldDecl::NewObj(nullptr, qt, parent, 0);
         }
         else {
             //NamedDecl* tmp = dynamic_cast<NamedDecl*>(parseDeclarator(qt, 0, 0));
             NamedDecl* tmp = nullptr;
-            if (seq_->match(TokenKind::Colon_)) {
+            if (m_tokenSeq->match(TokenKind::Colon_)) {
                 initEx = parseConstansExpr();
             }
             dc = nullptr;//FieldDecl::NewObj(tmp->getSymbol(), qt, parent, 0);
         }
         res.push_back(dc);
 
-    }while (seq_->match(TokenKind::Semicolon_));
+    }while (m_tokenSeq->match(TokenKind::Semicolon_));
     return res;
 }
 
@@ -1064,18 +1061,18 @@ Type* Parser::parseEnumSpec()
 {
     // 符号解析
     std::string key;
-    if (seq_->match(TokenKind::Identifier)) {
-        key = seq_->cur()->value_;
+    if (m_tokenSeq->match(TokenKind::Identifier)) {
+        key = m_tokenSeq->cur()->value_;
     }
 
     // 枚举定义解析
-    Symbol* sym = sys_->lookup(Symbol::RECORD, key);
-    if (seq_->match(TokenKind::LCurly_Brackets_)) {
+    Symbol* sym = m_systable->lookup(Symbol::RECORD, key);
+    if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         // 符号表没有查找到，第一次定义
         if (!sym) {
             Type* ty = EnumType::NewObj(nullptr);
             if (key.empty()) { // 匿名对象不插入符号表
-                sys_->insertRecord(key, ty, nullptr);
+                m_systable->insertRecord(key, ty, nullptr);
             }
             return parseEnumeratorList(nullptr, ty);
         }
@@ -1101,7 +1098,7 @@ Type* Parser::parseEnumSpec()
         return nullptr;// sym->getType();
     }
     Type* ty = EnumType::NewObj(nullptr);
-    sys_->insertRecord(key, ty, nullptr);
+    m_systable->insertRecord(key, ty, nullptr);
     return ty;
 }
 
@@ -1117,15 +1114,15 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
     while (true) {
         dc->addConstant(parseEnumerator(QualType()));
         // 匹配到逗号
-        if (seq_->match(TokenKind::Comma_)) {
-            if (seq_->match(TokenKind::RCurly_Brackets_)) {
+        if (m_tokenSeq->match(TokenKind::Comma_)) {
+            if (m_tokenSeq->match(TokenKind::RCurly_Brackets_)) {
                 break;
             }
             continue;
         }
         // 未匹配到逗号，则必定结束
         else {
-            seq_->expect(TokenKind::RCurly_Brackets_);
+            m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
             break;
         }
     }
@@ -1144,16 +1141,16 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
 EnumConstantDecl* Parser::parseEnumerator(QualType qt)
 {
     // 解析符号
-    seq_->expect(TokenKind::Identifier);
+    m_tokenSeq->expect(TokenKind::Identifier);
     Symbol* sym = nullptr;
     // 解析表达式
     Expr* ex = nullptr;
-    if (seq_->match(TokenKind::Assign_)) {
+    if (m_tokenSeq->match(TokenKind::Assign_)) {
         ex = parseConstansExpr();
     }
     EnumConstantDecl* dc = nullptr;//EnumConstantDecl::NewObj(sym, ex);
     // 插入符号表
-    sys_->insertMember(seq_->cur()->value_, nullptr, nullptr);
+    m_systable->insertMember(m_tokenSeq->cur()->value_, nullptr, nullptr);
     return nullptr;
 }
 
@@ -1167,7 +1164,7 @@ int Parser::parseTypeQualList()
     //(6.7.3) type-qualifier:
     int res = 0;
     while (true) {
-        switch (seq_->peek()->kind_)
+        switch (m_tokenSeq->peek()->kind_)
         {
         case TokenKind::Const:   
             res |= TypeQualifier::CONST;
@@ -1181,7 +1178,7 @@ int Parser::parseTypeQualList()
         default:
             return res;
         }
-        seq_->next();
+        m_tokenSeq->next();
     }
     return res;
 }
@@ -1211,12 +1208,12 @@ void Parser::parseDeclarator(Declarator& dc)
     QualType base = parsePointer(dc.getType());
     dc.setType(base);
     // （ declarator ）
-    if (seq_->match(TokenKind::Identifier)) {
-        dc.setName(seq_->cur()->value_);
+    if (m_tokenSeq->match(TokenKind::Identifier)) {
+        dc.setName(m_tokenSeq->cur()->value_);
     }
-    else if (seq_->match(TokenKind::LParent_)) {
+    else if (m_tokenSeq->match(TokenKind::LParent_)) {
         parseDeclarator(dc);
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
     }
     else {
         sytaxError("expect declarator, but not!");
@@ -1224,16 +1221,16 @@ void Parser::parseDeclarator(Declarator& dc)
     // 解析声明符后缀
     while (true)
     {
-        if (seq_->match(TokenKind::LParent_)) {
-            sys_->enterScope(Scope::FUNC_PROTOTYPE);
+        if (m_tokenSeq->match(TokenKind::LParent_)) {
+            m_systable->enterScope(Scope::FUNC_PROTOTYPE);
             auto paramList = parseParameterList();
-            sys_->exitScope();
-            seq_->expect(TokenKind::RParent_);
+            m_systable->exitScope();
+            m_tokenSeq->expect(TokenKind::RParent_);
             dc.setType(FunctionType::NewObj(base, false, false, paramList));
             // 更新声明符的类型
             dc.setType(modifyBaseType(base, base, dc.getType()));
         }
-        else if (seq_->match(TokenKind::LSquare_Brackets_)) {
+        else if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
             dc.setType(ArrayType::NewObj(dc.getType(), parseArrayLen()));
             // 更新声明符的类型
             dc.setType(modifyBaseType(base, base, dc.getType()));
@@ -1260,17 +1257,17 @@ Expr* Parser::parseArrayLen()
 
 QualType Parser::parseFuncOrArrayDeclarator(QualType base)
 {
-    if (seq_->match(TokenKind::LSquare_Brackets_)) {
+    if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
         auto len = parseArrayLen();
-        seq_->expect(TokenKind::RSquare_Brackets_);
+        m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
         base = parseFuncOrArrayDeclarator(base);
         return ArrayType::NewObj(base, len);
     }
-    else if (seq_->match(TokenKind::LParent_)) {
-        sys_->enterScope(Scope::FUNC_PROTOTYPE);
+    else if (m_tokenSeq->match(TokenKind::LParent_)) {
+        m_systable->enterScope(Scope::FUNC_PROTOTYPE);
         auto paramList = parseParameterList();
-        sys_->exitScope();
-        seq_->expect(TokenKind::RParent_);
+        m_systable->exitScope();
+        m_tokenSeq->expect(TokenKind::RParent_);
         base = parseFuncOrArrayDeclarator(base);
         return FunctionType::NewObj(base, false, false, paramList);
     }
@@ -1283,7 +1280,7 @@ QualType Parser::parseFuncOrArrayDeclarator(QualType base)
 */
 QualType Parser::parsePointer(QualType qt)
 { 
-    while (seq_->match(TokenKind::Multiplication_)) {
+    while (m_tokenSeq->match(TokenKind::Multiplication_)) {
         Type* ty = PointerType::NewObj(qt);
         int tq = parseTypeQualList();
         qt = QualType(ty, tq);
@@ -1294,15 +1291,15 @@ QualType Parser::parsePointer(QualType qt)
 void Parser::parseParameterTypeList()
 {
     parseParameterList();
-    if (seq_->match(TokenKind::Comma_)) {
-        seq_->expect(TokenKind::Ellipsis_);
+    if (m_tokenSeq->match(TokenKind::Comma_)) {
+        m_tokenSeq->expect(TokenKind::Ellipsis_);
     }
 }
 
 std::vector<ParmVarDecl*> Parser::parseParameterList()
 {
     parseParameterDeclaration();
-    while (seq_->match(TokenKind::Comma_)) {
+    while (m_tokenSeq->match(TokenKind::Comma_)) {
         parseParameterDeclaration();
     }
     return std::vector<ParmVarDecl*>();
@@ -1315,24 +1312,24 @@ std::vector<ParmVarDecl*> Parser::parseParameterList()
 void Parser::parseParameterDeclaration()
 {
     QualType qt = parseDeclarationSpec(nullptr, nullptr);
-    if (seq_->match(TokenKind::Identifier)) {
+    if (m_tokenSeq->match(TokenKind::Identifier)) {
         // 解析标识符
-        seq_->expect(TokenKind::Identifier);
+        m_tokenSeq->expect(TokenKind::Identifier);
     }
-    else if (seq_->match(TokenKind::LParent_)) {
+    else if (m_tokenSeq->match(TokenKind::LParent_)) {
         // 解析括号表达式
-        seq_->expect(TokenKind::LParent_);
+        m_tokenSeq->expect(TokenKind::LParent_);
         //parseDeclarator(qt);
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
     }
     else {
         parseAbstractDeclarator();
     }
     // 解析可选的函数参数列表
-    if (seq_->match(TokenKind::LParent_)) {
-        seq_->expect(TokenKind::LParent_);
+    if (m_tokenSeq->match(TokenKind::LParent_)) {
+        m_tokenSeq->expect(TokenKind::LParent_);
         parseParameterTypeList();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
     }
 }
 
@@ -1342,9 +1339,9 @@ void Parser::parseParameterDeclaration()
 */
 void Parser::parseIdentifierList()
 {
-    seq_->expect(TokenKind::Identifier);
-    while (seq_->match(TokenKind::Comma_)) {
-        seq_->expect(TokenKind::Identifier);
+    m_tokenSeq->expect(TokenKind::Identifier);
+    while (m_tokenSeq->match(TokenKind::Comma_)) {
+        m_tokenSeq->expect(TokenKind::Identifier);
     }
 
 }
@@ -1371,35 +1368,35 @@ void Parser::parseAbstractDeclarator()
 
 void Parser::parseDirectAbstractDeclarator()
 {
-    if (seq_->match(TokenKind::LParent_)) {
-        seq_->expect(TokenKind::LParent_);
+    if (m_tokenSeq->match(TokenKind::LParent_)) {
+        m_tokenSeq->expect(TokenKind::LParent_);
         parseAbstractDeclarator();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
     }
-    else if (seq_->match(TokenKind::LSquare_Brackets_)) {
-        seq_->expect(TokenKind::LSquare_Brackets_);
-        if (seq_->match(TokenKind::RSquare_Brackets_)) {
+    else if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
+        m_tokenSeq->expect(TokenKind::LSquare_Brackets_);
+        if (m_tokenSeq->match(TokenKind::RSquare_Brackets_)) {
             // 数组长度不确定
-            seq_->expect(TokenKind::RSquare_Brackets_);
+            m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
         } else {
             parseConstansExpr();
-            seq_->expect(TokenKind::RSquare_Brackets_);
+            m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
         }
     }
-    else if (seq_->match(TokenKind::LCurly_Brackets_)) {
+    else if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         // 解析函数声明
-        seq_->expect(TokenKind::LCurly_Brackets_);
+        m_tokenSeq->expect(TokenKind::LCurly_Brackets_);
         parseParameterTypeList();
-        seq_->expect(TokenKind::RCurly_Brackets_);
+        m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
     }
     else {
         sytaxError("expect direct abstract declarator, but not!");
     }
     // 解析可选的函数参数列表
-    if (seq_->match(TokenKind::LParent_)) {
-        seq_->expect(TokenKind::LParent_);
+    if (m_tokenSeq->match(TokenKind::LParent_)) {
+        m_tokenSeq->expect(TokenKind::LParent_);
         parseParameterTypeList();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
     }
 }
 
@@ -1408,7 +1405,7 @@ void Parser::parseDirectAbstractDeclarator()
 */
 void Parser::parseTypedefName()
 {
-    seq_->expect(TokenKind::Identifier);
+    m_tokenSeq->expect(TokenKind::Identifier);
 }
 
 /*(6.7.8) initializer:
@@ -1418,10 +1415,10 @@ void Parser::parseTypedefName()
 */
 Expr* Parser::parseInitializer()
 {
-    if (seq_->match(TokenKind::LCurly_Brackets_)) {
+    if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         parseInitializerList();
-        seq_->match(TokenKind::Comma_);
-        seq_->expect(TokenKind::RCurly_Brackets_);
+        m_tokenSeq->match(TokenKind::Comma_);
+        m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
     }
     else {
         parseAssignExpr();
@@ -1438,7 +1435,7 @@ void Parser::parseInitializerList()
     do {
         parseDesignation();
         parseInitializer();
-    } while (seq_->match(TokenKind::Comma_));
+    } while (m_tokenSeq->match(TokenKind::Comma_));
 }
 
 /* (6.7.8) designation:
@@ -1449,19 +1446,19 @@ void Parser::parseDesignation()
     TokenKind tk;
     do {
         parseDesignator();
-        tk = seq_->peek()->kind_;
+        tk = m_tokenSeq->peek()->kind_;
     }while (tk == TokenKind::LSquare_Brackets_ || tk == TokenKind::Dot_);
-    seq_->expect(TokenKind::Assign_);
+    m_tokenSeq->expect(TokenKind::Assign_);
 }
 
 void Parser::parseDesignator()
 {
-    if (seq_->match(TokenKind::LSquare_Brackets_)) {
+    if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
         parseConstansExpr();
-        seq_->expect(TokenKind::LSquare_Brackets_);
+        m_tokenSeq->expect(TokenKind::LSquare_Brackets_);
     }
-    else if (seq_->match(TokenKind::Dot_)) {
-        seq_->expect(TokenKind::Identifier);
+    else if (m_tokenSeq->match(TokenKind::Dot_)) {
+        m_tokenSeq->expect(TokenKind::Identifier);
     }
     else {
         sytaxError("expect designator, but not!");
@@ -1481,7 +1478,7 @@ void Parser::parseDesignator()
 Stmt* Parser::parseStmt()
 {
     Stmt* node = nullptr;
-    switch (seq_->peek()->kind_)
+    switch (m_tokenSeq->peek()->kind_)
     {
     case TokenKind::Identifier:
     case TokenKind::Case:
@@ -1521,15 +1518,15 @@ Stmt* Parser::parseStmt()
 Stmt* Parser::parseLabeledStmt()
 {
     Stmt* node = nullptr;
-    Token* tk = seq_->next();
+    Token* tk = m_tokenSeq->next();
     switch (tk->kind_)
     {
     case TokenKind::Identifier:
     {
         LabelDecl* key = nullptr;//LabelDecl::NewObj(tk->value_);
         // 添加到符号表
-        sys_->insertLabel(tk->value_, key);
-        seq_->expect(TokenKind::Colon_);
+        m_systable->insertLabel(tk->value_, key);
+        m_tokenSeq->expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
         node = LabelStmt::NewObj(key, body);
         break;
@@ -1538,7 +1535,7 @@ Stmt* Parser::parseLabeledStmt()
     case TokenKind::Case:
     {
         Expr* cond = parseConstansExpr();
-        seq_->expect(TokenKind::Colon_);
+        m_tokenSeq->expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
         node = CaseStmt::NewObj(cond, body);
         break;
@@ -1546,7 +1543,7 @@ Stmt* Parser::parseLabeledStmt()
 
     case TokenKind::Default:
     {
-        seq_->expect(TokenKind::Colon_);
+        m_tokenSeq->expect(TokenKind::Colon_);
         Stmt* body = parseStmt();
         node = DefaultStmt::NewObj(nullptr, body);
         break;
@@ -1562,9 +1559,9 @@ Stmt* Parser::parseLabeledStmt()
 Stmt* Parser::parseCompoundStmt()
 {
     ScopeManager scm(this, Scope::BLOCK);
-    seq_->expect(TokenKind::LCurly_Brackets_);
+    m_tokenSeq->expect(TokenKind::LCurly_Brackets_);
     std::vector<Stmt*> res;
-    while (!seq_->match(TokenKind::RCurly_Brackets_)) {
+    while (!m_tokenSeq->match(TokenKind::RCurly_Brackets_)) {
         DeclGroup dc = parseDeclaration();
         for (int i =0; i < dc.size(); i++) {
             res.push_back(DeclStmt::NewObj(dc[i]));
@@ -1579,31 +1576,31 @@ Stmt* Parser::parseCompoundStmt()
 Stmt* Parser::parseExprStmt()
 {
     Expr* ex = parseExpr();
-    seq_->expect(TokenKind::Semicolon_);
+    m_tokenSeq->expect(TokenKind::Semicolon_);
     return ExprStmt::NewObj(ex);
 }
 
 Stmt* Parser::parseSelectionStmt()
 {
     Stmt* node = nullptr;
-    switch (seq_->next()->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::If:
     {   
-        seq_->expect(TokenKind::LParent_);
+        m_tokenSeq->expect(TokenKind::LParent_);
         Expr* cond = parseExpr();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
         Stmt* th = parseStmt();
-        Stmt* el = (seq_->match(TokenKind::Else)) ? parseStmt() : nullptr;
+        Stmt* el = (m_tokenSeq->match(TokenKind::Else)) ? parseStmt() : nullptr;
         node = IfStmt::NewObj(cond, th, el);
         break;
     }
 
     case TokenKind::Switch:
     {
-        seq_->expect(TokenKind::LParent_);
+        m_tokenSeq->expect(TokenKind::LParent_);
         Expr* cond = parseExpr();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
         Stmt* body = parseStmt();
         node = SwitchStmt::NewObj(cond, body);
         break;
@@ -1625,13 +1622,13 @@ Stmt* Parser::parseSelectionStmt()
 Stmt* Parser::parseIterationStmt()
 {
     Stmt* node = nullptr;
-    switch (seq_->next()->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::While:
     {
-        seq_->expect(TokenKind::LParent_);
+        m_tokenSeq->expect(TokenKind::LParent_);
         Expr* cond = parseExpr();
-        seq_->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::RParent_);
         Stmt* body = parseStmt();
         node = WhileStmt::NewObj(cond, body);
         break;
@@ -1640,11 +1637,11 @@ Stmt* Parser::parseIterationStmt()
     case TokenKind::Do:
     {
         Stmt* body = parseStmt();
-        seq_->expect(TokenKind::While);
-        seq_->expect(TokenKind::LParent_);
+        m_tokenSeq->expect(TokenKind::While);
+        m_tokenSeq->expect(TokenKind::LParent_);
         Expr* cond = parseExpr();
-        seq_->expect(TokenKind::RParent_);
-        seq_->expect(TokenKind::Semicolon_);
+        m_tokenSeq->expect(TokenKind::RParent_);
+        m_tokenSeq->expect(TokenKind::Semicolon_);
         return DoStmt::NewObj(cond, body);
     }
 
@@ -1667,24 +1664,24 @@ Stmt* Parser::parseIterationStmt()
 Stmt* Parser::parseJumpStmt()
 {
     Stmt* node = nullptr;
-    switch (seq_->next()->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Goto:
     {
-        seq_->expect(TokenKind::Identifier);
-        Symbol* sym = sys_->lookup(Symbol::LABEL, seq_->cur()->value_);
-        seq_->expect(TokenKind::Semicolon_);
+        m_tokenSeq->expect(TokenKind::Identifier);
+        Symbol* sym = m_systable->lookup(Symbol::LABEL, m_tokenSeq->cur()->value_);
+        m_tokenSeq->expect(TokenKind::Semicolon_);
         node = GotoStmt::NewObj(nullptr);
         break;
     }
 
     case TokenKind::Continue:
-        seq_->expect(TokenKind::Semicolon_);
+        m_tokenSeq->expect(TokenKind::Semicolon_);
         node = ContinueStmt::NewObj(nullptr);
         break;
 
     case TokenKind::Break:
-        seq_->expect(TokenKind::Semicolon_);
+        m_tokenSeq->expect(TokenKind::Semicolon_);
         node = BreakStmt::NewObj(nullptr);
         break;
 
@@ -1724,16 +1721,14 @@ Decl* Parser::parseFunctionDefinitionBody(Decl* dc)
 void Parser::parseTranslationUnit()
 {
     ScopeManager scm(this, Scope::FILE);
-    sys_->initBuiltType();
-    DeclGroup res;
-    while (!seq_->match(TokenKind::EOF_)) 
+    m_systable->initBuiltType();
+    m_unit = std::make_shared<TranslationUnitDecl>();
+    while (!m_tokenSeq->match(TokenKind::EOF_))
     {
-        if (seq_->match(TokenKind::Semicolon_)) 
+        if (m_tokenSeq->match(TokenKind::Semicolon_))
         {
             continue;
         }
-        auto path = parseDeclaration();
-        res.insert(res.begin(), path.begin(), path.end());
+        m_unit->addDecl(parseDeclaration());
     }
-    unit_ = new TranslationUnitDecl(res);
 }

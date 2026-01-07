@@ -25,22 +25,20 @@ class Type;
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
 class QualType 
 {
-    uint8_t ql_; // 类型限定符
-    Type* ty_;  // 存储类型指针
 public:
     // 构造函数
     QualType() {}
     QualType(Type *ptr, unsigned qual=0x00)
-        :ty_(ptr) {
+        :m_type(ptr) {
         // 校验类型限定符的合法性
         assert((qual & ~TypeQualifier::TQ_MASK) == 0);
-        ql_ |= qual;
+        m_qualSpec |= qual;
     }
 
     // 获取类型指针
     bool isNull() const {return (nullptr == getPtr());}
-    Type *getPtr() {return ty_;}
-    const Type *getPtr() const {return ty_;}
+    std::shared_ptr<Type> getPtr() {return m_type;}
+    const std::shared_ptr<Type> getPtr() const {return m_type;}
     
     // 运算符重载: 
     // 隐式类型转换: 用于在布尔上下文环境中表达
@@ -50,21 +48,21 @@ public:
     const Type &operator*() const {return *getPtr();}
     
     // 箭头运算符重载：箭头运算符是双目运算符
-    Type *operator->() {return getPtr();}
-    const Type *operator->() const{return getPtr();}
-        // 逻辑运算符重载
-    friend bool operator==(const QualType &LHS, const QualType &RHS) {
-        return LHS.operator->() == RHS.operator->();
-    }
-    friend bool operator!=(const QualType &LHS, const QualType &RHS) {
-        return !(LHS == RHS);
-    }
+    std::shared_ptr<Type> operator->() {return getPtr();}
+    const std::shared_ptr<Type> operator->() const{return getPtr();}
+    // 逻辑运算符重载
+    friend bool operator==(const QualType &LHS, const QualType &RHS) {return LHS.operator->() == RHS.operator->();}
+    friend bool operator!=(const QualType &LHS, const QualType &RHS) {return !(LHS == RHS);}
 
     // 获取是否有类型限定符
-    unsigned getQual() const {return ql_ & 0x07;}
-    bool isConstQual() const {return ql_ & TypeQualifier::CONST;}
-    bool isRestrictQual() const {return ql_ & TypeQualifier::RESTRICT;}
-    bool isVolatileQual() const {return ql_ & TypeQualifier::VOLATILE;}
+    unsigned getQual() const {return m_qualSpec & 0x07;}
+    bool isConstQual() const {return m_qualSpec & TypeQualifier::CONST;}
+    bool isRestrictQual() const {return m_qualSpec & TypeQualifier::RESTRICT;}
+    bool isVolatileQual() const {return m_qualSpec & TypeQualifier::VOLATILE;}
+
+private:
+    uint8_t m_qualSpec; // 类型限定符
+    std::shared_ptr<Type> m_type;  // 存储类型指针
 };
 
 // 对类型系统而言：存储限定符是针对变量，类型限定符是针对类型
@@ -80,39 +78,32 @@ public:
     // 派生类型：从对象，函数和不完整类型可以构造任意数量派生类型; 数组，函数，指针
     ARRAY, FUNCION, POINTER,
     // 自定义类型
-    STRUCT, UNION, ENUM,
+    RECORD, ENUM,
     // 类型别名
     TYPEDEF
     };
-private:
-    TypeKind kind_;  // 类型域标识
-    QualType canonicalType_; // 规范类型
-    std::string name_;
-    int align_; // 对齐方式，32位系统默认4字节对齐
-    int size_;  // 类型要占用多大空间
-    bool isComplete_; // 是否是完整类型
     
 protected:
     Type(TypeKind tk, QualType canonical, const std::string& name, int size, bool isComplete = false)
-    : kind_(tk), canonicalType_(canonical.isNull() ? QualType(this, 0) : canonical), name_(name), size_(size), isComplete_(isComplete) {}
+    : m_kind(tk), m_qualType(canonical.isNull() ? QualType(this, 0) : canonical), m_name(name), m_size(size), m_isComplete(isComplete) {}
     Type(TypeKind tk, QualType canonical, bool isComplete = false)
     : Type(tk, canonical, "", 0, isComplete) {}
     virtual ~Type() {}
   
 public:
     // 类型基本属性
-    TypeKind getKind() const { return kind_;}
-    int getAlign() const {return align_;}
-    void setAlign(int align) {align_ = align;}
-    int getSize() const {return size_;}
-    void setSize(int size) {size_ = size;}
-    std::string getName() const {return name_;}
-    void getName(const std::string& name) {name_ = name;}
-    QualType getQualType() {return canonicalType_;}
-    const QualType getQualType() const {return canonicalType_;}
-    void setQualType(QualType ql) {canonicalType_ = ql;}
+    TypeKind getKind() const { return m_kind;}
+    int getAlign() const {return m_align;}
+    void setAlign(int align) {m_align = align;}
+    int getSize() const {return m_size;}
+    void setSize(int size) {m_size = size;}
+    std::string getName() const {return m_name;}
+    void getName(const std::string& name) {m_name = name;}
+    QualType getQualType() {return m_qualType;}
+    const QualType getQualType() const {return m_qualType;}
+    void setQualType(QualType ql) {m_qualType = ql;}
     // 判断当前类型是否是规范类型
-    bool isCanonical() { return canonicalType_.getPtr() == this; }
+    bool isCanonical() { return m_qualType.getPtr().get() == this; }
 
     /* C语言类型分为三种：对象类型，函数类型，不完整类型
     对象类型：能够完整描述对象存储特征的类型(如int, struct, 数组等)，编译器可以确定大小和内存布局。
@@ -121,7 +112,7 @@ public:
     bool isObjectType();
     //bool isFunctionType();
     bool isCompleteType();
-    void setCompleteType(bool complete) {isComplete_ = complete;}
+    void setCompleteType(bool complete) {m_isComplete = complete;}
     //6.2.5-1
     bool isBoolType(); 
     //6.2.5-4 ~ 6.2.5-7
@@ -158,27 +149,31 @@ public:
     bool iaDrivedDeclaratorType();
     // typedef单独判断
     bool isTypeDefType();
+
+private:
+    TypeKind m_kind;  // 类型域标识
+    QualType m_qualType; // 规范类型
+    std::string m_name;
+    int m_align; // 对齐方式，32位系统默认4字节对齐
+    int m_size;  // 类型要占用多大空间
+    bool m_isComplete; // 是否是完整类型
 };
 
-/*---------------------------------基本类型----------------------------------------------*/
 // 空类型
 class VoidType : public Type
 {
-protected:
+public:
     VoidType()
     : Type(Type::VOID, QualType(this), "void", 0, false){}
-public:
-    static VoidType* NewObj();
 };
 
 // bool类型
 class BoolType : public Type
 {
-protected:
+public:
     BoolType()
     : Type(Type::BOOL, QualType(this), "_Bool", 1, true){}
-public:
-    static BoolType* NewObj();
+
 };
 // 整型
 class IntegerType : public Type 
@@ -202,24 +197,24 @@ public:
         CHAR,
         INT,
     };
-private:
-    Sign signed_;
-    Width width_;
-    Category category_;
-protected:
+
     IntegerType(Sign sig, Width wid, Category cate)
-    : Type(Type::INTEGER, QualType(this), true), signed_(sig), width_(wid), category_(cate) {}
-public:
-    static IntegerType* NewObj(Sign sig, Width wid, Category cate);
+    : Type(Type::INTEGER, QualType(this), true), m_signed(sig), m_width(wid), m_category(cate) {}
+
     // 判断是否是整数类型
-    bool isSigned() const {return (Sign::SIGNED == signed_);}
-    bool isUnSigned() const {return (Sign::UNSIGNED == signed_);}
-    bool isShort() const {return (Width::SHORT == width_);}
-    bool isNormal() const {return (Width::NORMAL == width_);}
-    bool isLong() const {return (Width::LONG == width_);}
-    bool isLongLong() const {return (Width::LONG2 == width_);}
-    bool isChar() const {return (Category::CHAR == category_);}
-    bool isInt() const {return (Category::INT == category_);}
+    bool isSigned() const {return (Sign::SIGNED == m_signed);}
+    bool isUnSigned() const {return (Sign::UNSIGNED == m_signed);}
+    bool isShort() const {return (Width::SHORT == m_width);}
+    bool isNormal() const {return (Width::NORMAL == m_width);}
+    bool isLong() const {return (Width::LONG == m_width);}
+    bool isLongLong() const {return (Width::LONG2 == m_width);}
+    bool isChar() const {return (Category::CHAR == m_category);}
+    bool isInt() const {return (Category::INT == m_category);}
+
+private:
+    Sign m_signed;
+    Width m_width;
+    Category m_category;
 };
 
 // 浮点类型
@@ -231,16 +226,15 @@ public:
         DOUBLE,
         LONG_DOUBLE
     };
-private:
-    Category category_;
-protected:
     RealFloatingType(Category cate)
-    : Type(Type::REALFLOATING, QualType(this), true), category_(cate) {}
-public:
-    static RealFloatingType* NewObj(Category cate);
-    bool isFloat() const {return (Category::FLOAT == category_);}
-    bool isDouble() const {return (Category::DOUBLE == category_);}
-    bool isLongDouble() const {return (Category::LONG_DOUBLE == category_);}
+    : Type(Type::REALFLOATING, QualType(this), true), m_category(cate) {}
+
+    bool isFloat() const {return (Category::FLOAT == m_category);}
+    bool isDouble() const {return (Category::DOUBLE == m_category);}
+    bool isLongDouble() const {return (Category::LONG_DOUBLE == m_category);}
+
+private:
+    Category m_category;
 };
 
 // 复数类型
@@ -252,32 +246,29 @@ public:
         DOUBLE,
         LONG_DOUBLE
     };
-private:
-    Category category_;
-protected:
+
     ComplexType(Category cate) 
-    : Type(Type::COMPLEX, QualType(this), true), category_(cate) {}
-public:
-    static ComplexType* NewObj(Category cate);
-    bool isFloatComplex() const {return (Category::FLOAT == category_);}
-    bool isDoubleComplex() const {return (Category::DOUBLE == category_);}
-    bool isLongDoubleComplex() const {return (Category::LONG_DOUBLE == category_);}
+    : Type(Type::COMPLEX, QualType(this), true), m_category(cate) {}
+
+    bool isFloatComplex() const {return (Category::FLOAT == m_category);}
+    bool isDoubleComplex() const {return (Category::DOUBLE == m_category);}
+    bool isLongDoubleComplex() const {return (Category::LONG_DOUBLE == m_category);}
+
+private:
+    Category m_category;
 };
 
-/*---------------------------------派生声明符类型---------------------------------------------------*/
+/*派生声明符类型*/
 class PointerType : public Type 
 {
-protected:
+public:
     PointerType(QualType pointee) 
     : Type(Type::POINTER, pointee, true){}
-public:
-    static PointerType* NewObj(QualType pointee);
+
     QualType getPointeeType() const {return getQualType();}
     bool isConstPointer() const {return getQualType().isConstQual();}
     bool isVolatilePointer() const {return getQualType().isVolatileQual();}
     bool isRestrictPointer() const {return getQualType().isRestrictQual();}
-    // 获取指针指向的类型
-    // 获取指针类型的规范类型
 };
 
 // 数组派生类型
@@ -290,84 +281,79 @@ public:
     Static: C99引入得静态大小修饰符(int arr[static 10], 提示编译器至少需要10个元素)
     Star: yoghurt不完整得数组声明（int arr[*] 可变数组）
     */
-private:
-    int len_;
-    Expr* lenExpr_;
-
-protected:
     ArrayType(QualType elem, int len)
-    : Type(Type::ARRAY, elem, true), len_(len) {}
-    ArrayType(QualType elem, Expr* lenExpr)
-    : Type(Type::ARRAY, elem, true), lenExpr_(lenExpr) {}
+    : Type(Type::ARRAY, elem, true), m_len(len) {}
+    ArrayType(QualType elem, std::shared_ptr<Expr> lenExpr)
+    : Type(Type::ARRAY, elem, true), m_lenExpr(lenExpr) {}
 
-public:
-    static ArrayType* NewObj(QualType can, int len);
-    static ArrayType* NewObj(QualType can, Expr* lenExpr);
-    void setLen(unsigned len) {len_ = len;}
-    int getLen() const {return len_;}
-    void setLenExpr(Expr* ex) {lenExpr_ = ex;}
-    Expr* getLenExpr() const {return lenExpr_;}
+    void setLen(unsigned len) {m_len = len;}
+    int getLen() const {return m_len;}
+    void setLenExpr(std::shared_ptr<Expr> ex) {m_lenExpr = ex;}
+    std::shared_ptr<Expr> getLenExpr() const {return m_lenExpr;}
 
-    bool isStarArray() const {return lenExpr_ != nullptr;}
-    bool isStaticArray() const {return len_ > 0;}
-    bool isNormalArray() const {return len_ > 0 && lenExpr_ == nullptr;}
-};
+    bool isStarArray() const {return m_lenExpr != nullptr;}
+    bool isStaticArray() const {return m_len > 0;}
+    bool isNormalArray() const {return m_len > 0 && m_lenExpr == nullptr;}
 
-class FunctionType : public Type {
-    bool isInline_; // 是否是内联函数
-    bool isNoReturn_; // 是否是无返回值函数
-    std::vector<ParmVarDecl*> proto_; // 函数参数列表
-  
-protected:
-    FunctionType(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& proto)
-    : Type(Type::FUNCION, qt, false), isInline_(isInline), isNoReturn_(isNoReturn), proto_(proto){}
-
-public:
-    static FunctionType* NewObj(QualType qt, bool isInline, bool isNoReturn, std::vector<ParmVarDecl*>& proto);
-
-    QualType getResultType() const { return QualType(); }
-    bool isInline() const {return isInline_;}
-    bool isNoReturn() const {return isNoReturn_;}
-    const std::vector<ParmVarDecl*>& getParams() const { return proto_;}
-    void setParams(const std::vector<ParmVarDecl*>& params) { proto_ = params; }
-};
-
-/*------------------------------结构体和枚举类型----------------------------------------------*/
-class TagType : public Type {
-    TagDecl* tag_;
-protected:
-    TagType(TypeKind tk, TagDecl* dc)
-    : Type(tk,  QualType(this)), tag_(dc){}
-
-public:  
-    TagDecl* getTagDecl() const {return tag_;}
-    void setTagDecl(TagDecl* dc) {tag_ = dc;}
-};
-
-class RecordType : public TagType {
-protected:
-    RecordType(TagDecl* dc, bool isStruct);
-public:
-    static RecordType* NewObj(TagDecl* dc, bool isStruct);
-};
-
-class EnumType : public TagType {
-protected:
-    EnumType(EnumDecl* dc);
-public:
-    static EnumType* NewObj(EnumDecl* dc);
-};
-
-/*--------------------------typedef定义的类型别名--------------------------------------*/
-class TypedefType : public Type {
 private:
-    TypedefDecl *decl_;
-protected:
-    TypedefType(QualType qt, TypedefDecl *decl) 
-    : Type(Type::TYPEDEF, qt), decl_(decl) {}
+    int m_len;
+    std::shared_ptr<Expr> m_lenExpr;
+};
 
+class FunctionType : public Type
+{
 public:
-    static TypedefType* NewObj(QualType qt, TypedefDecl *decl);
-    TypedefDecl *getDecl() const { return decl_; }
-    void setDecl(TypedefDecl *dc) { decl_ = dc; }
+    FunctionType()
+    : Type(Type::FUNCION, QualType(), false), m_isInline(false), m_isNoReturn(false){}
+
+    bool isInline() {return m_isInline;}
+    void setIsInline(bool flag) {m_isInline = flag;}
+    bool isNoReturn() {return m_isNoReturn;}
+    void setIsNotReturn(bool flag) {m_isNoReturn = flag;}
+    std::vector<QualType> getParams() {return m_paramTypes;}
+    void setParams(std::vector<QualType> params) {m_paramTypes = params;}
+
+private:
+    bool m_isInline; // 是否是内联函数
+    bool m_isNoReturn; // 是否是无返回值函数
+    std::vector<QualType> m_paramTypes; // 函数参数列表
+};
+
+class RecordType : public Type
+{
+public:
+    RecordType(QualType qt)
+    : Type(Type::RECORD, qt), m_decl(nullptr) {}
+
+    std::shared_ptr<RecordDecl> getDecl() {return m_decl;}
+    void setDecl(std::shared_ptr<RecordDecl> dc) {m_decl = dc;}
+
+private:
+    std::shared_ptr<RecordDecl> m_decl;
+};
+
+class EnumType : public Type
+{
+public:
+    EnumType(QualType qt)
+    : Type(Type::ENUM, qt), m_decl(nullptr) {}
+
+    std::shared_ptr<EnumDecl> getDecl() {return m_decl;}
+    void setDecl(std::shared_ptr<EnumDecl> dc) {m_decl = dc;}
+
+private:
+    std::shared_ptr<EnumDecl> m_decl;
+};
+
+class TypedefType : public Type
+{
+public:
+    TypedefType(QualType qt)
+    : Type(Type::TYPEDEF, qt), m_decl(nullptr) {}
+
+    std::shared_ptr<TypedefDecl> getDecl() {return m_decl;}
+    void setDecl(std::shared_ptr<TypedefDecl> dc) {m_decl = dc;}
+
+private:
+    std::shared_ptr<TypedefDecl> m_decl;
 };

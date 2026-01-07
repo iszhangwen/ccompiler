@@ -71,7 +71,7 @@ bool scanner::isEscapeChar(char ch)
 
 bool scanner::isUCN(char ch)
 {
-    if (ch == '\\' && (buf_->peek() == 'u' || buf_->peek() == 'U')) {
+    if (ch == '\\' && (m_source->peek() == 'u' || m_source->peek() == 'U')) {
         return true;
     }
     return false;
@@ -82,7 +82,7 @@ bool scanner::skipUCN(int len)
 {
     bool flag = true;
     for (int i = 0; i < len; i++) {
-        if (!isHexacimal(buf_->nextch())) {
+        if (!isHexacimal(m_source->nextch())) {
             flag = false;
         }
     }
@@ -97,7 +97,7 @@ bool scanner::skipEscape(char ch)
     case '\\': case 'a' : case 'b' : 
     case 'f' : case 'n' : case 'r' :
     case 't' : case 'v' :
-        buf_->nextch();
+        m_source->nextch();
         return true;
     case 'u':
         return skipUCN(4);
@@ -110,17 +110,17 @@ bool scanner::skipEscape(char ch)
 
 Token *scanner::scanIdentifier()
 {
-    char ch = buf_->nextch();
+    char ch = m_source->nextch();
     while (isLetter(ch) || isDecimal(ch) || isUCN(ch)) {
 
         if (isUCN(ch)) {
             skipEscape(ch);
         }
-        ch = buf_->nextch();
+        ch = m_source->nextch();
     }
     
     // 关键字查找
-    auto iter = Token::KeyWordMap.find(buf_->seg());
+    auto iter = Token::KeyWordMap.find(m_source->seg());
     TokenKind kind = (iter != Token::KeyWordMap.end()) ? iter->second : TokenKind::Identifier;
     return makeToken(kind);   
 }
@@ -128,14 +128,14 @@ Token *scanner::scanIdentifier()
 
 Token *scanner::scanNumberLiteral()
 {
-    char ch = buf_->nextch();
+    char ch = m_source->nextch();
     // 若下一个字符是预处理数字，则移动指针。
     while (isProcessMumberic(ch)) {
-        ch = buf_->nextch();
+        ch = m_source->nextch();
     }
 
     if (ch == 'e' || ch == 'E') {
-        if (buf_->match('+') || buf_->match('-') || isProcessMumberic(buf_->peek())) {
+        if (m_source->match('+') || m_source->match('-') || isProcessMumberic(m_source->peek())) {
             return scanNumberLiteral();
         }
          return makeToken(TokenKind::Error_);
@@ -146,18 +146,18 @@ Token *scanner::scanNumberLiteral()
 Token *scanner::scanStringLiteral()
 {
     do {
-        if (buf_->match('\"')) {
-            buf_->nextch();
+        if (m_source->match('\"')) {
+            m_source->nextch();
             return makeToken(TokenKind::String_Constant_);
         }
-        else if (buf_->match('\n')) {
+        else if (m_source->match('\n')) {
             error("unExpect stringLiteral!");
         }
-        else if (buf_->match(EOF)) {
+        else if (m_source->match(EOF)) {
             throw ("unExpect stringLiteral!");
         }
         else {
-            buf_->nextch();
+            m_source->nextch();
         }
     } while (true);
     error("unExpect stringLiteral!");
@@ -165,32 +165,32 @@ Token *scanner::scanStringLiteral()
 
 Token *scanner::scanCharLiter()
 {
-    char ch = buf_->nextch();
+    char ch = m_source->nextch();
     switch (ch)
     {
     case '\'':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Error_);
     case '\\':
-        if (buf_->match('\'')) {
-            buf_->nextch();
+        if (m_source->match('\'')) {
+            m_source->nextch();
             return makeToken(TokenKind::Error_);
         } else {
             skipEscape(ch);
-            if (buf_->match('\'')) {
-                buf_->nextch();
+            if (m_source->match('\'')) {
+                m_source->nextch();
                 return makeToken(TokenKind::Character_Constant_);
             } else {
-                buf_->nextch();
+                m_source->nextch();
                 return makeToken(TokenKind::Error_);
             }
         }
     case '\n':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Error_);
     default:
-        if (buf_->match('\'')) {
-            buf_->nextch();
+        if (m_source->match('\'')) {
+            m_source->nextch();
             return makeToken(TokenKind::Character_Constant_);
         } else {
             return makeToken(TokenKind::Error_);
@@ -200,29 +200,29 @@ Token *scanner::scanCharLiter()
 
 Token *scanner::scanLineComment()
 {
-    char ch =  buf_->nextch();
+    char ch =  m_source->nextch();
     while (ch != '\n' && ch != EOF) {
-        ch = buf_->nextch();
+        ch = m_source->nextch();
     }
     return makeToken(TokenKind::Comment_);
 }
 
 Token *scanner::scanFullComment()
 {
-    char ch = buf_->nextch();
+    char ch = m_source->nextch();
     while (ch != EOF) {
-        if (ch == '*' && buf_->match('/')) {
-            buf_->nextch();
+        if (ch == '*' && m_source->match('/')) {
+            m_source->nextch();
             return makeToken(TokenKind::Comment_);
         }
-        ch = buf_->nextch();
+        ch = m_source->nextch();
     }
     return makeToken(TokenKind::Error_);
 }
 
 void scanner::error(const std::string& val)
 {
-   error(buf_->loc(), val);
+   error(m_source->loc(), val);
 }
 
 void scanner::error(SourceLocation loc, const std::string& val)
@@ -241,11 +241,11 @@ void scanner::error(SourceLocation loc, const std::string& val)
         << CANCEL
         << val 
         << std::endl
-        << buf_->segline(loc)
+        << m_source->segline(loc)
         << std::string(loc.column, ' ') 
         << "^ "  
         << RED 
-        << std::string(buf_->segline(loc).size() - loc.column - 2, '~') 
+        << std::string(m_source->segline(loc).size() - loc.column - 2, '~') 
         << CANCEL 
         << std::endl;
     #undef RED
@@ -255,13 +255,13 @@ void scanner::error(SourceLocation loc, const std::string& val)
 
 Token *scanner::makeToken(TokenKind kind)
 {
-    return Token::newObj(kind, buf_->loc(), buf_->seg());
+    return Token::newObj(kind, m_source->loc(), m_source->seg());
 }
 
-scanner::scanner(Source* buf)
-: buf_(buf)
+scanner::scanner(std::shared_ptr<Source> buf)
+: m_source(buf)
 {
-    if (buf_ == nullptr)
+    if (m_source == nullptr)
     {
         error("SourceBuffer is nullptr");
     }
@@ -270,12 +270,12 @@ scanner::scanner(Source* buf)
 Token *scanner::scan()
 {
     // 跳过空白行
-    while (isspace(buf_->curch())) {
-        buf_->nextch();
+    while (isspace(m_source->curch())) {
+        m_source->nextch();
     }
 
-    buf_->mark();
-    char ch = buf_->curch();
+    m_source->mark();
+    char ch = m_source->curch();
     switch (ch)
     {
     case 'a'...'z': 
@@ -293,18 +293,18 @@ Token *scanner::scan()
         return scanCharLiter();
 
     case '/':
-        if (buf_->match('/')) {
+        if (m_source->match('/')) {
             return scanLineComment();
         } 
-        else if (buf_->match('*')) {
+        else if (m_source->match('*')) {
             return scanFullComment();
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Div_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Division_);
         }
     
@@ -317,36 +317,36 @@ Token *scanner::scan()
         }
 
     case '{':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::LCurly_Brackets_);
 
     case '}':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::RCurly_Brackets_);
 
     case '[':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::LSquare_Brackets_);
 
     case ']':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::RSquare_Brackets_);
 
     case '(':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::LParent_);
 
     case ')':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::RParent_);
 
     case '.':
-        if (isDecimal(buf_->peek())) {
+        if (isDecimal(m_source->peek())) {
             return scanNumberLiteral();
         } 
-        else if (buf_->match('.')) {
-            if (buf_->match('.')) {
-                buf_->nextch();
+        else if (m_source->match('.')) {
+            if (m_source->match('.')) {
+                m_source->nextch();
                 return makeToken(TokenKind::Ellipsis_);
             } 
             else {
@@ -354,186 +354,186 @@ Token *scanner::scan()
             }
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Dot_);
         }
 
     case '-':
-        if (buf_->match('>')) {
-            buf_->nextch();
+        if (m_source->match('>')) {
+            m_source->nextch();
             return makeToken(TokenKind::Arrow_);
         } 
-        else if (buf_->match('-')) {
-            buf_->nextch();
+        else if (m_source->match('-')) {
+            m_source->nextch();
             return makeToken(TokenKind::Decrement_);
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Sub_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Subtraction_);
         }
             
     case '+':
-        if (buf_->match('+')) {
-            buf_->nextch();
+        if (m_source->match('+')) {
+            m_source->nextch();
             return makeToken(TokenKind::Increment_);
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Add_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Addition_);
         }
 
     case '&':
-        if (buf_->match('&')) {
-            buf_->nextch();            
+        if (m_source->match('&')) {
+            m_source->nextch();            
             return makeToken(TokenKind::Logical_AND_);
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::BitWise_AND_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::BitWise_AND_);
         }
 
     case '*':
-        if (buf_->match('=')) {
-            buf_->nextch();
+        if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Mult_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Multiplication_);
         }
 
     case '~':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::RParent_);
 
     case '!':
-        if (buf_->match('=')) {
-            buf_->nextch();            
+        if (m_source->match('=')) {
+            m_source->nextch();            
             return makeToken(TokenKind::Inequality_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::RParent_);
         }
 
     case '%':
-        if (buf_->match('=')) {
-            buf_->nextch();
+        if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Mod_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Modulus_);
         }
 
     case '<':
-        if (buf_->match('<')) {
-            if (buf_->match('=')) {
-                buf_->nextch();
+        if (m_source->match('<')) {
+            if (m_source->match('=')) {
+                m_source->nextch();
                 return makeToken(TokenKind::LShift_Assign_);
             } 
             else {
-                buf_->nextch();
+                m_source->nextch();
                 return makeToken(TokenKind::LShift_);
             } 
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Less_Equal_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Less_);
         }
 
     case '>':
-        if (buf_->match('>')) {
-            if (buf_->match('=')) {
-                buf_->nextch();
+        if (m_source->match('>')) {
+            if (m_source->match('=')) {
+                m_source->nextch();
                 return makeToken(TokenKind::RShift_Assign_);
             } 
             else {
-                buf_->nextch();
+                m_source->nextch();
                 return makeToken(TokenKind::RShift_);
             }
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Greater_Equal_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Greater_);
         }
     
     case '=':
-        if (buf_->match('=')) {
-            buf_->nextch();
+        if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::Equality_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Assign_);
         }
     
     case '^':
-        if (buf_->match('=')) {
-            buf_->nextch();
+        if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::BitWise_XOR_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::BitWise_XOR_);
         }
 
     case '|':
-        if (buf_->match('|')) {
-            buf_->nextch();
+        if (m_source->match('|')) {
+            m_source->nextch();
             return makeToken(TokenKind::Logical_OR_);
         } 
-        else if (buf_->match('=')) {
-            buf_->nextch();
+        else if (m_source->match('=')) {
+            m_source->nextch();
             return makeToken(TokenKind::BitWise_OR_Assign_);
         } 
         else {
-            buf_->nextch();
+            m_source->nextch();
             return makeToken(TokenKind::Error_);
         }
     
     case '?':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Conditional_);
 
     case ':':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Colon_);
 
     case ';':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Semicolon_);
 
     case ',':
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Comma_);
 
     case EOF:
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::EOF_);
 
     default:
-        buf_->nextch();
+        m_source->nextch();
         return makeToken(TokenKind::Error_);
     }
 }

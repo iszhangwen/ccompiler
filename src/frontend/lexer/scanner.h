@@ -8,7 +8,7 @@
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner {
 private:
-    Source *buf_;
+    std::shared_ptr<Source> m_source;
     static bool isLetter(char);
     static bool isDecimal(char);
     static bool isHexacimal(char);
@@ -39,7 +39,7 @@ private:
     void error(SourceLocation loc, const std::string& val);
 
 public:
-    explicit scanner(Source* buf);
+    explicit scanner(std::shared_ptr<Source> buf);
     // 核心扫描函数
     Token *scan();
     TokenSequence tokenize();
