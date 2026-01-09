@@ -1,125 +1,133 @@
 #include "symbol.h"
 #include "decl.h"
 
-Symbol* Symbol::NewObj(SymbolType st, Scope* s, const std::string& k, QualType t, NamedDecl* dc, bool isType)
-{
-    return new Symbol(st, s, k, t, dc, isType);
-}
-
 std::string Symbol::getTag() 
 {
-    return getTag(st_, key_);
+    return getTag(m_nameSpace, m_name);
 }
 
-std::string Symbol::getTag(SymbolType st, const std::string& key)
+std::string Symbol::getTag(NameSpace st, const std::string& key)
 {
-    std::string tail;
+    std::string res(key);
     switch (st)
     {
     case LABEL:
-        tail.append("@LABEL");
+        res.append("@LABEL");
         break;
     case RECORD:
-        tail.append("@RECORD");
+        res.append("@RECORD");
         break;
     case MEMBER:
-        tail.append("@RECORD_MEMBER");
+        res.append("@RECORD_MEMBER");
         break;
     case NORMAL:
     default:
-        tail.append("@NORMAL");
+        res.append("@NORMAL");
         break;
     }
-    return key + tail;
+    return res;
 }
 
-Scope::Scope(ScopeType st, Scope* parent)
-: sct_(st), parent_(parent)
+Scope::Scope(ScopeType st, std::shared_ptr<Scope> parent)
+: m_scopeType(st), m_parent(parent)
 {
-    level_ = parent ? (parent->getLevel() + 1) : 1;
+    m_level = parent ? (parent->getLevel() + 1) : 1;
 }
 
-Symbol* Scope::lookup(Symbol::SymbolType st, const std::string& key)
+std::shared_ptr<Symbol> Scope::lookup(Symbol::NameSpace st, const std::string& key)
 {
-    std::string tmp = Symbol::getTag(st, key);
-    if (table_.count(tmp)) {
-        return table_[tmp];
+    auto name = Symbol::getTag(st, key);
+    if (m_sysbolTable.count(name)) {
+        return m_sysbolTable[name];
     }
-    if (parent_) {
-        return parent_->lookup(st, key);
+    if (m_parent) {
+        return m_parent->lookup(st, key);
     }
     return nullptr;
 }
 
-bool Scope::insert(Symbol* sy)
+bool Scope::insert(std::shared_ptr<Symbol> sys)
 {
-    if (!sy) {
+    if (!sys) {
         return false;
     }
-    std::string tmp = sy->getTag();
-    if (!table_.count(tmp)) {
-        table_[tmp] = sy;
+    auto name = sys->getTag();
+    if (!m_sysbolTable.count(name)) {
+        m_sysbolTable[name] = sys;
         return true;
     }
     return false;
 }
 
-Symbol* SymbolTableContext::insert(Symbol::SymbolType st, const std::string& key, QualType ty, NamedDecl* dc,  bool isType)
+bool SymbolTableContext::insertLabel(std::shared_ptr<Symbol> sys)
 {
-    if (!curScope_) {
-        return nullptr;
+    if (!sys) {
+        return false;
     }
-    Symbol* sym = Symbol::NewObj(st, curScope_, key, ty, dc, isType);
-    if (!sym) {
-        return nullptr;
-    }
-    if (!curScope_->insert(sym)) {
-        delete sym;
-        return nullptr;
-    }
-    return sym;
-}
-Symbol* SymbolTableContext::insert(Symbol::SymbolType st, const std::string& key, Type* ty, NamedDecl* dc,  bool isType)
-{
-    return insert(st, key, QualType(ty, 0), dc, isType);
-} 
-
-Symbol* SymbolTableContext::insertLabel(const std::string& key, NamedDecl* dc)
-{
-    return insert(Symbol::LABEL, key, nullptr, dc);
+    sys->setNameSpace(Symbol::LABEL);
+    return m_curScope->insert(sys);
 }
 
-Symbol* SymbolTableContext::insertRecord(const std::string& key, QualType ty, NamedDecl* dc)
+bool SymbolTableContext::insertRecord(std::shared_ptr<Symbol> sys)
 {
-    return insert(Symbol::RECORD, key, ty, dc, true);
+    if (!sys) return false;
+    sys->setNameSpace(Symbol::RECORD);
+    return m_curScope->insert(sys);
 }
 
-Symbol* SymbolTableContext::insertMember(const std::string& key, QualType ty, NamedDecl* dc)
+bool SymbolTableContext::insertMember(std::shared_ptr<Symbol> sys)
 {
-    return insert(Symbol::MEMBER, key, ty, dc);
+    if (!sys) return false;
+    sys->setNameSpace(Symbol::MEMBER);
+    return m_curScope->insert(sys);
 }
 
-Symbol* SymbolTableContext::insertNormal(const std::string& key, QualType ty, NamedDecl* dc, bool isType)
+bool SymbolTableContext::insertNormal(std::shared_ptr<Symbol> sys)
 {
-    return insert(Symbol::NORMAL, key, ty, dc, isType);
+    if (!sys) return false;
+    sys->setNameSpace(Symbol::NORMAL);
+    sys->setScope(m_curScope);
+    return m_curScope->insert(sys);
 }
 
-Symbol* SymbolTableContext::lookup(Symbol::SymbolType st, const std::string& key)
+std::shared_ptr<Symbol> SymbolTableContext::LookupLabel(const std::string& name)
 {
-    return curScope_->lookup(st, key);
-}  
-
-void SymbolTableContext::enterScope(Scope::ScopeType st)
-{
-    curScope_ = new Scope(st, curScope_);
+    return m_curScope->lookup(Symbol::LABEL, name);
 }
-
+std::shared_ptr<Symbol> SymbolTableContext::LookupRecord(const std::string& name)
+{
+    return m_curScope->lookup(Symbol::RECORD, name);
+}
+std::shared_ptr<Symbol> SymbolTableContext::LookupMember(const std::string& name)
+{
+    return m_curScope->lookup(Symbol::MEMBER, name);
+}
+std::shared_ptr<Symbol> SymbolTableContext::LookupNormal(const std::string& name)
+{
+    return m_curScope->lookup(Symbol::NORMAL, name);
+}
+void SymbolTableContext::enterFileScope()
+{
+    m_curScope = std::make_shared<Scope>(Scope::FILE, m_curScope);
+}
+void SymbolTableContext::enterFuncScope()
+{
+    m_curScope = std::make_shared<Scope>(Scope::FUNC, m_curScope);
+}
+void SymbolTableContext::enterBlockScope()
+{
+    m_curScope = std::make_shared<Scope>(Scope::BLOCK, m_curScope);
+}
+void SymbolTableContext::enterFuncPrototypeScope()
+{
+    m_curScope = std::make_shared<Scope>(Scope::FUNC_PROTOTYPE, m_curScope);
+}
 void SymbolTableContext::exitScope()
 {
-    if (!curScope_) {
+    if (!m_curScope) {
         throw std::string("curScope_ is nullptr");
     }
-    curScope_ = curScope_->getParent();
+    m_curScope = m_curScope->getParent();
 }
 
 /*
@@ -167,7 +175,7 @@ bool SymbolTableContext::isTypeSpecifier(Token* tk)
         break;
     }
     /*typedef-name*/
-    Symbol* sym = lookup(Symbol::NORMAL, tk->value_);
+    auto sym = LookupNormal(tk->value_);
     if (sym && sym->isTypeName()) {
         return true;
     }
@@ -176,9 +184,7 @@ bool SymbolTableContext::isTypeSpecifier(Token* tk)
 
 bool SymbolTableContext::isTypeQualifier(Token* tk)
 {
-    if (!tk) {
-        return false;
-    }
+    if (!tk) return false;
     // 判断是否是类型限定符
     switch (tk->kind_)
     {
@@ -195,33 +201,39 @@ bool SymbolTableContext::isTypeQualifier(Token* tk)
 
 void SymbolTableContext::initBuiltType()
 {
+    auto insert = [&](const std::string& name, std::shared_ptr<Type> ty){
+        auto sys = std::make_shared<Symbol>();
+        sys->setName(name);
+        sys->setType(QualType(ty));
+        insertNormal(sys);
+    };
     // void
-    insert(Symbol::NORMAL, "void", VoidType::NewObj(), nullptr);
+    insert("void", std::make_shared<VoidType>());
     // bool
-    insert(Symbol::NORMAL, "_Bool", BoolType::NewObj(), nullptr);
+    insert("_Bool", std::make_shared<BoolType>());
     // char型
-    insert(Symbol::NORMAL, "signed_char", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::BYTE, IntegerType::CHAR), nullptr);
-    insert(Symbol::NORMAL, "unsignd_char", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR), nullptr);
+    insert("signed_char", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::BYTE, IntegerType::CHAR));
+    insert("unsignd_char", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR));
     // 整型
-    insert(Symbol::NORMAL, "signed_short_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "signed_normal_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "signed_long_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "signed_long_long_int", IntegerType::NewObj(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_short_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_normal_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsignd_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT), nullptr);
-    insert(Symbol::NORMAL, "unsigned_long_long_int", IntegerType::NewObj(IntegerType::UNSIGNED, IntegerType::LONG2, IntegerType::INT), nullptr);
+    insert("signed_short_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT));
+    insert("signed_normal_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT));
+    insert("signed_long_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("signed_long_long_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT));
+    insert("unsignd_short_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT));
+    insert("unsignd_normal_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT));
+    insert("unsignd_long_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("unsigned_long_long_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
     // 浮点型
-    insert(Symbol::NORMAL, "float", RealFloatingType::NewObj(RealFloatingType::FLOAT), nullptr);
-    insert(Symbol::NORMAL, "double", RealFloatingType::NewObj(RealFloatingType::DOUBLE), nullptr);
-    insert(Symbol::NORMAL, "long_double", RealFloatingType::NewObj(RealFloatingType::LONG_DOUBLE), nullptr);
+    insert("float", std::make_shared<RealFloatingType>(RealFloatingType::FLOAT));
+    insert("double", std::make_shared<RealFloatingType>(RealFloatingType::DOUBLE));
+    insert("long_double", std::make_shared<RealFloatingType>(RealFloatingType::LONG_DOUBLE));
     // 复数
-    insert(Symbol::NORMAL, "float_complex", ComplexType::NewObj(ComplexType::FLOAT), nullptr);
-    insert(Symbol::NORMAL, "double_complex", ComplexType::NewObj(ComplexType::DOUBLE), nullptr);
-    insert(Symbol::NORMAL, "long_double_complex", ComplexType::NewObj(ComplexType::LONG_DOUBLE), nullptr);
+    insert("float_complex", std::make_shared<ComplexType>(ComplexType::FLOAT));
+    insert("double_complex", std::make_shared<ComplexType>(ComplexType::DOUBLE));
+    insert("long_double_complex", std::make_shared<ComplexType>(ComplexType::LONG_DOUBLE));
 }
 
-Type* SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
+std::shared_ptr<Type> SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
 {
     std::string key;
     if (tq & VOID) {
@@ -259,6 +271,9 @@ Type* SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
         }
         key.append("int");
     }
-    Symbol* sym = lookup(Symbol::NORMAL, key);
-    return sym ? sym->getType().getPtr() : nullptr;
+    auto sys = LookupNormal(key);
+    if (sys) {
+        return sys->getType().getPtr();
+    }
+    return nullptr;
 }

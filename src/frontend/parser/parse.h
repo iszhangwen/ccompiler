@@ -19,6 +19,7 @@ public:
 
 class Parser {
 private:
+    using std::shared_ptr<Expr> = std::shared_ptr<Expr>;
     friend ScopeManager;
     std::shared_ptr<Source> m_source;
     std::shared_ptr<TokenSequence> m_tokenSeq;
@@ -34,46 +35,46 @@ private:
     void semaError(Token *tk, const std::string& val);
 
     /*-----------------------------Expressions-----------------------------------------*/
-    Expr* parsePrimaryExpr();
-    Expr* parseGenericSelection();
-    Expr* parseGenericAssociation();
-    Expr* parsePostfixExpr();
-    std::vector<Expr*> parseArgListExpr();
-    Expr* parseUnaryExpr();
-    Expr* parseCastExpr();
-    Expr* parseMultiExpr();
-    Expr* parseAddExpr();
-    Expr* parseShiftExpr();
-    Expr* parseRelationalExpr();
-    Expr* parseEqualExpr();
-    Expr* parseBitANDExpr();
-    Expr* parseBitXORExpr();
-    Expr* parseBitORExpr();
-    Expr* parseLogicalANDExpr();
-    Expr* parseLogicalORExpr();
-    Expr* parseConditionalExpr();
-    Expr* parseAssignExpr();
-    Expr* parseExpr();
-    Expr* parseConstansExpr();
+    std::shared_ptr<Expr> parsePrimaryExpr();
+    std::shared_ptr<Expr> parseGenericSelection();
+    std::shared_ptr<Expr> parseGenericAssociation();
+    std::shared_ptr<Expr> parsePostfixExpr();
+    std::vector<std::shared_ptr<Expr>> parseArgListExpr();
+    std::shared_ptr<Expr> parseUnaryExpr();
+    std::shared_ptr<Expr> parseCastExpr();
+    std::shared_ptr<Expr> parseMultiExpr();
+    std::shared_ptr<Expr> parseAddExpr();
+    std::shared_ptr<Expr> parseShiftExpr();
+    std::shared_ptr<Expr> parseRelationalExpr();
+    std::shared_ptr<Expr> parseEqualExpr();
+    std::shared_ptr<Expr> parseBitANDExpr();
+    std::shared_ptr<Expr> parseBitXORExpr();
+    std::shared_ptr<Expr> parseBitORExpr();
+    std::shared_ptr<Expr> parseLogicalANDExpr();
+    std::shared_ptr<Expr> parseLogicalORExpr();
+    std::shared_ptr<Expr> parseConditionalExpr();
+    std::shared_ptr<Expr> parseAssignExpr();
+    std::shared_ptr<Expr> parseExpr();
+    std::shared_ptr<Expr> parseConstansExpr();
     // 该表达式不是文法符号，是为了简化分析歧义
-    Expr* parseParenExpr(); 
+    std::shared_ptr<Expr> parseParenExpr();
     /*-------------------------------Declarations--------------------------------------*/
     // 6.7 declaration
     DeclGroup parseDeclaration();
-    QualType parseDeclarationSpec(int* sc, int* fs);
-    Decl* parseInitDeclarator(Declarator);
+    Declarator parseDeclarationSpec();
+    std::shared_ptr<DeclaratorDecl> parseInitDeclarator(Declarator);
     //Declarator parseInitDeclarator(QualType qt, int sc, int fs);
     // 6.7.1 storage-class-specifier
     void parseStorageClassSpec(StorageClass val, int* sc);
     // 6.7.2 type-specifier
-    Type* parseStructOrUnionSpec(bool isStruct);
-    Type* parseStructDeclarationList(Symbol*);
+    std::shared_ptr<RecordType> parseStructOrUnionSpec(bool isStruct);
+    QualType parseStructDeclarationList(Symbol*);
     QualType parseSpecQualList();
     DeclGroup parseStructDeclaratorList(QualType qt, Decl* parent);
-    Decl* parseStructDeclarator(QualType qt);
-    Type* parseEnumSpec();
-    Type* parseEnumeratorList(Symbol*, Type*);
-    EnumConstantDecl* parseEnumerator(QualType qt);
+    std::shared_ptr<Decl> parseStructDeclarator(QualType qt);
+    std::shared_ptr<EnumType> parseEnumSpec();
+    QualType parseEnumeratorList(Symbol*, Type*);
+    std::shared_ptr<EnumConstantDecl> parseEnumerator(QualType qt);
     // 6.7.3 type-qualifier
     int parseTypeQualList();
     // 6.7.4 function-specifier
@@ -82,7 +83,7 @@ private:
     void parseDeclarator(Declarator&);
     // 复杂声明时，由于最后解析函数或数组声明，需要对变量类型做修正。
     QualType modifyBaseType(QualType, QualType, QualType);
-    Expr* parseArrayLen();
+    std::shared_ptr<Expr> parseArrayLen();
     QualType parseFuncOrArrayDeclarator(QualType qt);
     QualType parsePointer(QualType);
     void parseParameterTypeList();
@@ -96,18 +97,18 @@ private:
     // 6.7.7 typedef-name
     void parseTypedefName();
     // 6.7.8 initializer
-    Expr* parseInitializer();
+    std::shared_ptr<Expr> parseInitializer();
     void parseInitializerList();
     void parseDesignation();
     void parseDesignator();
     /*--------------------------------Statements---------------------------------------*/
-    Stmt* parseStmt();
-    Stmt* parseLabeledStmt();
-    Stmt* parseCompoundStmt();
-    Stmt* parseExprStmt();
-    Stmt* parseSelectionStmt();
-    Stmt* parseIterationStmt();
-    Stmt* parseJumpStmt();
+    std::shared_ptr<Stmt> parseStmt();
+    std::shared_ptr<Stmt> parseLabeledStmt();
+    std::shared_ptr<CompoundStmt> parseCompoundStmt();
+    std::shared_ptr<ExprStmt> parseExprStmt();
+    std::shared_ptr<Stmt> parseSelectionStmt();
+    std::shared_ptr<Stmt> parseIterationStmt();
+    std::shared_ptr<Stmt> parseJumpStmt();
     /*-------------------------------External definitions-------------------------------*/
     Decl* parseFunctionDefinitionBody(Decl*);
 

@@ -13,7 +13,7 @@ class Symbol
 public:
     // 名称空间规定了同一个名称空间的元素不能相同，即同一作用域不同名称空间的标识符名可以相同 
     // 同一个作用域必须要划分不同的名称空间，必然插入时开销
-    enum SymbolType
+    enum NameSpace
     {
         LABEL, // 标签是独特的
         RECORD, // struct union enum共享同一个名称空间
@@ -21,35 +21,41 @@ public:
         NORMAL // 普通标识符的名称空间
     };
 
-private:
-    SymbolType st_;
-    std::string key_;
-    Scope* sc_;
-    QualType qty_;
-    NamedDecl* dc_;
-    bool isType_; // 是否是类型声明
-protected:
-    Symbol(SymbolType st, Scope* s, const std::string& k, QualType t, NamedDecl* dc, bool isType = false)
-    : st_(st), sc_(s), key_(k), qty_(t), dc_(dc), isType_(isType){}
+    Symbol()
+    : m_nameSpace(NORMAL)
+    , m_scope()
+    , m_name("")
+    , m_type(QualType())
+    , m_decl()
+    , m_isType(false){}
 
-public:
-    static Symbol* NewObj(SymbolType st, Scope* s, const std::string& k, QualType t, NamedDecl* dc, bool isType = false);
-    static std::string getTag(SymbolType, const std::string&);
+    static std::string getTag(NameSpace, const std::string&);
     std::string getTag();
 
-    const std::string& getKey() const {return key_;}
-    void setKey(const std::string& key) {key_ = key;}
+    NameSpace getNameSpace() {return m_nameSpace;}
+    void setNameSpace(NameSpace st) {m_nameSpace = st;}
 
-    Scope* getScope() {return sc_;}
-    void setScope(Scope* sc) {sc_ = sc;}
+    const std::string& getName() const {return m_name;}
+    void setName(const std::string& key) {m_name = key;}
 
-    QualType getType() { return qty_;}
-    void setType(QualType ty) {qty_ = ty;}
+    std::shared_ptr<Scope> getScope() {return m_scope.lock();}
+    void setScope(std::shared_ptr<Scope> sc) {m_scope = sc;}
 
-    NamedDecl* getDecl() { return dc_;}
-    void setDecl(NamedDecl* dc) {dc_ = dc;}
+    QualType getType() { return m_type;}
+    void setType(QualType ty) {m_type = ty;}
 
-    bool isTypeName() {return isType_;}
+    std::shared_ptr<NamedDecl> getDecl() { return m_decl.lock();}
+    void setDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
+
+    bool isTypeName() {return m_isType;}
+
+private:
+    bool m_isType; // 是否是类型声明
+    QualType m_type; // 符号的类型
+    NameSpace m_nameSpace;
+    std::string m_name;
+    std::weak_ptr<Scope> m_scope;
+    std::weak_ptr<NamedDecl> m_decl;
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 
@@ -66,39 +72,42 @@ public:
     };
 
 private:
-    int level_; // 作用域深度
-    Scope* parent_;
-    ScopeType sct_;
-    std::unordered_map<std::string, Symbol*> table_;
+    int m_level; // 作用域深度
+    std::shared_ptr<Scope> m_parent;
+    ScopeType m_scopeType;
+    std::unordered_map<std::string, std::shared_ptr<Symbol>> m_sysbolTable;
 
 public:
-    Scope(ScopeType st, Scope* parent);
-    Scope* getParent() {return parent_;}
-    ScopeType getScopeType() {return sct_;}
-    int getLevel() const {return level_;}
-    Symbol* lookup(Symbol::SymbolType, const std::string&);
-    bool insert(Symbol*); 
+    Scope(ScopeType st, std::shared_ptr<Scope> parent);
+    std::shared_ptr<Scope> getParent() {return m_parent;}
+    ScopeType getScopeType() {return m_scopeType;}
+    int getLevel() const {return m_level;}
+    std::shared_ptr<Symbol> lookup(Symbol::NameSpace, const std::string&);
+    bool insert(std::shared_ptr<Symbol>);
 };
 
 /*符号表管理
 */
-class SymbolTableContext {
-    Scope* curScope_;
-    Symbol* insert(Symbol::SymbolType, const std::string&, QualType, NamedDecl*, bool isType = false);
-    Symbol* insert(Symbol::SymbolType, const std::string&, Type*, NamedDecl*, bool isType = false);
+class SymbolTableContext
+{
 public:
-    SymbolTableContext(): curScope_(nullptr) {}
+    SymbolTableContext(): m_curScope(nullptr) {}
     // 符号查询和插入
-    Symbol* insertLabel(const std::string&, NamedDecl*);
-    Symbol* insertRecord(const std::string&, QualType, NamedDecl*);
-    Symbol* insertMember(const std::string&, QualType, NamedDecl*);
-    Symbol* insertNormal(const std::string&, QualType, NamedDecl*, bool isType = false);
-    Symbol* lookup(Symbol::SymbolType, const std::string&);
+    bool insertLabel(std::shared_ptr<Symbol>);
+    bool insertRecord(std::shared_ptr<Symbol>);
+    bool insertMember(std::shared_ptr<Symbol>);
+    bool insertNormal(std::shared_ptr<Symbol>);
+    std::shared_ptr<Symbol> LookupLabel(const std::string&);
+    std::shared_ptr<Symbol> LookupRecord(const std::string&);
+    std::shared_ptr<Symbol> LookupMember(const std::string&);
+    std::shared_ptr<Symbol> LookupNormal(const std::string&);
     // 作用域管理函数
-    Scope* getCurScope() {return curScope_;}
-    void enterScope(Scope::ScopeType);
+    void enterFileScope();
+    void enterFuncScope();
+    void enterBlockScope();
+    void enterFuncPrototypeScope();
     void exitScope();
-    bool isScopeType(Scope::ScopeType st) {return curScope_->getScopeType() == st;}
+    std::shared_ptr<Scope> getCurScope() {return m_curScope;}
 
     // 类型检测
     bool isTypeName(Token* tk);
@@ -108,5 +117,8 @@ public:
     // 设置内置类型
     void initBuiltType();
     // 获取内置类型
-    Type* getBuiltTypeByTypeSpec(int);
+    std::shared_ptr<Type> getBuiltTypeByTS(int);
+
+private:
+    std::shared_ptr<Scope> m_curScope;
 };

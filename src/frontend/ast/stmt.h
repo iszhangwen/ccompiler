@@ -25,34 +25,33 @@ class CaseStmt : public Stmt
 {
 public:
     CaseStmt()
-    : Stmt(NodeKind::NK_CaseStmt), m_cond(nullptr), m_val(nullptr) {}
+    : Stmt(NodeKind::NK_CaseStmt), m_cond(nullptr), m_body(nullptr) {}
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> cond) {m_cond = cond;}
 
-    std::shared_ptr<Stmt> getStmt() {return m_val;}
-    void setLabel(std::shared_ptr<Stmt> val) {m_val = val;}
+    std::shared_ptr<Stmt> getBody() {return m_body;}
+    void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
 
 private:
     std::shared_ptr<Expr> m_cond;
-    std::shared_ptr<Stmt> m_val;
+    std::shared_ptr<Stmt> m_body;
 };
 
 class DefaultStmt : public Stmt
 {
 public:
     DefaultStmt()
-    : Stmt(NodeKind::NK_DefaultStmt), m_val(val) {}
+    : Stmt(NodeKind::NK_DefaultStmt), m_body(val) {}
 
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    std::shared_ptr<Expr> getCond() {return nullptr;}
-    std::shared_ptr<Stmt> getStmt() {return val_;}
-    void setLabel(std::shared_ptr<Stmt> val) {m_val = val;}
+    std::shared_ptr<Stmt> getBody() {return val_;}
+    void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
 
 private:
-    std::shared_ptr<Stmt> m_val;
+    std::shared_ptr<Stmt> m_body;
 };
 
 /*------------------------------compound-statement---------------------------------------------*/
@@ -134,30 +133,30 @@ class SwitchStmt : public Stmt
 {
 public:
     SwitchStmt()
-    : Stmt(NodeKind::NK_SwitchStmt), m_cond(nullptr), m_val(nullptr) {}
+    : Stmt(NodeKind::NK_SwitchStmt), m_cond(nullptr), m_body(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
-    std::shared_ptr<Stmt> getStmt() {return m_val;}
-    void setStmt(std::shared_ptr<Stmt> val) {m_val = val;}
+    std::shared_ptr<Stmt> getBody() {return m_body;}
+    void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
 
 private:
     std::shared_ptr<Expr> m_cond;
-    std::shared_ptr<Stmt> m_val;
+    std::shared_ptr<Stmt> m_body;
 };
 
 class WhileStmt : public Stmt
 {
 public:
     WhileStmt()
-    : Stmt(NodeKind::NK_WhileStmt), m_cond(nullptr), m_val(nullptr) {}
+    : Stmt(NodeKind::NK_WhileStmt), m_cond(nullptr), m_body(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
-    std::shared_ptr<Stmt> getStmt() {return m_val;}
-    void setStmt(std::shared_ptr<Stmt> val) {m_val = val;}
+    std::shared_ptr<Stmt> getBody() {return m_body;}
+    void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
     // 获取条件表达式的类型
     QualType getCondType() const;
     // 获取语句的类型
@@ -165,24 +164,24 @@ public:
 
 private:
     std::shared_ptr<Expr> m_cond;
-    std::shared_ptr<Stmt> m_val;
+    std::shared_ptr<Stmt> m_body;
 };
 
 class DoStmt : public Stmt
 {
 public:
     DoStmt()
-    : Stmt(NodeKind::NK_DoStmt), m_cond(nullptr), m_val(nullptr) {}
+    : Stmt(NodeKind::NK_DoStmt), m_cond(nullptr), m_body(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
-    std::shared_ptr<Stmt> getStmt() {return m_val;}
-    void setStmt(std::shared_ptr<Stmt> val) {m_val = val;}
+    std::shared_ptr<Stmt> getBody() {return m_body;}
+    void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
 
 private:
     std::shared_ptr<Expr> m_cond;
-    std::shared_ptr<Stmt> m_val;
+    std::shared_ptr<Stmt> m_body;
 };
 
 class ForStmt : public Stmt

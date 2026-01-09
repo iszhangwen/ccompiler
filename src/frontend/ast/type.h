@@ -28,7 +28,7 @@ class QualType
 public:
     // 构造函数
     QualType() {}
-    QualType(Type *ptr, unsigned qual=0x00)
+    QualType(std::shared_ptr<Type> ptr, unsigned qual=0x00)
         :m_type(ptr) {
         // 校验类型限定符的合法性
         assert((qual & ~TypeQualifier::TQ_MASK) == 0);

@@ -120,55 +120,71 @@ void Parser::semaError(Token *tk, const std::string& val)
  ( expression )
   generic-selection
 */
-Expr* Parser::parsePrimaryExpr()
+std::shared_ptr<Expr> Parser::parsePrimaryExpr()
 {
-    Expr* node = nullptr;
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Identifier:
     {
-        Symbol* sym = m_systable->lookup(Symbol::NORMAL, m_tokenSeq->cur()->value_);
-        if (!sym) {
+        auto sys = m_systable->LookupNormal(m_tokenSeq->cur()->value_);
+        if (!sys)
             semaError("symbol undefined!");
-            return nullptr;
-        }
-        else if (!sym->getDecl()) {
+        else if (!sys->getDecl())
             semaError("symbol declaration undefined!");
-            return nullptr;
-        }
         else {
-            node = DeclRefExpr::NewObj(sym->getType()->getQualType(), sym->getDecl());
+            auto node = std::make_shared<DeclRefExpr>();
+            node->setType(sys->getType()->getQualType());
+            node->setDecl(sys->getDecl());
+            return node;
         }
-        return node;
     }    
 
     case TokenKind::Numeric_Constant_:
-        node = IntegerLiteral::NewObj(m_tokenSeq->cur());
-        break;
+    {
+        auto node = std::make_shared<IntegerLiteral>();
+        node->setValue(std::atoll(m_tokenSeq->cur()->value_.c_str()));
+        node->setType(m_systable->getBuiltTypeByTypeSpec(TypeSpecifier::LONGLONG));
+        return node;
+    }
 
     case TokenKind::Float_Constant:
-        node = FloatingLiteral::NewObj(m_tokenSeq->cur());
-        break;
+    {
+        auto node = std::make_shared<FloatingLiteral>();
+        node->setValue(std::atof(m_tokenSeq->cur()->value_.c_str()));
+        node->setType(m_systable->getBuiltTypeByTypeSpec(TypeSpecifier::DOUBLE));
+        return node;
+    }
 
     case TokenKind::Character_Constant_:
-        node = CharacterLiteral::NewObj(m_tokenSeq->cur());
-        break;
+    {
+        auto node = std::make_shared<CharacterLiteral>();
+        node->setValue(m_tokenSeq->cur()->value_.at(0));
+        node->setType(m_systable->getBuiltTypeByTypeSpec(TypeSpecifier::CHAR));
+        return node;
+    }
 
     case TokenKind::String_Constant_:
-        node = StringLiteral::NewObj(m_tokenSeq->cur());
-        break;
+    {
+        auto node = std::make_shared<StringLiteral>();
+        node->setValue(m_tokenSeq->cur()->value_);
+        return node;
+    }
     
     case TokenKind::LParent_:
-        node = parseExpr();
+    {
+        auto child = parseExpr();
         m_tokenSeq->expect(TokenKind::RParent_);
-        node = ParenExpr::NewObj(node);
-        break;
+        auto node = std::make_shared<ParenExpr>();
+        node->setSubExpr(child);
+        node->setType(child->getType());
+        return node;
+    }
 
     default:
         sytaxError(m_tokenSeq->cur(), "unexpect PrimaryExpr!");
         break;
     }
-    return node;
+    return nullptr;
 }
 
 /* (6.5.1.1) gegneric-selection:
@@ -178,7 +194,7 @@ Expr* Parser::parsePrimaryExpr()
  generic-association
  generic-assoc-list , generic-association
 */
-Expr* Parser::parseGenericSelection()
+std::shared_ptr<Expr> Parser::parseGenericSelection()
 {
     m_tokenSeq->expect(TokenKind::T_Generic);
     m_tokenSeq->expect(TokenKind::LParent_);
@@ -194,7 +210,7 @@ Expr* Parser::parseGenericSelection()
  type-name : assignment-expression
  default : assignment-expression
 */
-Expr* Parser::parseGenericAssociation()
+std::shared_ptr<Expr> Parser::parseGenericAssociation()
 {
     if (m_tokenSeq->match(TokenKind::Default)) {
 
@@ -214,10 +230,10 @@ Expr* Parser::parseGenericAssociation()
     解析重点：
     复合字面值和primary都具备 （type-name）(expr)等括号表达式形式
 */
-Expr* Parser::parsePostfixExpr()
+std::shared_ptr<Expr> Parser::parsePostfixExpr()
 {
-    Expr* node = nullptr;
-    if (m_tokenSeq->peek()->kind_ == TokenKind::LParent_) {
+    std::shared_ptr<Expr> node = nullptr;
+    if (m_tokenSeq->test(TokenKind::LParent_)) {
         node = parseParenExpr();
     }
     else {
@@ -225,54 +241,36 @@ Expr* Parser::parsePostfixExpr()
     }
     while (true) {
         if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
-            auto lex = parseExpr();
+            auto array = std::make_shared<ArraySubscriptExpr>();
+            array->setIndexExpr(parseExpr());
+            array->setBaseExpr(node);
             m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
-            node = ArraySubscriptExpr::NewObj(node, lex);
         }
         else if (m_tokenSeq->match(TokenKind::LParent_)) {
-            auto lex = parseArgListExpr();
+            auto args = std::make_shared<CallExpr>();
+            args->setParams(parseArgListExpr());
+            args->setCallee(node);
             m_tokenSeq->expect(TokenKind::RParent_);
-            node = CallExpr::NewObj(node, lex);
         }
         else if (m_tokenSeq->match(TokenKind::Dot_)) {
-            m_tokenSeq->expect(TokenKind::Identifier);
-            Symbol* sym = m_systable->lookup(Symbol::NORMAL, m_tokenSeq->cur()->value_);
-            if (!sym) {
-                semaError("symbol undefined!");
-                break;
-            }
-            QualType ty = sym->getType();
-            if (ty) {
-                //auto lex = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
-                //node = MemberExpr::NewObj(node, nullptr, false);
-            }
-            else {
-                semaError("symbol type undefined!");
-                break;
-            }
+            // TODO 成员运算符
         }
         else if (m_tokenSeq->match(TokenKind::Arrow_)) {
-            m_tokenSeq->expect(TokenKind::Identifier);
-            Symbol* sym = m_systable->lookup(Symbol::NORMAL, m_tokenSeq->cur()->value_);
-            if (!sym) {
-                semaError("symbol undefined!");
-                break;
-            }
-            QualType ty = sym->getType();
-            if (ty) {
-                //auto lex = DeclRefExpr::NewObj(ty, dynamic_cast<NamedDecl*>(ty->getDecl()));
-                //node = MemberExpr::NewObj(node, nullptr, true);
-            }
-            else {
-                semaError("symbol type undefined!");
-                break;
-            }
+            // TODO 成员运算符
         }
+        // 自增表达式
         else if (m_tokenSeq->match(TokenKind::Increment_)) {
-            node = UnaryOpExpr::NewObj(node, UnaryOpExpr::Post_Increment_);
+            auto inc = std::make_shared<UnaryOpExpr>();
+            inc->setOpCode(UnaryOpExpr::Post_Increment_);
+            inc->setSubExpr(node);
+            node = inc;
         }
+        // 自减表达式
         else if (m_tokenSeq->match(TokenKind::Decrement_)) {
-            node = UnaryOpExpr::NewObj(node, UnaryOpExpr::Post_Decrement_);
+            auto dec = std::make_shared<UnaryOpExpr>();
+            dec->setOpCode(UnaryOpExpr::Post_Decrement_);
+            dec->setSubExpr(node);
+            node = dec;
         }
         else {
             break;
@@ -281,9 +279,9 @@ Expr* Parser::parsePostfixExpr()
     return node;
 }
 
-std::vector<Expr*> Parser::parseArgListExpr()
+std::vector<std::shared_ptr<Expr>> Parser::parseArgListExpr()
 {
-    std::vector<Expr*> res;
+    std::vector<std::shared_ptr<Expr>> res;
     res.push_back(parseAssignExpr());
     while (m_tokenSeq->match(TokenKind::Comma_)) {
         res.push_back(parseAssignExpr());
@@ -303,78 +301,59 @@ std::vector<Expr*> Parser::parseArgListExpr()
 unary-operator: one of
     & * +- ~ !
 */
-Expr* Parser::parseUnaryExpr()
+std::shared_ptr<Expr> Parser::parseUnaryExpr()
 {
-    Expr* rex = nullptr;
-    Expr* node = nullptr;
+    auto node = std::make_shared<UnaryOpExpr>();
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Increment_:
-        rex = parseUnaryExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Pre_Increment_);
+        node->setOpCode(UnaryOpExpr::Pre_Increment_);
+        node->setSubExpr(parseUnaryExpr());
         break;
 
     case TokenKind::Decrement_:
-        rex = parseUnaryExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Pre_Decrement_);
+        node->setOpCode(UnaryOpExpr::Pre_Decrement_);
+        node->setSubExpr(parseUnaryExpr());
         break;
 
     case TokenKind::BitWise_AND_:
-        rex = parseCastExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::BitWise_AND_);
+        node->setOpCode(UnaryOpExpr::BitWise_AND_);
+        node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Multiplication_:
-        rex = parseCastExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Multiplication_);
+        node->setOpCode(UnaryOpExpr::Multiplication_);
+        node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Addition_:
-        rex = parseCastExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Addition_);
+        node->setOpCode(UnaryOpExpr::Addition_);
+        node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Subtraction_:
-        rex = parseCastExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Subtraction_);
+        node->setOpCode(UnaryOpExpr::Subtraction_);
+        node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::BitWise_NOT_:
-        rex = parseCastExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::BitWise_NOT_);
+        node->setOpCode(UnaryOpExpr::BitWise_NOT_);
+        node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Logical_NOT_:
-        rex = parseCastExpr();
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Logical_NOT_);
+        node->setOpCode(UnaryOpExpr::Logical_NOT_);
+        node->setSubExpr(parseCastExpr());
         break;
     
     case TokenKind::Sizeof:
-        if (m_tokenSeq->match(TokenKind::RParent_)) {
-            if (m_systable->isTypeName(m_tokenSeq->peek())) {
-                parseTypeName();
-                rex = ParenExpr::NewObj(nullptr);
-            }
-            else {
-                rex = parseUnaryExpr();
-            }
-            m_tokenSeq->expect(TokenKind::RParent_);
-        }
-        else {
-            rex = parseUnaryExpr();
-        }
-        node = UnaryOpExpr::NewObj(rex, UnaryOpExpr::Logical_NOT_);
         break;
     
     case TokenKind::Alignof:
-        m_tokenSeq->expect(TokenKind::LParent_);
-        parseTypeName();
-        m_tokenSeq->expect(TokenKind::RParent_);
         break;
 
     default:
-        node = parsePostfixExpr();
-        break;
+        return parsePostfixExpr();
     }
     return node;
 }
@@ -383,176 +362,190 @@ Expr* Parser::parseUnaryExpr()
  unary-expression
  ( type-name ) cast-expression
 */
-Expr* Parser::parseCastExpr()
+std::shared_ptr<Expr> Parser::parseCastExpr()
 {
-    return nullptr;
+    return parseUnaryExpr();
 }
 
-Expr* Parser::parseMultiExpr()
+std::shared_ptr<Expr> Parser::parseMultiExpr()
 {
-    Expr* node = parseCastExpr();
+    auto node = parseCastExpr();
     while (true) {
+        auto rex = std::make_shared<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Multiplication_)) {
-            Expr* rex = parseCastExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Multiplication_);
+            rex->setOpCode(BinaryOpExpr::Multiplication_);
         } 
         else if (m_tokenSeq->match(TokenKind::Division_)) {
-            Expr* rex = parseCastExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Division_);
+            rex->setOpCode(BinaryOpExpr::Division_);
         } 
         else if (m_tokenSeq->match(TokenKind::Modulus_)) {
-            Expr* rex = parseCastExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Modulus_);
+            rex->setOpCode(BinaryOpExpr::Modulus_);
         } 
         else {
             break;
         }
+        rex->setLExpr(node);
+        rex->setRExpr(parseCastExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseAddExpr()
+std::shared_ptr<Expr> Parser::parseAddExpr()
 {
-    Expr* node = parseMultiExpr();
+    auto node = parseMultiExpr();
     while (true) {
+        auto rex = std::make_shared<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Addition_)) {
-            Expr* rex = parseMultiExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Addition_);
-        } 
-        else if (m_tokenSeq->match(TokenKind::Subtraction_)) {
-            Expr* rex = parseMultiExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Subtraction_);
-        } 
-        else {
+            rex->setOpCode(BinaryOpExpr::Addition_);
+        } else if (m_tokenSeq->match(TokenKind::Subtraction_)) {
+            rex->setOpCode(BinaryOpExpr::Subtraction_);
+        } else {
             break;
         }
+        rex->setLExpr(node);
+        rex->setRExpr(parseMultiExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseShiftExpr()
+std::shared_ptr<Expr> Parser::parseShiftExpr()
 {
-    Expr* node = parseAddExpr();
+    auto node = parseAddExpr();
     while (true) {
+        auto rex = std::make_shared<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::LShift_)) {
-            Expr* rex = parseAddExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::LShift_);
-        } 
-        else if (m_tokenSeq->match(TokenKind::RShift_)) {
-            Expr* rex = parseAddExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::RShift_);
-        } 
-        else {
+            rex->setOpCode(BinaryOpExpr::LShift_);
+        } else if (m_tokenSeq->match(TokenKind::RShift_)) {
+            rex->setOpCode(BinaryOpExpr::RShift_);
+        } else {
             break;
         }
+        rex->setLExpr(node);
+        rex->setRExpr(parseAddExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseRelationalExpr()
+std::shared_ptr<Expr> Parser::parseRelationalExpr()
 {
-    Expr* node = parseShiftExpr();
+    auto node = parseShiftExpr();
     while (true) {
+        auto rex = std::make_shared<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Less_)) {
-            Expr* rex = parseShiftExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Less_);
-        } 
-        else if (m_tokenSeq->match(TokenKind::Less_Equal_)) {
-            Expr* rex = parseShiftExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Less_Equal_);
-        } 
-        else if (m_tokenSeq->match(TokenKind::Greater_)) {
-            Expr* rex = parseShiftExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Greater_);
-        } 
-        else if (m_tokenSeq->match(TokenKind::Greater_Equal_)) {
-            Expr* rex = parseShiftExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Greater_Equal_);
-        } 
-        else  {
+            rex->setOpCode(BinaryOpExpr::Less_);
+        } else if (m_tokenSeq->match(TokenKind::Less_Equal_)) {
+            rex->setOpCode(BinaryOpExpr::Less_Equal_);
+        } else if (m_tokenSeq->match(TokenKind::Greater_)) {
+            rex->setOpCode(BinaryOpExpr::Greater_);
+        } else if (m_tokenSeq->match(TokenKind::Greater_Equal_)) {
+            rex->setOpCode(BinaryOpExpr::Greater_Equal_);
+        } else  {
             break;
         }
+        rex->setLExpr(node);
+        rex->setRExpr(parseShiftExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseEqualExpr()
+std::shared_ptr<Expr> Parser::parseEqualExpr()
 {
-    Expr* node = parseRelationalExpr();
+    auto node = parseRelationalExpr();
     while (true) {
+        auto rex = std::make_shared<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Equality_)) {
-            Expr* rex = parseRelationalExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Equality_);
-        } 
-        else if (m_tokenSeq->match(TokenKind::Inequality_)) {
-            Expr* rex = parseRelationalExpr();
-            node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Inequality_);
-        } 
-        else {
+            rex->setOpCode(BinaryOpExpr::Equality_);
+        } else if (m_tokenSeq->match(TokenKind::Inequality_)) {
+            rex->setOpCode(BinaryOpExpr::Inequality_);
+        } else {
             break;
         }
+        rex->setLExpr(node);
+        rex->setRExpr(parseRelationalExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseBitANDExpr()
+std::shared_ptr<Expr> Parser::parseBitANDExpr()
 {
-    Expr* node = parseEqualExpr();
+    auto node = parseEqualExpr();
     while (m_tokenSeq->match(TokenKind::BitWise_AND_)) {
-        Expr* rex = parseEqualExpr();
-        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_AND_);
+        auto rex = std::make_shared<BinaryOpExpr>();
+        rex->setOpCode(BinaryOpExpr::BitWise_AND_);
+        rex->setLExpr(node);
+        rex->setRExpr(parseEqualExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseBitXORExpr()
+std::shared_ptr<Expr> Parser::parseBitXORExpr()
 {
-    Expr* node = parseBitANDExpr();
+    auto node = parseBitANDExpr();
     while (m_tokenSeq->match(TokenKind::BitWise_XOR_)) {
-        Expr* rex = parseBitANDExpr();
-        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_XOR_);
+        auto rex = std::make_shared<BinaryOpExpr>();
+        rex->setOpCode(BinaryOpExpr::BitWise_XOR_);
+        rex->setLExpr(node);
+        rex->setRExpr(parseBitANDExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseBitORExpr()
+std::shared_ptr<Expr> Parser::parseBitORExpr()
 {
-    Expr* node = parseBitXORExpr();
+    auto node = parseBitXORExpr();
     while (m_tokenSeq->match(TokenKind::BitWise_OR_)) {
-        Expr* rex = parseBitXORExpr();
-        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::BitWise_OR_);
+        auto rex = std::make_shared<BinaryOpExpr>();
+        rex->setOpCode(BinaryOpExpr::BitWise_OR_);
+        rex->setLExpr(node);
+        rex->setRExpr(parseBitXORExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseLogicalANDExpr()
+std::shared_ptr<Expr> Parser::parseLogicalANDExpr()
 {
-    Expr* node = parseBitORExpr();
+    auto node = parseBitORExpr();
     while (m_tokenSeq->match(TokenKind::Logical_AND_)) {
-        Expr* rex = parseBitORExpr();
-        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Logical_AND_);
+        auto rex = std::make_shared<BinaryOpExpr>();
+        rex->setOpCode(BinaryOpExpr::Logical_AND_);
+        rex->setLExpr(node);
+        rex->setRExpr(parseBitORExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseLogicalORExpr()
+std::shared_ptr<Expr> Parser::parseLogicalORExpr()
 {
-    Expr* node = parseLogicalANDExpr();
+    auto node = parseLogicalANDExpr();
     while (m_tokenSeq->match(TokenKind::Logical_OR_)) {
-        Expr* rex = parseLogicalANDExpr();
-        node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Logical_OR_);
+        auto rex = std::make_shared<BinaryOpExpr>();
+        rex->setOpCode(BinaryOpExpr::Logical_OR_);
+        rex->setLExpr(node);
+        rex->setRExpr(parseLogicalANDExpr());
+        node = rex;
     }
     return node;
 }
 
-Expr* Parser::parseConditionalExpr()
+std::shared_ptr<Expr> Parser::parseConditionalExpr()
 {
-    Expr* node = parseLogicalORExpr();
+    auto node = parseLogicalORExpr();
     if (m_tokenSeq->match(TokenKind::Conditional_)) {
-        Expr* th = parseExpr();
+        auto rex = std::make_shared<ConditionalExpr>();
+        rex->setCond(node);
+        rex->setElse(parseExpr());
         m_tokenSeq->expect(TokenKind::Colon_);
-        Expr* el = parseConditionalExpr();
-        node = ConditionalExpr::NewObj(node, th, el);
+        rex->setThen(parseConditionalExpr());
+        node = rex;
     }
     return node;
 }
@@ -567,73 +560,62 @@ Expr* Parser::parseConditionalExpr()
  (6.5.16) assignment-operator: one of
  = *= /= %= +=-= <<= >>= &= ^= |=
 */
-Expr* Parser::parseAssignExpr()
+std::shared_ptr<Expr> Parser::parseAssignExpr()
 {
-    Expr* rex = nullptr;
-    BinaryOpExpr::OpCode opc;
-    Expr* node = parseConditionalExpr();
+    auto node = std::make_shared<BinaryOpExpr>();
+    node->setLExpr(parseConditionalExpr());
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Assign_:
-        opc = BinaryOpExpr::Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::Assign_);
         break;
 
     case TokenKind::Mult_Assign_:
-        opc = BinaryOpExpr::Mult_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::Mult_Assign_);
         break;
 
     case TokenKind::Div_Assign_:
-        opc = BinaryOpExpr::Div_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::Div_Assign_);
         break;
 
     case TokenKind::Mod_Assign_:
-        opc = BinaryOpExpr::Mod_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::Mod_Assign_);
         break;
 
     case TokenKind::Add_Assign_:
-        opc = BinaryOpExpr::Add_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::Add_Assign_);
         break;
 
     case TokenKind::Sub_Assign_:
-        opc = BinaryOpExpr::Sub_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::Sub_Assign_);
         break;
 
     case TokenKind::LShift_Assign_:
-        opc = BinaryOpExpr::LShift_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::LShift_Assign_);
         break;
 
     case TokenKind::RShift_Assign_:
-        opc = BinaryOpExpr::RShift_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::RShift_Assign_);
         break;
 
     case TokenKind::BitWise_AND_Assign_:
-        opc = BinaryOpExpr::BitWise_AND_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::BitWise_AND_Assign_);
         break;
 
     case TokenKind::BitWise_XOR_Assign_:
-        opc = BinaryOpExpr::BitWise_XOR_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::BitWise_XOR_Assign_);
         break;
 
     case TokenKind::BitWise_OR_Assign_:
-        opc = BinaryOpExpr::BitWise_OR_Assign_;
-        rex = parseAssignExpr();
+        node->setOpCode(BinaryOpExpr::BitWise_OR_Assign_);
         break;
         
     default:
         sytaxError("expect assignment-operator, but not!");
         break;
     }
-    return BinaryOpExpr::NewObj(node, rex, opc);
+    node->setRExpr(parseAssignExpr());
+    return node;
 }
 
 /*
@@ -641,13 +623,15 @@ Expr* Parser::parseAssignExpr()
  assignment-expression
  expression , assignment-expression
 */
-Expr* Parser::parseExpr()
+std::shared_ptr<Expr> Parser::parseExpr()
 {
-    Expr* node = nullptr;
-    node = parseAssignExpr();
+    auto node = parseAssignExpr();
     while (m_tokenSeq->match(TokenKind::Comma_)) {
-        auto rnode = parseAssignExpr();
-        node = BinaryOpExpr::NewObj(node, rnode, BinaryOpExpr::Comma, QualType());
+        auto rex = std::make_shared<BinaryOpExpr>();
+        rex->setOpCode(BinaryOpExpr::Comma);
+        rex->setLExpr(node);
+        rex->setRExpr(parseAssignExpr());
+        node = rex;
     }
     return node;
 }
@@ -655,7 +639,7 @@ Expr* Parser::parseExpr()
 /*(6.6) constant-expression:
  conditional-expression
 */
-Expr* Parser::parseConstansExpr()
+std::shared_ptr<Expr> Parser::parseConstansExpr()
 {
     return parseConditionalExpr();
 }
@@ -664,33 +648,26 @@ Expr* Parser::parseConstansExpr()
    posftix-expr： （type-name）{...}
    cast-expr: (type-name) cast-expr
 */
-Expr* Parser::parseParenExpr()
+std::shared_ptr<Expr> Parser::parseParenExpr()
 {
     m_tokenSeq->expect(TokenKind::LParent_);
-    Expr* node = nullptr;
     if (m_systable->isTypeName(m_tokenSeq->peek())) {
         QualType qt = parseTypeName();
         m_tokenSeq->expect(TokenKind::RParent_);
         if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
-            //node = parseInitlizerList();
-            while (m_tokenSeq->match(TokenKind::Comma_)) {
-                //auto rex = parseInitlizerList();
-                //node = BinaryOpExpr::NewObj(node, rex, BinaryOpExpr::Comma);
-            }
-            m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
-            //node = CompoundLiteralExpr::NewObj();
+            // TODO
         }
         else {
-            auto lex = parseCastExpr();
-            //node = sema_->onActCastExpr(qt, lex);
+            // TODO
         }
     }
     else {
-        auto lex = parseExpr();
+        auto node = std::make_shared<ParenExpr>();
+        node->setSubExpr(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
-        node = ParenExpr::NewObj(lex);
+        return node;
     }
-    return node;
+    return nullptr;
 }
 
 //---------------------------------------------------------Declarations------------------------------------------------------------------------
@@ -701,31 +678,26 @@ Expr* Parser::parseParenExpr()
 DeclGroup Parser::parseDeclaration()
 {
     DeclGroup res;
-    int sc = 0, fs = 0;
-    QualType qt = parseDeclarationSpec(&sc, &fs);
+    auto declarator = parseDeclarationSpec();
     if (m_tokenSeq->match(TokenKind::Semicolon_)) {
-        if (qt->getKind() == Type::RECORD) {
-            res.push_back(dynamic_cast<RecordType*>(qt.getPtr())->getTagDecl());
-        }
-        else if (qt->getKind() == Type::ENUM) {
-            res.push_back(dynamic_cast<EnumType*>(qt.getPtr())->getTagDecl());
-        }
-        else {
-            sytaxError("declaration specifier incomplete!");
-        }
+        // 枚举，结构体和typedef返回，不加入到全局声明
         return res;
     }
 
     // 解析第一个声明符
-    Declarator declarator("", qt, sc, fs);
-    Decl* dc = parseInitDeclarator(declarator);
-    if (qt->isFunctionType() && m_tokenSeq->test(TokenKind::LCurly_Brackets_)) {
-        //res.push_back(parseFunctionDefinitionBody(fstDecl));
-        return res;
-    } else {
-        //res.push_back(fstDecl);
+    auto decl = parseInitDeclarator(declarator);
+    // 检测是否是函数
+    if (decl->getKind() == AstNode::NK_FunctionDecl) {
+        // 判断是否是函数定义是，直接返回
+        if (m_tokenSeq->test(TokenKind::LCurly_Brackets_)) {
+            dynamic_cast<FunctionDecl*>(decl.get())->setBody(parseCompoundStmt());
+            res.push_back(decl);
+            return res;
+        }
+        // 不是函数定义时，添加到res
+        res.push_back(decl);
     }
-
+    // 解析后续的变量声明
     while (m_tokenSeq->match(TokenKind::Comma_)) {
             res.push_back(parseInitDeclarator(declarator));
     }
@@ -733,11 +705,10 @@ DeclGroup Parser::parseDeclaration()
     return res;
 }
 
-QualType Parser::parseDeclarationSpec(int* sc, int* fs)
+Declarator Parser::parseDeclarationSpec()
 {
-    int tq = 0; // 类型限定符
-    int ts = 0; // 类型说明符
-    Type* ty = nullptr; // 类型：内建类型,自定义类型
+    Declarator res;
+    int ts = 0, tq = 0;
     while (true)
     {
         TokenKind tkind = m_tokenSeq->next()->kind_;
@@ -745,19 +716,35 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         {
         // (6.7.1) storage class specifier
         case TokenKind::Typedef:
-            parseStorageClassSpec(StorageClass::TYPEDEF, sc);
+            if (res.getStorageClass() != 0) {
+                sytaxError("duplication storageclass!");
+            }
+            res.setStorageClass(StorageClass::TYPEDEF);
+            res.setKind(Declarator::DK_TYPEDEFNAME);
             break;
         case TokenKind::Extern:
-            parseStorageClassSpec(StorageClass::EXTERN, sc);
+            if (res.getStorageClass() != 0) {
+                sytaxError("duplication storageclass!");
+            }
+            res.setStorageClass(StorageClass::EXTERN);
             break;
         case TokenKind::Static:
-            parseStorageClassSpec(StorageClass::STATIC, sc);
+            if (res.getStorageClass() != 0) {
+                sytaxError("duplication storageclass!");
+            }
+            res.setStorageClass(StorageClass::STATIC);
             break;
         case TokenKind::Auto:
-            parseStorageClassSpec(StorageClass::AUTO, sc);
+            if (res.getStorageClass() != 0) {
+                sytaxError("duplication storageclass!");
+            }
+            res.setStorageClass(StorageClass::AUTO);
             break;
         case TokenKind::Register:
-            parseStorageClassSpec(StorageClass::REGISTER, sc);
+            if (res.getStorageClass() != 0) {
+                sytaxError("duplication storageclass!");
+            }
+            res.setStorageClass(StorageClass::REGISTER);
             break;
 
         // (6.7.2) type specifiers
@@ -853,19 +840,24 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
         // (6.7.2) type-specifier->struct-or-union-specifier
         case TokenKind::Struct:
         case TokenKind::Union:
+        {
+            bool isStruct = m_tokenSeq->cur()->kind_ == TokenKind::Struct;
             if (ts & ~COM_RECORD) {
                 sytaxError("unexpect struct or union!");
             }
-            ty = parseStructOrUnionSpec(m_tokenSeq->cur()->kind_ == TokenKind::Struct);
-            return QualType(ty, tq);
+            res.setType(QualType(parseStructOrUnionSpec(isStruct), tq));
+            res.setKind(Declarator::DK_RECORD);
+            return res;
+        }
 
         // (6.7.2) type-specifier->enum-specifier
         case TokenKind::Enum:
             if (ts & ~COM_ENUM) {
                 sytaxError("unexpect enum!");
             }
-            ty = parseEnumSpec();
-            return QualType(ty, tq);
+            res.setType(QualType(parseEnumSpec(), tq));
+            res.setKind(Declarator::DK_ENUM);
+            return res;
 
         //(6.7.3) type-qualifier:
         case TokenKind::Const:    tq |= TypeQualifier::CONST; break;
@@ -874,42 +866,53 @@ QualType Parser::parseDeclarationSpec(int* sc, int* fs)
 
         // (6.7.4) function-specifier
         case TokenKind::Inline:
-            parseFunctionSpec(FuncSpecifier::INLINE, fs);
+            res.setFuncSpec(FuncSpecifier::INLINE);
+            res.setKind(Declarator::DK_FUNC);
             break;
 
         // (6.7.7) typedef-name 判断当前是否已有其他方式
         case TokenKind::Identifier:
-            if (ts == 0) {
-                if (m_systable->isTypeName(m_tokenSeq->cur())) {
-                    //ty = sys_->lookup(Symbol::NORMAL, seq_->cur()->value_)->getType();
-                } else {
-                    sytaxError("expect type, but not!");
-                }
-                break;
-            } else {
-                ty = m_systable->getBuiltTypeByTypeSpec(ts);
+            // 遇到标识符后，判断是否有基本类型
+            if (ts) {
+                res.setType(QualType(m_systable->getBuiltTypeByTS(ts), tq));
                 m_tokenSeq->reset();
+            }
+            // 判断之前是否已经有类型
+            else if (!res.getType().isNull()) {
+                m_tokenSeq->reset();
+            }
+            // 判断标识符是否是类型
+            else if (m_systable->isTypeName(m_tokenSeq->cur())){
+                auto sys = m_systable->LookupNormal(m_tokenSeq->cur()->value_);
+                if (sys) {
+                    auto ty = sys->getType();
+                    res.setType(QualType(ty.getPtr(), ty.getQual()|tq));
+                }
+            }
+            else {
+                sytaxError("expect type, but not!");
+                break;
             }
 
         default:
             // 遇到了标识符或者其他
-            if (!ty) {
+            if (res.getType().isNull()) {
                 sytaxError("incomplete type specifier!");
             }
-            return QualType(ty, tq);
+            return res;
         }
     }
-    return QualType();
+    return res;
 }
 
 /*init-declarator:
  declarator
  declarator = initializer
 */
-Decl* Parser::parseInitDeclarator(Declarator dc)
+std::shared_ptr<DeclaratorDecl> Parser::parseInitDeclarator(Declarator dc)
 {
     parseDeclarator(dc);
-    Expr* initExpr = nullptr;
+    std::shared_ptr<Expr> initExpr = nullptr;
     if (m_tokenSeq->match(TokenKind::Assign_)) {
         initExpr = parseInitializer();
     }
@@ -942,7 +945,7 @@ void Parser::parseStorageClassSpec(StorageClass val, int* sc)
  struct-or-union identifieropt { struct-declaration-list }
  struct-or-union identifier
 */
-Type* Parser::parseStructOrUnionSpec(bool isStruct)
+std::shared_ptr<RecordType> Parser::parseStructOrUnionSpec(bool isStruct)
 {
     //符号解析
     std::string key;
@@ -993,7 +996,7 @@ Type* Parser::parseStructOrUnionSpec(bool isStruct)
  specifier-qualifier-list struct-declarator-list ;
  解析结构体成员
 */
-Type* Parser::parseStructDeclarationList(Symbol* sym)
+QualType Parser::parseStructDeclarationList(Symbol* sym)
 {
     ScopeManager scm(this, Scope::BLOCK);
     if (!sym) {
@@ -1057,7 +1060,7 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
  enum identifieropt { enumerator-list ,}
  enum identifier
 */
-Type* Parser::parseEnumSpec()
+std::shared_ptr<EnumType> Parser::parseEnumSpec()
 {
     // 符号解析
     std::string key;
@@ -1106,7 +1109,7 @@ Type* Parser::parseEnumSpec()
  enumerator
  enumerator-list , enumerator
 */
-Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
+QualType Parser::parseEnumeratorList(Symbol* sym, Type* ty)
 {
     // 打开块作用域
     ScopeManager scm(this, Scope::BLOCK);
@@ -1138,7 +1141,7 @@ Type* Parser::parseEnumeratorList(Symbol* sym, Type* ty)
   (6.4.4.3) enumeration-constant:
  identifier
 */
-EnumConstantDecl* Parser::parseEnumerator(QualType qt)
+std::shared_ptr<EnumConstantDecl> Parser::parseEnumerator(QualType qt)
 {
     // 解析符号
     m_tokenSeq->expect(TokenKind::Identifier);
@@ -1205,7 +1208,7 @@ void Parser::parseFunctionSpec(FuncSpecifier val, int* fs)
 void Parser::parseDeclarator(Declarator& dc)
 {
     // 计算pointer指针类型
-    QualType base = parsePointer(dc.getType());
+    auto base = parsePointer(dc.getType());
     dc.setType(base);
     // （ declarator ）
     if (m_tokenSeq->match(TokenKind::Identifier)) {
@@ -1222,7 +1225,7 @@ void Parser::parseDeclarator(Declarator& dc)
     while (true)
     {
         if (m_tokenSeq->match(TokenKind::LParent_)) {
-            m_systable->enterScope(Scope::FUNC_PROTOTYPE);
+            m_systable->enterFuncPrototypeScope();
             auto paramList = parseParameterList();
             m_systable->exitScope();
             m_tokenSeq->expect(TokenKind::RParent_);
@@ -1250,27 +1253,13 @@ QualType Parser::modifyBaseType(QualType oldBase, QualType newBase, QualType cur
     return curType;
 }
 
-Expr* Parser::parseArrayLen()
+std::shared_ptr<Expr> Parser::parseArrayLen()
 {
     return nullptr;
 }
 
 QualType Parser::parseFuncOrArrayDeclarator(QualType base)
 {
-    if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
-        auto len = parseArrayLen();
-        m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
-        base = parseFuncOrArrayDeclarator(base);
-        return ArrayType::NewObj(base, len);
-    }
-    else if (m_tokenSeq->match(TokenKind::LParent_)) {
-        m_systable->enterScope(Scope::FUNC_PROTOTYPE);
-        auto paramList = parseParameterList();
-        m_systable->exitScope();
-        m_tokenSeq->expect(TokenKind::RParent_);
-        base = parseFuncOrArrayDeclarator(base);
-        return FunctionType::NewObj(base, false, false, paramList);
-    }
     return base;
 }
 
@@ -1281,9 +1270,8 @@ QualType Parser::parseFuncOrArrayDeclarator(QualType base)
 QualType Parser::parsePointer(QualType qt)
 { 
     while (m_tokenSeq->match(TokenKind::Multiplication_)) {
-        Type* ty = PointerType::NewObj(qt);
-        int tq = parseTypeQualList();
-        qt = QualType(ty, tq);
+        auto ty = std::make_shared<PointerType>(qt);
+        qt = QualType(ty, parseTypeQualList());
     }
     return qt;
 }
@@ -1413,7 +1401,7 @@ void Parser::parseTypedefName()
  { initializer-list }
  { initializer-list , }
 */
-Expr* Parser::parseInitializer()
+std::shared_ptr<Expr> Parser::parseInitializer()
 {
     if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         parseInitializerList();
@@ -1475,142 +1463,132 @@ void Parser::parseDesignator()
     iteration-statement
     jump-statement
 */
-Stmt* Parser::parseStmt()
+std::shared_ptr<Stmt> Parser::parseStmt()
 {
-    Stmt* node = nullptr;
     switch (m_tokenSeq->peek()->kind_)
     {
     case TokenKind::Identifier:
     case TokenKind::Case:
     case TokenKind::Default:
-        node = parseLabeledStmt();
-        break;
+        return parseLabeledStmt();
     
     case TokenKind::LCurly_Brackets_:
-        node = parseCompoundStmt();
-        break;
+        return parseCompoundStmt();
 
     case TokenKind::If:
     case TokenKind::Switch:
-        node = parseSelectionStmt();
-        break;
+        return parseSelectionStmt();
 
     case TokenKind::While:
     case TokenKind::Do:
     case TokenKind::For:
-        node = parseIterationStmt();
-        break;
+        return parseIterationStmt();
 
     case TokenKind::Goto:
     case TokenKind::Continue:
     case TokenKind::Break:
     case TokenKind::Return:
-        node = parseJumpStmt();
-        break;
+        return parseJumpStmt();
     
     default:
-        node = parseExprStmt();
-        break;
+        return parseExprStmt();
     }
-    return node;
+    return nullptr;
 }
 
-Stmt* Parser::parseLabeledStmt()
+std::shared_ptr<Stmt> Parser::parseLabeledStmt()
 {
-    Stmt* node = nullptr;
-    Token* tk = m_tokenSeq->next();
-    switch (tk->kind_)
+    switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Identifier:
     {
-        LabelDecl* key = nullptr;//LabelDecl::NewObj(tk->value_);
-        // 添加到符号表
-        m_systable->insertLabel(tk->value_, key);
-        m_tokenSeq->expect(TokenKind::Colon_);
-        Stmt* body = parseStmt();
-        node = LabelStmt::NewObj(key, body);
+        // TODO
         break;
     }
     
     case TokenKind::Case:
     {
-        Expr* cond = parseConstansExpr();
+        auto node = std::make_shared<CaseStmt>();
+        node->setCond(parseConstansExpr());
         m_tokenSeq->expect(TokenKind::Colon_);
-        Stmt* body = parseStmt();
-        node = CaseStmt::NewObj(cond, body);
-        break;
+        node->setBody(parseStmt());
+        return node;
     }
 
     case TokenKind::Default:
     {
+        auto node = std::make_shared<DefaultStmt>();
         m_tokenSeq->expect(TokenKind::Colon_);
-        Stmt* body = parseStmt();
-        node = DefaultStmt::NewObj(nullptr, body);
-        break;
+        node->setBody(parseStmt());
+        return node;
     }
 
     default:
         sytaxError("expect label, but not!");
-        return nullptr;
     }
-    return node;
+    return nullptr;
 }
 
-Stmt* Parser::parseCompoundStmt()
+std::shared_ptr<CompoundStmt> Parser::parseCompoundStmt()
 {
     ScopeManager scm(this, Scope::BLOCK);
+    auto node = std::make_shared<CompoundStmt>();
     m_tokenSeq->expect(TokenKind::LCurly_Brackets_);
-    std::vector<Stmt*> res;
     while (!m_tokenSeq->match(TokenKind::RCurly_Brackets_)) {
-        DeclGroup dc = parseDeclaration();
-        for (int i =0; i < dc.size(); i++) {
-            res.push_back(DeclStmt::NewObj(dc[i]));
+        auto decls = parseDeclaration();
+        for (auto decl : decls) {
+            node->addStmt(std::make_shared<DeclStmt>(decl));
         }
-        Stmt* st = parseStmt();
-        res.push_back(st);
+        auto stmt = parseStmt();
+        if (stmt) {
+            node->addStmt(parseStmt());
+        }
     }
-    Stmt* node = CompoundStmt::NewObj(res);
     return node;    
 }
 
-Stmt* Parser::parseExprStmt()
+std::shared_ptr<ExprStmt> Parser::parseExprStmt()
 {
-    Expr* ex = parseExpr();
+    auto expr = parseExpr();
     m_tokenSeq->expect(TokenKind::Semicolon_);
-    return ExprStmt::NewObj(ex);
+    if (expr) {
+        return std::make_shared<ExprStmt>(expr);
+    }
+    return nullptr;
 }
 
-Stmt* Parser::parseSelectionStmt()
+std::shared_ptr<Stmt> Parser::parseSelectionStmt()
 {
-    Stmt* node = nullptr;
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::If:
     {   
         m_tokenSeq->expect(TokenKind::LParent_);
-        Expr* cond = parseExpr();
+        auto node = std::make_shared<IfStmt>();
+        node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
-        Stmt* th = parseStmt();
-        Stmt* el = (m_tokenSeq->match(TokenKind::Else)) ? parseStmt() : nullptr;
-        node = IfStmt::NewObj(cond, th, el);
-        break;
+        node->setThen(parseStmt());
+        if (m_tokenSeq->match(TokenKind::Else)) {
+            node->setElse(parseStmt());
+        }
+        return node;
     }
 
     case TokenKind::Switch:
     {
         m_tokenSeq->expect(TokenKind::LParent_);
-        Expr* cond = parseExpr();
+        auto node = std::make_shared<SwitchStmt>();
+        node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
-        Stmt* body = parseStmt();
-        node = SwitchStmt::NewObj(cond, body);
-        break;
+        node->setBody(parseStmt());
+        return node;
     }
     
     default:
         sytaxError("expect selection, but not!");
         return nullptr;
     }
-    return node;
+    return nullptr;
 }
 
 /* (6.8.5) iteration-statement:
@@ -1619,30 +1597,30 @@ Stmt* Parser::parseSelectionStmt()
  for ( expressionopt ; expressionopt ; expressionopt ) statement
  for ( declaration expressionopt ; expressionopt ) statement 
 */
-Stmt* Parser::parseIterationStmt()
+std::shared_ptr<Stmt> Parser::parseIterationStmt()
 {
-    Stmt* node = nullptr;
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::While:
     {
+        auto node = std::make_shared<WhileStmt>();
         m_tokenSeq->expect(TokenKind::LParent_);
-        Expr* cond = parseExpr();
+        node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
-        Stmt* body = parseStmt();
-        node = WhileStmt::NewObj(cond, body);
-        break;
+        node->setBody(parseStmt());
+        return node;
     }
 
     case TokenKind::Do:
     {
-        Stmt* body = parseStmt();
+        auto node = std::make_shared<DoStmt>();
+        node->setBody(parseStmt());
         m_tokenSeq->expect(TokenKind::While);
         m_tokenSeq->expect(TokenKind::LParent_);
-        Expr* cond = parseExpr();
+        node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
         m_tokenSeq->expect(TokenKind::Semicolon_);
-        return DoStmt::NewObj(cond, body);
+        return node;
     }
 
     case TokenKind::For:
@@ -1651,9 +1629,8 @@ Stmt* Parser::parseIterationStmt()
     
     default:
         sytaxError("expect iteration, but not!");
-        return nullptr;
     }
-    return node;
+    return nullptr;
 }
 /* (6.8.6) jump-statement:
  goto identifier ;
@@ -1661,43 +1638,46 @@ Stmt* Parser::parseIterationStmt()
  break ;
  return expressionopt ;
 */
-Stmt* Parser::parseJumpStmt()
+std::shared_ptr<Stmt> Parser::parseJumpStmt()
 {
-    Stmt* node = nullptr;
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Goto:
     {
+        auto node = std::make_shared<GotoStmt>();
         m_tokenSeq->expect(TokenKind::Identifier);
-        Symbol* sym = m_systable->lookup(Symbol::LABEL, m_tokenSeq->cur()->value_);
+        auto sys = m_systable->LookupLabel(m_tokenSeq->cur()->value_);
         m_tokenSeq->expect(TokenKind::Semicolon_);
-        node = GotoStmt::NewObj(nullptr);
-        break;
+        return node;
     }
 
     case TokenKind::Continue:
+    {
+        auto node = std::make_shared<ContinueStmt>();
         m_tokenSeq->expect(TokenKind::Semicolon_);
-        node = ContinueStmt::NewObj(nullptr);
-        break;
+        return node;
+    }
 
     case TokenKind::Break:
+    {
+        auto node = std::make_shared<BreakStmt>();
         m_tokenSeq->expect(TokenKind::Semicolon_);
-        node = BreakStmt::NewObj(nullptr);
-        break;
+        return node;
+    }
 
     case TokenKind::Return:
     {
+        auto node = std::make_shared<ReturnStmt>();
         auto rex = parseExprStmt();
-        node = ReturnStmt::NewObj(nullptr);
-        break;
+        node->setRetExpr(rex->getExpr());
+        return node;
     }
     
     default:
         sytaxError("expect jump, but not!");
-        return nullptr;
 
     }
-    return node;
+    return nullptr;
 }
 //---------------------------------------------------------External definitions------------------------------------------------------------------------
 /*(6.9.1) function-definition:

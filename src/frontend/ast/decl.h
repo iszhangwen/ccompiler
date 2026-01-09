@@ -31,6 +31,8 @@ struct Declarator
         DK_FIELD,
         DK_INDIRECTFILED,
         DK_TYPEDEFNAME,
+        DK_RECORD,
+        DK_ENUM
     };
     // 标识符类型
     DeclaratorKind m_kind;
@@ -43,6 +45,8 @@ struct Declarator
     // 函数说明符  
     FuncSpecifier m_funcSpec;
     // 构造函数
+    Declarator()
+    : m_kind(DK_UNDEFINED), m_name(""), m_type(nullptr), m_storageClass(N_SCLASS), m_funcSpec(N_FSPEC) {}
     Declarator(const std::string& name, QualType type, StorageClass sc, FuncSpecifier fs)
     : m_kind(DK_UNDEFINED), m_name(name), m_type(type), m_storageClass(sc), m_funcSpec(fs) {}
 

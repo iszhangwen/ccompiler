@@ -17,12 +17,12 @@ private:
 class DeclRefExpr : public Expr 
 {
 public:
-    DeclRefExpr(QualType qt)
-    : Expr(NodeKind::NK_DeclRefExpr, qt), m_decl(nullptr) {}
+    DeclRefExpr()
+    : Expr(NodeKind::NK_DeclRefExpr, QualType()), m_decl(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
-    std::shared_ptr<NamedDecl> getNameDecl() const {return m_decl;}
-    void setNameDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
+    std::shared_ptr<NamedDecl> getDecl() const {return m_decl;}
+    void setDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
 private:
     std::shared_ptr<NamedDecl> m_decl;
 };
@@ -30,10 +30,13 @@ private:
 class IntegerLiteral : public Expr 
 {
 public:
-    IntegerLiteral(QualType qt)
-    : Expr(NodeKind::NK_IntegerLiteral, qt), m_val(0){}
+    IntegerLiteral()
+    : Expr(NodeKind::NK_IntegerLiteral, QualType()), m_val(0){}
 
     virtual void accept(ASTVisitor* vt) override;
+    void setValue(std::any val) {m_val = val;}
+    int64_t getSignedValue() {return std::any_cast<int64_t>(m_val);}
+    uint64_t getUnsignedValue() {return std::any_cast<uint64_t>(m_val);}
 private:
     std::any m_val;
 };
@@ -42,9 +45,11 @@ class CharacterLiteral : public Expr
 {
 public:
     CharacterLiteral(QualType qt)
-    : Expr(NodeKind::NK_CharacterLiteral, qt), m_val('0') {}
+    : Expr(NodeKind::NK_CharacterLiteral, QualType()), m_val('0') {}
 
     virtual void accept(ASTVisitor* vt) override;
+    void setValue(std::any val) {m_val = val;}
+    char getValue() {return std::any_cast<char>(m_val);}
 private:
     std::any m_val;
 };
@@ -52,10 +57,14 @@ private:
 class FloatingLiteral : public Expr 
 {
 public:
-    FloatingLiteral(QualType qt)
-    : Expr(NodeKind::NK_FloatingLiteral, qt), m_val(0.0f) {}
+    FloatingLiteral()
+    : Expr(NodeKind::NK_FloatingLiteral, QualType()), m_val(0.0f) {}
 
     virtual void accept(ASTVisitor* vt) override;
+    void setValue(std::any val) {m_val = val;}
+    float getFloatValue() {return std::any_cast<float>(m_val);}
+    double getDoubleValue() {return std::any_cast<double>(m_val);}
+    long double getLongDoubleValue() {return std::any_cast<long double>(m_val);}
 private:
     std::any m_val;
 };
@@ -67,6 +76,8 @@ public:
     : Expr(NodeKind::NK_StringLiteral, qt), m_val("") {}
 
     virtual void accept(ASTVisitor* vt) override;
+    void setValue(std::any val) {m_val = val;}
+    std::string getValue() {return std::any_cast<std::string>(m_val);}
 private:
     std::any m_val;
 };
@@ -74,7 +85,7 @@ private:
 class ParenExpr : public Expr 
 {
 public:
-    ParenExpr(Expr* val)
+    ParenExpr()
     : Expr(NodeKind::NK_ParenExpr, QualType()), val_(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
@@ -235,7 +246,7 @@ public:
     };
 
     BinaryOpExpr()
-    : Expr(NodeKind::NK_BinaryOperator, QualType()), m_lexpr(nullptr), m_rexpr(nullptr), m_opcode(nullptr) {}
+    : Expr(NodeKind::NK_BinaryOperator, QualType()), m_lexpr(nullptr), m_rexpr(nullptr), m_opcode(Comma){}
 
     virtual void accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {return m_opcode;}
