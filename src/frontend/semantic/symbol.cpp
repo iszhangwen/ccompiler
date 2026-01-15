@@ -106,6 +106,7 @@ std::shared_ptr<Symbol> SymbolTableContext::LookupNormal(const std::string& name
 {
     return m_curScope->lookup(Symbol::NORMAL, name);
 }
+
 void SymbolTableContext::enterFileScope()
 {
     m_curScope = std::make_shared<Scope>(Scope::FILE, m_curScope);
@@ -215,14 +216,14 @@ void SymbolTableContext::initBuiltType()
     insert("signed_char", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::BYTE, IntegerType::CHAR));
     insert("unsignd_char", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR));
     // 整型
-    insert("signed_short_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT));
-    insert("signed_normal_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT));
-    insert("signed_long_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT));
-    insert("signed_long_long_int", std::make_shared<VoidType>(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT));
-    insert("unsignd_short_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT));
-    insert("unsignd_normal_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT));
-    insert("unsignd_long_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
-    insert("unsigned_long_long_int", std::make_shared<VoidType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("signed_short_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT));
+    insert("signed_normal_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT));
+    insert("signed_long_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("signed_long_long_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT));
+    insert("unsignd_short_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT));
+    insert("unsignd_normal_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT));
+    insert("unsignd_long_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("unsigned_long_long_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
     // 浮点型
     insert("float", std::make_shared<RealFloatingType>(RealFloatingType::FLOAT));
     insert("double", std::make_shared<RealFloatingType>(RealFloatingType::DOUBLE));
@@ -233,7 +234,7 @@ void SymbolTableContext::initBuiltType()
     insert("long_double_complex", std::make_shared<ComplexType>(ComplexType::LONG_DOUBLE));
 }
 
-std::shared_ptr<Type> SymbolTableContext::getBuiltTypeByTypeSpec(int tq)
+std::shared_ptr<Type> SymbolTableContext::getBuiltTypeByTS(int tq)
 {
     std::string key;
     if (tq & VOID) {

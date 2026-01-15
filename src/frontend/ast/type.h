@@ -82,23 +82,19 @@ public:
     // 类型别名
     TYPEDEF
     };
-    
-protected:
-    Type(TypeKind tk, QualType canonical, const std::string& name, int size, bool isComplete = false)
-    : m_kind(tk), m_qualType(canonical.isNull() ? QualType(this, 0) : canonical), m_name(name), m_size(size), m_isComplete(isComplete) {}
-    Type(TypeKind tk, QualType canonical, bool isComplete = false)
-    : Type(tk, canonical, "", 0, isComplete) {}
-    virtual ~Type() {}
-  
+     
 public:
+    Type(TypeKind tk, QualType canonical, bool isComplete = false){}
+    virtual ~Type() {}
     // 类型基本属性
+
     TypeKind getKind() const { return m_kind;}
     int getAlign() const {return m_align;}
     void setAlign(int align) {m_align = align;}
     int getSize() const {return m_size;}
     void setSize(int size) {m_size = size;}
     std::string getName() const {return m_name;}
-    void getName(const std::string& name) {m_name = name;}
+    void setName(const std::string& name) {m_name = name;}
     QualType getQualType() {return m_qualType;}
     const QualType getQualType() const {return m_qualType;}
     void setQualType(QualType ql) {m_qualType = ql;}
@@ -109,46 +105,46 @@ public:
     对象类型：能够完整描述对象存储特征的类型(如int, struct, 数组等)，编译器可以确定大小和内存布局。
     函数类型：描述函数参数和返回值类型的抽象类型
     不完整类型：缺少完整定义的类型（未指定大小的数组或前向声明的结构体）*/
-    bool isObjectType();
+    virtual bool isObjectType();
     //bool isFunctionType();
-    bool isCompleteType();
+    virtual bool isCompleteType();
     void setCompleteType(bool complete) {m_isComplete = complete;}
     //6.2.5-1
-    bool isBoolType(); 
+    virtual bool isBoolType();
     //6.2.5-4 ~ 6.2.5-7
-    bool isSignedIntegerType();
-    bool isUnSignedIntegerType();
+    virtual bool isSignedIntegerType();
+    virtual bool isUnSignedIntegerType();
     // 6.2.5-10
-    bool isRealFloatingType();
+    virtual bool isRealFloatingType();
     // 6.2.5-11
-    bool isComplexType();
-    bool isFloatingType();
+    virtual bool isComplexType();
+    virtual bool isFloatingType();
     // 6.2.5-14
-    bool isBasicType();
+    virtual bool isBasicType();
     // 6.2.5-15
-    bool isCharacterType();
+    virtual bool isCharacterType();
     // 6.2.5-16
-    bool isEnumeratedType();
+    virtual bool isEnumeratedType();
     // 6.2.5-17
-    bool isIntegerType();
-    bool isRealType();
+    virtual bool isIntegerType();
+    virtual bool isRealType();
     // 6.2.5-18
-    bool isArithmeticType();
+    virtual bool isArithmeticType();
     // 6.2.5-19.1
-    bool isVoidType();
-    bool isArrayType();
-    bool isStructType();
-    bool isUnionType();
-    bool isFunctionType();
-    bool isPointerType();
+    virtual bool isVoidType();
+    virtual bool isArrayType();
+    virtual bool isStructType();
+    virtual bool isUnionType();
+    virtual bool isFunctionType();
+    virtual bool isPointerType();
     //bool isAtomicType();
     // 6.2.5-21
-    bool isScalarType();
-    bool isAggregateType();
+    virtual bool isScalarType();
+    virtual bool isAggregateType();
     // 6.2.5-24
-    bool iaDrivedDeclaratorType();
+    virtual bool iaDrivedDeclaratorType();
     // typedef单独判断
-    bool isTypeDefType();
+    virtual bool isTypeDefType();
 
 private:
     TypeKind m_kind;  // 类型域标识
@@ -164,7 +160,10 @@ class VoidType : public Type
 {
 public:
     VoidType()
-    : Type(Type::VOID, QualType(this), "void", 0, false){}
+    : Type(Type::VOID, QualType(),false){
+        setName("void");
+        setSize(0);
+    }
 };
 
 // bool类型
@@ -172,7 +171,10 @@ class BoolType : public Type
 {
 public:
     BoolType()
-    : Type(Type::BOOL, QualType(this), "_Bool", 1, true){}
+    : Type(Type::BOOL, QualType(), true){
+        setName("_Bool");
+        setSize(1);
+    }
 
 };
 // 整型
@@ -199,7 +201,10 @@ public:
     };
 
     IntegerType(Sign sig, Width wid, Category cate)
-    : Type(Type::INTEGER, QualType(this), true), m_signed(sig), m_width(wid), m_category(cate) {}
+    : Type(Type::INTEGER, QualType(), true)
+    , m_signed(sig)
+    , m_width(wid)
+    , m_category(cate) {}
 
     // 判断是否是整数类型
     bool isSigned() const {return (Sign::SIGNED == m_signed);}
@@ -227,7 +232,7 @@ public:
         LONG_DOUBLE
     };
     RealFloatingType(Category cate)
-    : Type(Type::REALFLOATING, QualType(this), true), m_category(cate) {}
+    : Type(Type::REALFLOATING, QualType(), true), m_category(cate) {}
 
     bool isFloat() const {return (Category::FLOAT == m_category);}
     bool isDouble() const {return (Category::DOUBLE == m_category);}
@@ -248,7 +253,7 @@ public:
     };
 
     ComplexType(Category cate) 
-    : Type(Type::COMPLEX, QualType(this), true), m_category(cate) {}
+    : Type(Type::COMPLEX, QualType(), true), m_category(cate) {}
 
     bool isFloatComplex() const {return (Category::FLOAT == m_category);}
     bool isDoubleComplex() const {return (Category::DOUBLE == m_category);}
@@ -281,6 +286,8 @@ public:
     Static: C99引入得静态大小修饰符(int arr[static 10], 提示编译器至少需要10个元素)
     Star: yoghurt不完整得数组声明（int arr[*] 可变数组）
     */
+    ArrayType()
+    : Type(Type::ARRAY, QualType(), true), m_len(0) {}
     ArrayType(QualType elem, int len)
     : Type(Type::ARRAY, elem, true), m_len(len) {}
     ArrayType(QualType elem, std::shared_ptr<Expr> lenExpr)
@@ -322,25 +329,36 @@ private:
 class RecordType : public Type
 {
 public:
-    RecordType(QualType qt)
-    : Type(Type::RECORD, qt), m_decl(nullptr) {}
+    RecordType(bool isStruct = true)
+    : Type(Type::RECORD,  QualType()), m_isStruct(isStruct), m_decl(nullptr) {
+        setCompleteType(false);
+    }
 
     std::shared_ptr<RecordDecl> getDecl() {return m_decl;}
     void setDecl(std::shared_ptr<RecordDecl> dc) {m_decl = dc;}
 
+    bool isStruct() const {return m_isStruct;}
+    void setIsStruct(bool val) {m_isStruct = val;}
+
+    bool isCompleteType() {return m_decl != nullptr;}
+
 private:
+    bool m_isStruct;
     std::shared_ptr<RecordDecl> m_decl;
 };
 
 class EnumType : public Type
 {
 public:
-    EnumType(QualType qt)
-    : Type(Type::ENUM, qt), m_decl(nullptr) {}
+    EnumType()
+    : Type(Type::ENUM, QualType()), m_decl(nullptr) {
+        setCompleteType(false);
+    }
 
     std::shared_ptr<EnumDecl> getDecl() {return m_decl;}
     void setDecl(std::shared_ptr<EnumDecl> dc) {m_decl = dc;}
 
+    bool isCompleteType() {return m_decl != nullptr;}
 private:
     std::shared_ptr<EnumDecl> m_decl;
 };
@@ -354,6 +372,7 @@ public:
     std::shared_ptr<TypedefDecl> getDecl() {return m_decl;}
     void setDecl(std::shared_ptr<TypedefDecl> dc) {m_decl = dc;}
 
+    bool isCompleteType() {return m_decl != nullptr;}
 private:
     std::shared_ptr<TypedefDecl> m_decl;
 };

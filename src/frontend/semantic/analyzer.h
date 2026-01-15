@@ -7,8 +7,8 @@ class Type;
 class SemaAnalyzer
 {
 private:
-    SymbolTableContext* sys_; // 符号表上下文
+
 public:
-    SemaAnalyzer(SymbolTableContext* sys): sys_(sys) {}
+    SemaAnalyzer(){}
     std::shared_ptr<Type> onActTypeSpec(int ts);
 };

@@ -96,10 +96,6 @@ void CodegenASTVisitor::visit(EnumConstantDecl* ecd)
 {
     std::cout << " EnumConstantDecl" << std::endl;
 }
-void CodegenASTVisitor::visit(IndirectFieldDecl* ifd) 
-{
-    std::cout << " IndirectFieldDecl" << std::endl;
-}
 void CodegenASTVisitor::visit(TypedefDecl* tnd) 
 {
     std::cout << " TypedefDecl" << std::endl;

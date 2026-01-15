@@ -26,7 +26,15 @@ enum TypeSpecCombine {
 ScopeManager::ScopeManager(Parser* p, Scope::ScopeType st)
 : parent_(p) 
 {
-    parent_->m_systable->enterScope(st);
+    if (st == Scope::FILE) {
+        parent_->m_systable->enterFileScope();
+    }else if (st == Scope::BLOCK) {
+        parent_->m_systable->enterBlockScope();
+    }else if (st == Scope::FUNC) {
+        parent_->m_systable->enterFuncScope();
+    }else if (st == Scope::FUNC_PROTOTYPE) {
+        parent_->m_systable->enterFuncPrototypeScope();
+    }
 }
 ScopeManager::~ScopeManager() 
 {
@@ -38,7 +46,7 @@ Parser::Parser(const std::string& filename)
     m_source = std::make_shared<Source>(filename);
     m_tokenSeq = std::make_shared<TokenSequence>(scanner(m_source).tokenize());
     m_systable = std::make_shared<SymbolTableContext>();
-    m_sema = std::make_shared<SemaAnalyzer>(m_systable);
+    m_sema = std::make_shared<SemaAnalyzer>();
 }
 
 Parser:: ~Parser()
@@ -143,7 +151,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
     {
         auto node = std::make_shared<IntegerLiteral>();
         node->setValue(std::atoll(m_tokenSeq->cur()->value_.c_str()));
-        node->setType(m_systable->getBuiltTypeByTypeSpec(TypeSpecifier::LONGLONG));
+        node->setType(m_systable->getBuiltTypeByTS(TypeSpecifier::LONGLONG));
         return node;
     }
 
@@ -151,7 +159,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
     {
         auto node = std::make_shared<FloatingLiteral>();
         node->setValue(std::atof(m_tokenSeq->cur()->value_.c_str()));
-        node->setType(m_systable->getBuiltTypeByTypeSpec(TypeSpecifier::DOUBLE));
+        node->setType(m_systable->getBuiltTypeByTS(TypeSpecifier::DOUBLE));
         return node;
     }
 
@@ -159,7 +167,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
     {
         auto node = std::make_shared<CharacterLiteral>();
         node->setValue(m_tokenSeq->cur()->value_.at(0));
-        node->setType(m_systable->getBuiltTypeByTypeSpec(TypeSpecifier::CHAR));
+        node->setType(m_systable->getBuiltTypeByTS(TypeSpecifier::CHAR));
         return node;
     }
 
@@ -304,44 +312,52 @@ unary-operator: one of
 std::shared_ptr<Expr> Parser::parseUnaryExpr()
 {
     auto node = std::make_shared<UnaryOpExpr>();
-    switch (m_tokenSeq->next()->kind_)
+    switch (m_tokenSeq->peek()->kind_)
     {
     case TokenKind::Increment_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::Pre_Increment_);
         node->setSubExpr(parseUnaryExpr());
         break;
 
     case TokenKind::Decrement_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::Pre_Decrement_);
         node->setSubExpr(parseUnaryExpr());
         break;
 
     case TokenKind::BitWise_AND_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::BitWise_AND_);
         node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Multiplication_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::Multiplication_);
         node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Addition_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::Addition_);
         node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Subtraction_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::Subtraction_);
         node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::BitWise_NOT_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::BitWise_NOT_);
         node->setSubExpr(parseCastExpr());
         break;
 
     case TokenKind::Logical_NOT_:
+        m_tokenSeq->next();
         node->setOpCode(UnaryOpExpr::Logical_NOT_);
         node->setSubExpr(parseCastExpr());
         break;
@@ -562,60 +578,63 @@ std::shared_ptr<Expr> Parser::parseConditionalExpr()
 */
 std::shared_ptr<Expr> Parser::parseAssignExpr()
 {
-    auto node = std::make_shared<BinaryOpExpr>();
-    node->setLExpr(parseConditionalExpr());
-    switch (m_tokenSeq->next()->kind_)
+    auto node = parseConditionalExpr();
+    auto code = BinaryOpExpr::Unknown;
+    switch (m_tokenSeq->peek()->kind_)
     {
     case TokenKind::Assign_:
-        node->setOpCode(BinaryOpExpr::Assign_);
+        code = BinaryOpExpr::Assign_;
         break;
 
     case TokenKind::Mult_Assign_:
-        node->setOpCode(BinaryOpExpr::Mult_Assign_);
+        code = BinaryOpExpr::Mult_Assign_;
         break;
 
     case TokenKind::Div_Assign_:
-        node->setOpCode(BinaryOpExpr::Div_Assign_);
+        code = BinaryOpExpr::Div_Assign_;
         break;
 
     case TokenKind::Mod_Assign_:
-        node->setOpCode(BinaryOpExpr::Mod_Assign_);
+        code = BinaryOpExpr::Mod_Assign_;
         break;
 
     case TokenKind::Add_Assign_:
-        node->setOpCode(BinaryOpExpr::Add_Assign_);
+        code = BinaryOpExpr::Add_Assign_;
         break;
 
     case TokenKind::Sub_Assign_:
-        node->setOpCode(BinaryOpExpr::Sub_Assign_);
+        code = BinaryOpExpr::Sub_Assign_;
         break;
 
     case TokenKind::LShift_Assign_:
-        node->setOpCode(BinaryOpExpr::LShift_Assign_);
+        code = BinaryOpExpr::LShift_Assign_;
         break;
 
     case TokenKind::RShift_Assign_:
-        node->setOpCode(BinaryOpExpr::RShift_Assign_);
+        code = BinaryOpExpr::RShift_Assign_;
         break;
 
     case TokenKind::BitWise_AND_Assign_:
-        node->setOpCode(BinaryOpExpr::BitWise_AND_Assign_);
+        code = BinaryOpExpr::BitWise_AND_Assign_;
         break;
 
     case TokenKind::BitWise_XOR_Assign_:
-        node->setOpCode(BinaryOpExpr::BitWise_XOR_Assign_);
+        code = BinaryOpExpr::BitWise_XOR_Assign_;
         break;
 
     case TokenKind::BitWise_OR_Assign_:
-        node->setOpCode(BinaryOpExpr::BitWise_OR_Assign_);
+        code = BinaryOpExpr::BitWise_OR_Assign_;
         break;
         
     default:
-        sytaxError("expect assignment-operator, but not!");
-        break;
+        return node;
     }
-    node->setRExpr(parseAssignExpr());
-    return node;
+    m_tokenSeq->next();
+    auto rex = std::make_shared<BinaryOpExpr>();
+    rex->setOpCode(code);
+    rex->setLExpr(node);
+    rex->setRExpr(parseAssignExpr());
+    return rex;
 }
 
 /*
@@ -912,20 +931,42 @@ Declarator Parser::parseDeclarationSpec()
 std::shared_ptr<DeclaratorDecl> Parser::parseInitDeclarator(Declarator dc)
 {
     parseDeclarator(dc);
-    std::shared_ptr<Expr> initExpr = nullptr;
-    if (m_tokenSeq->match(TokenKind::Assign_)) {
-        initExpr = parseInitializer();
-    }
     // 判断当前是否处于函数原型作用域
-    bool isFuncProto = (m_systable->isScopeType(Scope::FUNC_PROTOTYPE));
-    Decl* res = new VarDecl(dc.getName(), m_systable->getCurScope(), dc.getType(), dc.getStorageClass(), initExpr);
+    std::shared_ptr<DeclaratorDecl> node = nullptr;
+    if (dc.getKind() == Declarator::DK_FUNC) {
+        node = std::make_shared<FunctionDecl>();
+        if (m_systable->LookupNormal(dc.getName())) {
+            sytaxError("function redefined!");
+        }
+    }
+    else if (dc.getKind() == Declarator::DK_ARRAY) {
+
+    }
+    else {
+        auto var = std::make_shared<VarDecl>();
+        if (m_tokenSeq->match(TokenKind::Assign_)) {
+            var->setInitExpr(parseInitializer());
+        }
+        if (m_systable->LookupNormal(var->getName())) {
+            sytaxError("variable redefined!");
+        }
+        node = var;
+    }
+    node->setName(dc.getName());
+    node->setQualType(dc.getType());
+    node->setScope(m_systable->getCurScope());
+    node->setStorageClass(dc.getStorageClass());
 
     // 插入符号表
-    Symbol* sym = nullptr;
-    if (!dc.getName().empty()) {
-        sym = nullptr;//sys_->insertNormal(dc.getName(), dc.getType(), res);
+    if (m_systable->LookupNormal(node->getName())) {
+        sytaxError("variable redefined!");
     }
-    return res;
+    auto sys = std::make_shared<Symbol>();
+    sys->setName(node->getName());
+    sys->setType(node->getQualType());
+    sys->setDecl(node);
+    m_systable->insertNormal(sys);
+    return node;
 }
 
 void Parser::parseStorageClassSpec(StorageClass val, int* sc)
@@ -945,48 +986,53 @@ void Parser::parseStorageClassSpec(StorageClass val, int* sc)
  struct-or-union identifieropt { struct-declaration-list }
  struct-or-union identifier
 */
-std::shared_ptr<RecordType> Parser::parseStructOrUnionSpec(bool isStruct)
+std::shared_ptr<Type> Parser::parseStructOrUnionSpec(bool isStruct)
 {
-    //符号解析
-    std::string key;
-    if (m_tokenSeq->match(TokenKind::Identifier)) {
-        key = m_tokenSeq->cur()->value_;
+    auto decl = std::make_shared<RecordDecl>();
+    decl->setIsUnion(!isStruct);
+    decl->setScope(m_systable->getCurScope());
+
+    if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
+        // 添加符号到符号表
+        auto sys = std::make_shared<Symbol>();
+        sys->setType(QualType(std::make_shared<RecordType>()));
+        sys->setScope(m_systable->getCurScope());
+        sys->setDecl(decl);
+        m_systable->insertRecord(sys);
+
+        // 解析结构体或枚举成员
+        parseStructDeclarationList(decl);
+        m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
+        return sys->getType().getPtr();
     }
 
-    Symbol* sym = m_systable->lookup(Symbol::RECORD, key);
-    // UDT定义
+    m_tokenSeq->expect(TokenKind::Identifier);
+    decl->setName(m_tokenSeq->cur()->value_);
+    // 添加到符号表
+    auto sys = m_systable->LookupRecord(decl->getName());
+    if (!sys) {
+        sys = std::make_shared<Symbol>();
+        sys->setName(decl->getName());
+        sys->setType(QualType(std::make_shared<RecordType>()));
+        sys->setScope(m_systable->getCurScope());
+        sys->setDecl(decl);
+        m_systable->insertRecord(sys);
+    }
+
+    // 解析结构体或枚举成员
     if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
-        // 符号表没查找到:第一次定义
-        if (!sym) {
-            Type* ty = nullptr;//RecordType::NewObj(isStruct, nullptr);
-            if (!key.empty()) { // 匿名对象不插入符号表
-                sym = m_systable->insertRecord(key, ty, nullptr);
-            }
-            return parseStructDeclarationList(sym);
+        if (sys->getType()->isCompleteType()) {
+            sytaxError("struct or union redefined!");
         }
-        // 符号表查找到了但是类型定义不完整：存在前向声明
-        else if (!sym->getType()->isCompleteType()) {
-            return parseStructDeclarationList(sym);
-        }
-        // 符号表查找到了并且类型定义完整：重复定义
-        else {
-            sytaxError("redefined struct or union!");
-            return nullptr;
-        }
+        parseStructDeclarationList(decl);
+        m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
+        // 生成类型
+        auto ty = std::make_shared<RecordType>();
+        ty->setDecl(decl);
+        ty->setCompleteType(true);
+        sys->setType(QualType(ty));
     }
-    // UDT前向声明 struct test;
-    // struct test *p;
-    // 非定义情况下使用UDT必须要有声明符
-    if (key.empty()) {
-        sytaxError("struct or union need identifier, but not!");
-        return nullptr;
-    }
-    if (sym) {
-        return nullptr;//sym->getType();
-    }
-    Type* ty = nullptr; //::NewObj(isStruct, nullptr);
-    m_systable->insertRecord(key, ty, nullptr);
-    return ty;
+    return sys->getType().getPtr();
 }
 
 /* (6.7.2.1) struct-declaration-list:
@@ -996,22 +1042,14 @@ std::shared_ptr<RecordType> Parser::parseStructOrUnionSpec(bool isStruct)
  specifier-qualifier-list struct-declarator-list ;
  解析结构体成员
 */
-QualType Parser::parseStructDeclarationList(Symbol* sym)
+void Parser::parseStructDeclarationList(std::shared_ptr<RecordDecl> parent)
 {
+    if (!parent) return;
     ScopeManager scm(this, Scope::BLOCK);
-    if (!sym) {
-        return nullptr;
-    }
-    RecordType* ty = nullptr;//<RecordType*>(sym->getType());
-    RecordDecl* dc = nullptr;//RecordDecl::NewObj(sym, true, ty->isStructType());
     do {
-        QualType qt = parseSpecQualList();
-        DeclGroup path = parseStructDeclaratorList(qt, dc);
-        //dc->addField(path);
-        m_tokenSeq->match(TokenKind::Semantics);
-    }while (m_tokenSeq->test(TokenKind::RCurly_Brackets_));
-    ty->setTagDecl(dc);
-    return ty;
+        parseStructDeclaratorList(parent, parseSpecQualList());
+        m_tokenSeq->expect(TokenKind::Semicolon_);
+    }while (!m_tokenSeq->test(TokenKind::RCurly_Brackets_));
 }
 
 /* (6.7.2.1) specifier-qualifier-list:
@@ -1020,7 +1058,8 @@ QualType Parser::parseStructDeclarationList(Symbol* sym)
 */
 QualType Parser::parseSpecQualList()
 {
-    return parseDeclarationSpec(nullptr, nullptr);
+    auto dc = parseDeclarationSpec();
+    return dc.getType();
 }
 
 /* (6.7.2.1) struct-declarator-list:
@@ -1031,28 +1070,26 @@ QualType Parser::parseSpecQualList()
  declarator
  declaratoropt : constant-expression
 */
-DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
+void Parser::parseStructDeclaratorList(std::shared_ptr<RecordDecl> parent, QualType qt)
 {
-    DeclGroup res;
     do {
-        Decl* dc = nullptr;
-        Expr* initEx = nullptr;
+        auto decl = std::make_shared<FieldDecl>();
+        decl->setParent(parent);
+        decl->setQualType(qt);
+        decl->setScope(m_systable->getCurScope());
         if (m_tokenSeq->match(TokenKind::Colon_)) {
-            initEx = parseConstansExpr();
-            dc = nullptr;//FieldDecl::NewObj(nullptr, qt, parent, 0);
-        }
-        else {
-            //NamedDecl* tmp = dynamic_cast<NamedDecl*>(parseDeclarator(qt, 0, 0));
-            NamedDecl* tmp = nullptr;
-            if (m_tokenSeq->match(TokenKind::Colon_)) {
-                initEx = parseConstansExpr();
-            }
-            dc = nullptr;//FieldDecl::NewObj(tmp->getSymbol(), qt, parent, 0);
-        }
-        res.push_back(dc);
+            decl->setOffset(parseConstansExpr());
 
-    }while (m_tokenSeq->match(TokenKind::Semicolon_));
-    return res;
+        }else {
+            Declarator dc;
+            parseDeclarator(dc);
+            decl->setName(dc.getName());
+            decl->setQualType(dc.getType());
+            if (m_tokenSeq->match(TokenKind::Colon_)) {
+                decl->setOffset(parseConstansExpr());
+            }
+        }
+    }while (m_tokenSeq->match(TokenKind::Comma_));
 }
 
 /* (6.7.2.2) enum-specifier:
@@ -1060,101 +1097,97 @@ DeclGroup Parser::parseStructDeclaratorList(QualType qt, Decl* parent)
  enum identifieropt { enumerator-list ,}
  enum identifier
 */
-std::shared_ptr<EnumType> Parser::parseEnumSpec()
+std::shared_ptr<Type> Parser::parseEnumSpec()
 {
-    // 符号解析
-    std::string key;
-    if (m_tokenSeq->match(TokenKind::Identifier)) {
-        key = m_tokenSeq->cur()->value_;
+    auto decl = std::make_shared<EnumDecl>();
+    decl->setScope(m_systable->getCurScope());
+
+    // 枚举类型
+    auto memberType = m_systable->getBuiltTypeByTS(TypeSpecifier::INT);
+    if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
+        // 添加符号到符号表
+        auto sys = std::make_shared<Symbol>();
+        sys->setType(QualType(std::make_shared<EnumType>()));
+        sys->setScope(m_systable->getCurScope());
+        sys->setDecl(decl);
+        m_systable->insertRecord(sys);
+
+        // 解析枚举成员
+        parseEnumeratorList(decl, memberType);
+        m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
+        return sys->getType().getPtr();
     }
 
-    // 枚举定义解析
-    Symbol* sym = m_systable->lookup(Symbol::RECORD, key);
+    m_tokenSeq->expect(TokenKind::Identifier);
+    decl->setName(m_tokenSeq->cur()->value_);
+    // 添加到符号表
+    auto sys = m_systable->LookupRecord(decl->getName());
+    if (!sys) {
+        sys = std::make_shared<Symbol>();
+        sys->setName(decl->getName());
+        sys->setType(QualType(std::make_shared<EnumType>()));
+        sys->setScope(m_systable->getCurScope());
+        sys->setDecl(decl);
+        m_systable->insertRecord(sys);
+    }
+
+    // 解析结构体或枚举成员
     if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
-        // 符号表没有查找到，第一次定义
-        if (!sym) {
-            Type* ty = EnumType::NewObj(nullptr);
-            if (key.empty()) { // 匿名对象不插入符号表
-                m_systable->insertRecord(key, ty, nullptr);
-            }
-            return parseEnumeratorList(nullptr, ty);
+        if (sys->getType()->isCompleteType()) {
+            sytaxError("enum redefined!");
         }
-        // 符号表查找到了但是未定义
-        else if (!sym->getType()->isCompleteType()) {
-            Type* ty = nullptr;//->getType();
-            return parseEnumeratorList(sym, ty);
-        }
-        // 其他情况：符号表查找到了但是已经定义了：重定义错误
-        else {
-            sytaxError("redefined enum identifier!");
-            return nullptr;
-        }
+        parseEnumeratorList(decl, memberType);
+        m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
+        // 生成类型
+        auto ty = std::make_shared<EnumType>();
+        ty->setDecl(decl);
+        ty->setCompleteType(true);
+        sys->setType(QualType(ty));
     }
-    // 枚举声明或使用
-    // 必须要定义符号
-    if (key.empty()) {
-        sytaxError("expect enum identifier, but not!");
-        return nullptr;
-    }
-    // 返回类型，若由符号则返回，否则创建
-    if (!sym) {
-        return nullptr;// sym->getType();
-    }
-    Type* ty = EnumType::NewObj(nullptr);
-    m_systable->insertRecord(key, ty, nullptr);
-    return ty;
+    return sys->getType().getPtr();
 }
 
 /*  (6.7.2.2) enumerator-list:
  enumerator
  enumerator-list , enumerator
-*/
-QualType Parser::parseEnumeratorList(Symbol* sym, Type* ty)
-{
-    // 打开块作用域
-    ScopeManager scm(this, Scope::BLOCK);
-    EnumDecl* dc = nullptr;//::NewObj(sym, true);
-    while (true) {
-        dc->addConstant(parseEnumerator(QualType()));
-        // 匹配到逗号
-        if (m_tokenSeq->match(TokenKind::Comma_)) {
-            if (m_tokenSeq->match(TokenKind::RCurly_Brackets_)) {
-                break;
-            }
-            continue;
-        }
-        // 未匹配到逗号，则必定结束
-        else {
-            m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
-            break;
-        }
-    }
-    // 匿名对象则创建类型
-    EnumType* t = dynamic_cast<EnumType*>(ty);
-    t->setTagDecl(dc);
-    return ty;
-}
-
-/*(6.7.2.2) enumerator:
+  (6.7.2.2) enumerator:
  enumeration-constant
  enumeration-constant = constant-expression
   (6.4.4.3) enumeration-constant:
  identifier
 */
-std::shared_ptr<EnumConstantDecl> Parser::parseEnumerator(QualType qt)
+void Parser::parseEnumeratorList(std::shared_ptr<EnumDecl> parent, QualType qt)
 {
-    // 解析符号
-    m_tokenSeq->expect(TokenKind::Identifier);
-    Symbol* sym = nullptr;
-    // 解析表达式
-    Expr* ex = nullptr;
-    if (m_tokenSeq->match(TokenKind::Assign_)) {
-        ex = parseConstansExpr();
+    if (!parent) return;
+    // 打开块作用域
+    ScopeManager scm(this, Scope::BLOCK);
+    while (true) {
+        // 解析枚举常量
+        if (m_tokenSeq->match(TokenKind::Identifier)) {
+            auto decl = std::make_shared<EnumConstantDecl>();
+            decl->setName(m_tokenSeq->cur()->value_);
+            decl->setScope(m_systable->getCurScope());
+            decl->setQualType(qt);
+            decl->setParent(parent);
+            if (m_tokenSeq->match(TokenKind::Assign_)) {
+                decl->setInitExpr(parseConstansExpr());
+            }
+            parent->addConstant(decl);
+            // 创建符号并加入到符号表
+            auto sys = std::make_shared<Symbol>();
+            sys->setName(decl->getName());
+            sys->setScope(m_systable->getCurScope());
+            sys->setType(decl->getQualType());
+            sys->setDecl(decl);
+            m_systable->insertMember(sys);
+        }
+        // 匹配到","且接下来不是"}"，继续解析
+        if (m_tokenSeq->match(TokenKind::Comma_)
+           && !m_tokenSeq->test(TokenKind::RCurly_Brackets_)) {
+            continue;
+        }
+        break;
     }
-    EnumConstantDecl* dc = nullptr;//EnumConstantDecl::NewObj(sym, ex);
-    // 插入符号表
-    m_systable->insertMember(m_tokenSeq->cur()->value_, nullptr, nullptr);
-    return nullptr;
 }
 
 /* (6.7.3) type-qualifier:
@@ -1229,16 +1262,21 @@ void Parser::parseDeclarator(Declarator& dc)
             auto paramList = parseParameterList();
             m_systable->exitScope();
             m_tokenSeq->expect(TokenKind::RParent_);
-            dc.setType(FunctionType::NewObj(base, false, false, paramList));
-            // 更新声明符的类型
-            dc.setType(modifyBaseType(base, base, dc.getType()));
+            auto newBase = std::make_shared<FunctionType>();
+            newBase->setQualType(base);
+            dc.setType(QualType(newBase));
+            dc.setKind(Declarator::DK_FUNC);
+            break;
         }
         else if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
-            dc.setType(ArrayType::NewObj(dc.getType(), parseArrayLen()));
-            // 更新声明符的类型
-            dc.setType(modifyBaseType(base, base, dc.getType()));
+            auto newBase = std::make_shared<ArrayType>();
+            newBase->setQualType(base);
+            dc.setType(QualType(newBase));
+            dc.setKind(Declarator::DK_ARRAY);
+            break;
         }
         else {
+            dc.setKind(Declarator::DK_VAR);
             break;
         }
     }
@@ -1284,13 +1322,13 @@ void Parser::parseParameterTypeList()
     }
 }
 
-std::vector<ParmVarDecl*> Parser::parseParameterList()
-{
+std::vector<std::shared_ptr<ParmVarDecl>> Parser::parseParameterList()
+{/*
     parseParameterDeclaration();
     while (m_tokenSeq->match(TokenKind::Comma_)) {
         parseParameterDeclaration();
-    }
-    return std::vector<ParmVarDecl*>();
+    }*/
+    return std::vector<std::shared_ptr<ParmVarDecl>>();
 }
 
 /* (6.7.5) parameter-declaration:
@@ -1299,7 +1337,7 @@ std::vector<ParmVarDecl*> Parser::parseParameterList()
 */
 void Parser::parseParameterDeclaration()
 {
-    QualType qt = parseDeclarationSpec(nullptr, nullptr);
+    auto declarator = parseDeclarationSpec();
     if (m_tokenSeq->match(TokenKind::Identifier)) {
         // 解析标识符
         m_tokenSeq->expect(TokenKind::Identifier);
@@ -1468,6 +1506,11 @@ std::shared_ptr<Stmt> Parser::parseStmt()
     switch (m_tokenSeq->peek()->kind_)
     {
     case TokenKind::Identifier:
+        if (m_tokenSeq->test(TokenKind::Colon_))
+            return parseLabeledStmt();
+        else
+            return parseExprStmt();
+
     case TokenKind::Case:
     case TokenKind::Default:
         return parseLabeledStmt();
@@ -1535,13 +1578,17 @@ std::shared_ptr<CompoundStmt> Parser::parseCompoundStmt()
     auto node = std::make_shared<CompoundStmt>();
     m_tokenSeq->expect(TokenKind::LCurly_Brackets_);
     while (!m_tokenSeq->match(TokenKind::RCurly_Brackets_)) {
-        auto decls = parseDeclaration();
-        for (auto decl : decls) {
-            node->addStmt(std::make_shared<DeclStmt>(decl));
-        }
-        auto stmt = parseStmt();
-        if (stmt) {
-            node->addStmt(parseStmt());
+        if (isDeclarationSpecifier(m_tokenSeq->peek()))
+        {
+            auto decls = parseDeclaration();
+            for (auto decl : decls) {
+                node->addStmt(std::make_shared<DeclStmt>(decl));
+            }
+        } else {
+            auto stmt = parseStmt();
+            if (stmt) {
+                node->addStmt(stmt);
+            }
         }
     }
     return node;    
@@ -1679,6 +1726,56 @@ std::shared_ptr<Stmt> Parser::parseJumpStmt()
     }
     return nullptr;
 }
+
+bool Parser::isDeclarationSpecifier(Token* tk)
+{
+    switch (tk->kind_) {
+    case TokenKind::Identifier:
+        return m_systable->isTypeName(tk);
+
+    case TokenKind::Colon_:
+        return false;
+
+    // storage-class-specifier
+    case TokenKind::Typedef:
+    case TokenKind::Extern:
+    case TokenKind::Static:
+    case TokenKind::Auto:
+    case TokenKind::Register:
+
+    // type-specifiers
+    case TokenKind::Short:
+    case TokenKind::Long:
+    case TokenKind::Signed:
+    case TokenKind::Unsigned:
+    case TokenKind::T_Complex:
+    case TokenKind::Void:
+    case TokenKind::Char:
+
+    case TokenKind::Int:
+    case TokenKind::Float:
+    case TokenKind::Double:
+    case TokenKind::T_Bool:
+
+    // struct-or-union-specifier (C99) or class-specifier (C++)
+    case TokenKind::Struct:
+    case TokenKind::Union:
+    // enum-specifier
+    case TokenKind::Enum:
+
+    // type-qualifier
+    case TokenKind::Const:
+    case TokenKind::Volatile:
+    case TokenKind::Restrict:
+
+    // function-specifier
+    case TokenKind::Inline:
+        return true;
+    default:
+        return false;
+      }
+}
+
 //---------------------------------------------------------External definitions------------------------------------------------------------------------
 /*(6.9.1) function-definition:
  declaration-specifiers declarator declaration-listopt compound-statement

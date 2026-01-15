@@ -43,11 +43,11 @@ class DefaultStmt : public Stmt
 {
 public:
     DefaultStmt()
-    : Stmt(NodeKind::NK_DefaultStmt), m_body(val) {}
+    : Stmt(NodeKind::NK_DefaultStmt), m_body(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
-    std::shared_ptr<Stmt> getBody() {return val_;}
+    std::shared_ptr<Stmt> getBody() {return m_body;}
     void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
 
 private:
@@ -63,17 +63,17 @@ public:
     : Stmt(NodeKind::NK_CompoundStmt) {}
 
     CompoundStmt(const std::vector<Stmt*>& vals)
-    : Stmt(NodeKind::NK_CompoundStmt), m_vals(vals) {}
+    : Stmt(NodeKind::NK_CompoundStmt){}
 
     virtual void accept(ASTVisitor* vt) override;
-    StmtGroup getStmts() const {return m_vals;}
-    void setStmts(const StmtGroup& vals) {m_vals = vals;}
-    void addStmt(std::shared_ptr<Stmt> st) {m_vals.push_back(st);}
-    void clearStmts() {m_vals.clear();}
-    size_t size() const {return m_vals.size();}
+    StmtGroup getStmts() const {return m_bodys;}
+    void setStmts(const StmtGroup& vals) {m_bodys = vals;}
+    void addStmt(std::shared_ptr<Stmt> st) {m_bodys.push_back(st);}
+    void clearStmts() {m_bodys.clear();}
+    size_t size() const {return m_bodys.size();}
 
 private:
-    StmtGroup m_vals;
+    StmtGroup m_bodys;
 };
 
 class DeclStmt : public Stmt

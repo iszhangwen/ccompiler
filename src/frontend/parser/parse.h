@@ -17,9 +17,9 @@ public:
     ~ScopeManager();
 };
 
-class Parser {
+class Parser
+{
 private:
-    using std::shared_ptr<Expr> = std::shared_ptr<Expr>;
     friend ScopeManager;
     std::shared_ptr<Source> m_source;
     std::shared_ptr<TokenSequence> m_tokenSeq;
@@ -67,14 +67,13 @@ private:
     // 6.7.1 storage-class-specifier
     void parseStorageClassSpec(StorageClass val, int* sc);
     // 6.7.2 type-specifier
-    std::shared_ptr<RecordType> parseStructOrUnionSpec(bool isStruct);
-    QualType parseStructDeclarationList(Symbol*);
+    std::shared_ptr<Type> parseStructOrUnionSpec(bool isStruct);
+    void parseStructDeclarationList(std::shared_ptr<RecordDecl>);
     QualType parseSpecQualList();
-    DeclGroup parseStructDeclaratorList(QualType qt, Decl* parent);
+    void parseStructDeclaratorList(std::shared_ptr<RecordDecl>, QualType);
     std::shared_ptr<Decl> parseStructDeclarator(QualType qt);
-    std::shared_ptr<EnumType> parseEnumSpec();
-    QualType parseEnumeratorList(Symbol*, Type*);
-    std::shared_ptr<EnumConstantDecl> parseEnumerator(QualType qt);
+    std::shared_ptr<Type> parseEnumSpec();
+    void parseEnumeratorList(std::shared_ptr<EnumDecl>, QualType);
     // 6.7.3 type-qualifier
     int parseTypeQualList();
     // 6.7.4 function-specifier
@@ -87,7 +86,7 @@ private:
     QualType parseFuncOrArrayDeclarator(QualType qt);
     QualType parsePointer(QualType);
     void parseParameterTypeList();
-    std::vector<ParmVarDecl*> parseParameterList();
+    std::vector<std::shared_ptr<ParmVarDecl>> parseParameterList();
     void parseParameterDeclaration();
     void parseIdentifierList();
     // 6.7.6 type-name
@@ -109,6 +108,7 @@ private:
     std::shared_ptr<Stmt> parseSelectionStmt();
     std::shared_ptr<Stmt> parseIterationStmt();
     std::shared_ptr<Stmt> parseJumpStmt();
+    bool isDeclarationSpecifier(Token*);
     /*-------------------------------External definitions-------------------------------*/
     Decl* parseFunctionDefinitionBody(Decl*);
 

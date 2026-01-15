@@ -26,6 +26,9 @@ void CompoundStmt::accept(ASTVisitor* vt)
     if (vt) {
         vt->visit(this);
     }
+    for (auto body : m_bodys) {
+        body->accept(vt);
+    }
 }
 
 void DeclStmt::accept(ASTVisitor* vt) 

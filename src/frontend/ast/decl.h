@@ -51,7 +51,7 @@ struct Declarator
     : m_kind(DK_UNDEFINED), m_name(name), m_type(type), m_storageClass(sc), m_funcSpec(fs) {}
 
     DeclaratorKind getKind() {return m_kind;}
-    void setKind(DeclaratorKind dk) {m_kind = m_kind;}
+    void setKind(DeclaratorKind kind) {m_kind = kind;}
 
     std::string getName() {return m_name;}
     void setName(std::string name) {m_name = name;}
@@ -76,13 +76,13 @@ public:
 
     virtual void accept(ASTVisitor* vt) override;
     // insert new decl
-    void addDecl(const DeclGroup& dc) {m_decls.insert(m_decls.end(), dc.begin(), dc.end());}
-    void addDecl(Decl* dc) {m_decls.push_back(dc);}
-    const DeclGroup& getDecls() const {return m_decls;}
-    size_t size() const {return m_decls.size();}
+    void addDecl(const DeclGroup& dc) {m_bodys.insert(m_bodys.end(), dc.begin(), dc.end());}
+    void addDecl(std::shared_ptr<Decl> dc) {m_bodys.push_back(dc);}
+    const DeclGroup& getDecls() const {return m_bodys;}
+    size_t size() const {return m_bodys.size();}
 
 private:
-    DeclGroup m_decls;
+    DeclGroup m_bodys;
 };
 
 // 所有具有名称的基类, 命名实体具备链接属性
@@ -145,7 +145,7 @@ private:
 class VarDecl : public DeclaratorDecl
 {
 public:
-    VarDecl(NodeKind nk)
+    VarDecl(NodeKind nk = NodeKind::NK_VarDecl)
     : DeclaratorDecl(nk){}
     virtual void accept(ASTVisitor* vt) override;
 
@@ -194,18 +194,18 @@ class FieldDecl : public ValueDecl
 {
 public:
     FieldDecl()
-    : ValueDecl(NK_FieldDecl), m_parent(nullptr), m_offset(0) {}
+    : ValueDecl(NK_FieldDecl), m_parent(), m_offset(nullptr) {}
     virtual void accept(ASTVisitor* vt) override;
 
-    std::shared_ptr<RecordDecl> getParent() {return m_parent;}
+    std::shared_ptr<RecordDecl> getParent() {return m_parent.lock();}
     void setParent(std::shared_ptr<RecordDecl>& parent) {m_parent = parent;}
 
-    unsigned getOffset() {return m_offset;}
-    void setOffset(unsigned offset) {m_offset = offset;}
+    std::shared_ptr<Expr> getOffset() {return m_offset;}
+    void setOffset(std::shared_ptr<Expr> offset) {m_offset = offset;}
 
 private:
-    std::shared_ptr<RecordDecl> m_parent;  // 所属的结构体/联合体
-    unsigned m_offset;     // 字段在内存中的偏移量
+    std::weak_ptr<RecordDecl> m_parent;  // 所属的结构体/联合体
+    std::shared_ptr<Expr> m_offset;     // 字段在内存中的偏移量
 };
 
 class EnumConstantDecl : public ValueDecl
@@ -215,11 +215,15 @@ public:
     : ValueDecl(NK_EnumConstantDecl), m_initExpr(nullptr) {}
     virtual void accept(ASTVisitor* vt) override;
 
+    std::shared_ptr<EnumDecl> getParent() {return m_parent.lock();}
+    void setParent(std::shared_ptr<EnumDecl>& parent) {m_parent = parent;}
+
     std::shared_ptr<Expr> getInitExpr() {return m_initExpr;}
     void setInitExpr(std::shared_ptr<Expr> ex) {m_initExpr = ex;}
 
 private:
     std::shared_ptr<Expr> m_initExpr;
+    std::weak_ptr<EnumDecl> m_parent;
 };
 
 class TypedefDecl : public ValueDecl 
@@ -236,7 +240,7 @@ public:
     TagDecl(NodeKind nk)
     : NamedDecl(nk), m_isDefinition(false) {}
     bool isDefinition() const { return m_isDefinition;}
-    void setDefinition(bool flag) {m_isDefinition = flag;}
+    void setIsDefinition(bool flag) {m_isDefinition = flag;}
 
 private:
     bool m_isDefinition;  // 是否是定义（而非前向声明）

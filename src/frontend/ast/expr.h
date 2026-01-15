@@ -44,7 +44,7 @@ private:
 class CharacterLiteral : public Expr 
 {
 public:
-    CharacterLiteral(QualType qt)
+    CharacterLiteral()
     : Expr(NodeKind::NK_CharacterLiteral, QualType()), m_val('0') {}
 
     virtual void accept(ASTVisitor* vt) override;
@@ -72,8 +72,8 @@ private:
 class StringLiteral : public Expr 
 {
 public:
-    StringLiteral(QualType qt)
-    : Expr(NodeKind::NK_StringLiteral, qt), m_val("") {}
+    StringLiteral()
+    : Expr(NodeKind::NK_StringLiteral, QualType()), m_val("") {}
 
     virtual void accept(ASTVisitor* vt) override;
     void setValue(std::any val) {m_val = val;}
@@ -86,7 +86,7 @@ class ParenExpr : public Expr
 {
 public:
     ParenExpr()
-    : Expr(NodeKind::NK_ParenExpr, QualType()), val_(nullptr) {}
+    : Expr(NodeKind::NK_ParenExpr, QualType()), m_expr(nullptr) {}
 
     virtual void accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getSubExpr() {return m_expr;}
@@ -99,6 +99,7 @@ class UnaryOpExpr : public Expr
 {
 public:
     enum OpCode {
+        Unkonwn,
         Post_Increment_, Post_Decrement_, // [C99 6.5.2.4] Postfix increment and decrement operators
         Pre_Increment_, Pre_Decrement_,   // [C99 6.5.3.1] Prefix increment and decrement operators.
         BitWise_AND_, Multiplication_,    // [C99 6.5.3.2] Address and indirection operators.
@@ -106,8 +107,8 @@ public:
         BitWise_NOT_, Logical_NOT_        // [C99 6.5.3.3] Unary arithmetic operators.
     };
 
-    UnaryOpExpr(QualType qt, Expr* val, OpCode op)
-    : Expr(NodeKind::NK_UnaryOperator, qt), m_expr(val), m_opCode(op) {}
+    UnaryOpExpr()
+    : Expr(NodeKind::NK_UnaryOperator, QualType()), m_expr(nullptr), m_opCode(OpCode::Unkonwn) {}
 
     virtual void accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {return m_opCode;}
@@ -208,7 +209,7 @@ public:
     };
 
     CastExpr()
-    : Expr(NodeKind::NK_CastExpr, QualType), m_castKind(CK_Unknown) {}
+    : Expr(NodeKind::NK_CastExpr, QualType()), m_castKind(CK_Unknown) {}
 
     virtual void accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCastExpr() { return m_val;}
@@ -226,6 +227,7 @@ class BinaryOpExpr : public Expr
 {
 public:
     enum OpCode {
+        Unknown,
         Multiplication_, Division_, Modulus_,    // [C99 6.5.5] Multiplicative operators.
         Addition_, Subtraction_,         // [C99 6.5.6] Additive operators.
         LShift_, RShift_,         // [C99 6.5.7] Bitwise shift operators.

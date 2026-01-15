@@ -38,13 +38,13 @@ public:
     const std::string& getName() const {return m_name;}
     void setName(const std::string& key) {m_name = key;}
 
-    std::shared_ptr<Scope> getScope() {return m_scope.lock();}
+    std::shared_ptr<Scope> getScope() {return m_scope;}
     void setScope(std::shared_ptr<Scope> sc) {m_scope = sc;}
 
     QualType getType() { return m_type;}
     void setType(QualType ty) {m_type = ty;}
 
-    std::shared_ptr<NamedDecl> getDecl() { return m_decl.lock();}
+    std::shared_ptr<NamedDecl> getDecl() { return m_decl;}
     void setDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
 
     bool isTypeName() {return m_isType;}
@@ -54,8 +54,8 @@ private:
     QualType m_type; // 符号的类型
     NameSpace m_nameSpace;
     std::string m_name;
-    std::weak_ptr<Scope> m_scope;
-    std::weak_ptr<NamedDecl> m_decl;
+    std::shared_ptr<Scope> m_scope;
+    std::shared_ptr<NamedDecl> m_decl;
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 

@@ -89,11 +89,11 @@ bool Type::isArrayType()
 }
 bool Type::isStructType()
 {
-    return (Type::STRUCT == getKind());
+    return false;
 }
 bool Type::isUnionType()
 {
-    return (Type::UNION == getKind());
+    return false;
 }
 bool Type::isFunctionType()
 {

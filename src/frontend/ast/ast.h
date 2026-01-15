@@ -20,7 +20,6 @@ class EnumConstantDecl;
 class EnumDecl;
 class TagDecl;
 class RecordDecl;
-class IndirectFieldDecl;
 class TypedefDecl;
 class LabelStmt;
 class CaseStmt;
@@ -68,7 +67,6 @@ public:
     virtual void visit(FunctionDecl* fd) = 0;
     virtual void visit(FieldDecl* fd) = 0;
     virtual void visit(EnumConstantDecl* ecd) = 0;
-    virtual void visit(IndirectFieldDecl* ifd) = 0;
     virtual void visit(TypedefDecl* tnd) = 0;
     virtual void visit(EnumDecl* ed) = 0;
     virtual void visit(RecordDecl* rd) = 0;

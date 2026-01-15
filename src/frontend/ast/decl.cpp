@@ -1,9 +1,14 @@
 #include "decl.h"
+#include "stmt.h"
 
 void TranslationUnitDecl::accept(ASTVisitor* vt) 
 {
     if (vt) {
         vt->visit(this);
+    }
+    for (auto body : m_bodys)
+    {
+        body->accept(vt);
     }
 }
 
@@ -40,6 +45,14 @@ void ParmVarDecl::accept(ASTVisitor* vt)
     if (vt) {
         vt->visit(this);
     }
+}
+
+void FunctionDecl::accept(ASTVisitor* vt)
+{
+    if (vt) {
+        vt->visit(this);
+    }
+    m_body->accept(vt);
 }
 
 void FieldDecl::accept(ASTVisitor* vt) 
