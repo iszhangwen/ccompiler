@@ -6,10 +6,6 @@ void TranslationUnitDecl::accept(ASTVisitor* vt)
     if (vt) {
         vt->visit(this);
     }
-    for (auto body : m_bodys)
-    {
-        body->accept(vt);
-    }
 }
 
 void LabelDecl::accept(ASTVisitor* vt) 

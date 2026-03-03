@@ -1,5 +1,5 @@
 add_library(middleend_interface INTERFACE)
-target_include_directories(frontend_interface INTERFACE
+target_include_directories(middleend_interface INTERFACE
     ir
     pass
 )

@@ -117,9 +117,5 @@ public:
     virtual ~Parser();
     // 解析根节点
     void parseTranslationUnit();
-    void dump(ASTVisitor* av) {
-        if (av) {
-            m_unit->accept(av);
-        }
-    }
+    void accept(ASTVisitor* av) {if (av) m_unit->accept(av);}
 };

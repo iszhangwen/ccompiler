@@ -84,6 +84,7 @@ public:
     int getLevel() const {return m_level;}
     std::shared_ptr<Symbol> lookup(Symbol::NameSpace, const std::string&);
     bool insert(std::shared_ptr<Symbol>);
+    bool isFileScope() {return getScopeType() == ScopeType::FILE;}
 };
 
 /*符号表管理
