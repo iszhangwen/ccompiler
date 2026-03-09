@@ -9,7 +9,7 @@ public:
     LabelStmt()
     : Stmt(NodeKind::NK_LabelStmt), m_key(nullptr), m_val(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<NamedDecl> getLabel() {return m_key;}
     void setLabel(std::shared_ptr<NamedDecl> key) {m_key = key;}
 
@@ -26,7 +26,7 @@ class CaseStmt : public Stmt
 public:
     CaseStmt()
     : Stmt(NodeKind::NK_CaseStmt), m_cond(nullptr), m_body(nullptr) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> cond) {m_cond = cond;}
@@ -45,7 +45,7 @@ public:
     DefaultStmt()
     : Stmt(NodeKind::NK_DefaultStmt), m_body(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     std::shared_ptr<Stmt> getBody() {return m_body;}
     void setBody(std::shared_ptr<Stmt> val) {m_body = val;}
@@ -65,7 +65,7 @@ public:
     CompoundStmt(const std::vector<Stmt*>& vals)
     : Stmt(NodeKind::NK_CompoundStmt){}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     StmtGroup getStmts() const {return m_bodys;}
     void setStmts(const StmtGroup& vals) {m_bodys = vals;}
     void addStmt(std::shared_ptr<Stmt> st) {m_bodys.push_back(st);}
@@ -84,7 +84,7 @@ public:
     DeclStmt(std::shared_ptr<Decl> dc)
     : Stmt(NodeKind::NK_DeclStmt), m_decl(dc) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Decl> getDecl() {return m_decl;}
     void setDecl(std::shared_ptr<Decl> dc) {m_decl = dc;}
 
@@ -101,7 +101,7 @@ public:
     ExprStmt(std::shared_ptr<Expr> ex)
     : Stmt(NodeKind::NK_ExprStmt), m_expr(ex){}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getExpr() {return m_expr;}
     void setExpr(std::shared_ptr<Expr> ex) {m_expr = ex;}
 private:
@@ -114,7 +114,7 @@ public:
     IfStmt()
     : Stmt(NodeKind::NK_IfStmt), m_cond(nullptr), m_then(nullptr), m_else(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     // 获取和设置条件表达式和语句
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
@@ -135,7 +135,7 @@ public:
     SwitchStmt()
     : Stmt(NodeKind::NK_SwitchStmt), m_cond(nullptr), m_body(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
     std::shared_ptr<Stmt> getBody() {return m_body;}
@@ -152,7 +152,7 @@ public:
     WhileStmt()
     : Stmt(NodeKind::NK_WhileStmt), m_cond(nullptr), m_body(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
     std::shared_ptr<Stmt> getBody() {return m_body;}
@@ -173,7 +173,7 @@ public:
     DoStmt()
     : Stmt(NodeKind::NK_DoStmt), m_cond(nullptr), m_body(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> co) {m_cond = co;}
     std::shared_ptr<Stmt> getBody() {return m_body;}
@@ -190,7 +190,7 @@ public:
     ForStmt()
     : Stmt(NodeKind::NK_ForStmt), m_init(nullptr), m_cond(nullptr), m_update(nullptr), m_body(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     // 设置默认值
     std::shared_ptr<Expr> getInit() {return m_init;}
     void setInit(std::shared_ptr<Expr> val) {m_init = val;}
@@ -214,7 +214,7 @@ public:
     GotoStmt()
     : Stmt(NodeKind::NK_GotoStmt), m_label(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Stmt> getLabel() {return m_label;}
     void setLabel(std::shared_ptr<Stmt> lb) {m_label = lb;}
 
@@ -228,7 +228,7 @@ public:
     ContinueStmt()
     : Stmt(NodeKind::NK_ContinueStmt), m_label(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Stmt> getLabel() {return m_label;}
     void setLabel(std::shared_ptr<Stmt> lb) {m_label = lb;}
 private:
@@ -241,7 +241,7 @@ public:
     BreakStmt()
     : Stmt(NodeKind::NK_BreakStmt), m_label(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Stmt> getLabel() {return m_label;}
     void setLabel(std::shared_ptr<Stmt> lb) {m_label = lb;}
 
@@ -255,7 +255,7 @@ public:
     ReturnStmt()
     : Stmt(NodeKind::NK_ReturnStmt), m_retExpr(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getRetExpr() {return m_retExpr;}
     void setRetExpr(std::shared_ptr<Expr> retVal) {m_retExpr = retVal;}
 

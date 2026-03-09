@@ -20,7 +20,7 @@ public:
     DeclRefExpr()
     : Expr(NodeKind::NK_DeclRefExpr, QualType()), m_decl(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<NamedDecl> getDecl() const {return m_decl;}
     void setDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
 private:
@@ -33,10 +33,9 @@ public:
     IntegerLiteral()
     : Expr(NodeKind::NK_IntegerLiteral, QualType()), m_val(0){}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     void setValue(std::any val) {m_val = val;}
-    int64_t getSignedValue() {return std::any_cast<int64_t>(m_val);}
-    uint64_t getUnsignedValue() {return std::any_cast<uint64_t>(m_val);}
+    int64_t getValue() {return std::any_cast<int64_t>(m_val);}
 private:
     std::any m_val;
 };
@@ -47,7 +46,7 @@ public:
     CharacterLiteral()
     : Expr(NodeKind::NK_CharacterLiteral, QualType()), m_val('0') {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     void setValue(std::any val) {m_val = val;}
     char getValue() {return std::any_cast<char>(m_val);}
 private:
@@ -60,11 +59,9 @@ public:
     FloatingLiteral()
     : Expr(NodeKind::NK_FloatingLiteral, QualType()), m_val(0.0f) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     void setValue(std::any val) {m_val = val;}
-    float getFloatValue() {return std::any_cast<float>(m_val);}
-    double getDoubleValue() {return std::any_cast<double>(m_val);}
-    long double getLongDoubleValue() {return std::any_cast<long double>(m_val);}
+    float getValue() {return std::any_cast<float>(m_val);}
 private:
     std::any m_val;
 };
@@ -75,7 +72,7 @@ public:
     StringLiteral()
     : Expr(NodeKind::NK_StringLiteral, QualType()), m_val("") {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     void setValue(std::any val) {m_val = val;}
     std::string getValue() {return std::any_cast<std::string>(m_val);}
 private:
@@ -88,7 +85,7 @@ public:
     ParenExpr()
     : Expr(NodeKind::NK_ParenExpr, QualType()), m_expr(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getSubExpr() {return m_expr;}
     void setSubExpr(std::shared_ptr<Expr> val) {m_expr = val;}
 private:
@@ -110,7 +107,7 @@ public:
     UnaryOpExpr()
     : Expr(NodeKind::NK_UnaryOperator, QualType()), m_expr(nullptr), m_opCode(OpCode::Unkonwn) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {return m_opCode;}
     void setOpCode(OpCode op) {m_opCode = op;}
     std::shared_ptr<Expr> getSubExpr() {return m_expr;}
@@ -128,7 +125,7 @@ public:
     ArraySubscriptExpr()
     : Expr(NodeKind::NK_ArraySubscriptExpr, QualType()), m_base(nullptr), m_index(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getBaseExpr() {return m_base;}
     void setBaseExpr(std::shared_ptr<Expr> ex) {m_base = ex;}
     std::shared_ptr<Expr> getIndexExpr() {return m_index;}
@@ -146,7 +143,7 @@ public:
     CallExpr()
     : Expr(NodeKind::NK_CallExpr, QualType()), m_callee(nullptr){}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCallee() {return m_callee;}
     void setCallee(std::shared_ptr<Expr> callee) {m_callee = callee;}
     ParamExprGroup getParams() {return m_paramExprs;}
@@ -163,7 +160,7 @@ public:
     MemberExpr()
     : Expr(NodeKind::NK_MemberExpr, QualType()), m_parent(nullptr), m_member(nullptr), m_isArrow(false) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     bool getIsArrow() {return m_isArrow;}
     void setIsArrow(bool flag) {m_isArrow = flag;}
     std::shared_ptr<DeclRefExpr> getParent() {return m_parent;}
@@ -183,7 +180,7 @@ public:
     CompoundLiteralExpr()
     : Expr(NodeKind::NK_CompoundLiteralExpr, QualType()), m_init(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getInitExpr() { return m_init;}
     void setInitExpr(std::shared_ptr<Expr> ex) { m_init = ex;}
 private:
@@ -211,7 +208,7 @@ public:
     CastExpr()
     : Expr(NodeKind::NK_CastExpr, QualType()), m_castKind(CK_Unknown) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCastExpr() { return m_val;}
     void setCastExpr(std::shared_ptr<Expr> ex) { m_val = ex;}
 
@@ -250,7 +247,7 @@ public:
     BinaryOpExpr()
     : Expr(NodeKind::NK_BinaryOperator, QualType()), m_lexpr(nullptr), m_rexpr(nullptr), m_opcode(Comma){}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {return m_opcode;}
     void setOpCode(OpCode op) {m_opcode = op;}
     std::shared_ptr<Expr> getLExpr() {return m_lexpr;}
@@ -270,7 +267,7 @@ public:
     ConditionalExpr()
     : Expr(NodeKind::NK_ConditionalOperator, QualType()), m_cond(nullptr), m_then(nullptr), m_else(nullptr) {}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     std::shared_ptr<Expr> getCond() {return m_cond;}
     void setCond(std::shared_ptr<Expr> ex) {m_cond = ex;}
     std::shared_ptr<Expr> getThen() {return m_then;}

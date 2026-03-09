@@ -74,7 +74,7 @@ public:
     TranslationUnitDecl()
     : Decl(NK_TranslationUnitDecl){}
 
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
     // insert new decl
     void addDecl(const DeclGroup& dc) {m_bodys.insert(m_bodys.end(), dc.begin(), dc.end());}
     void addDecl(std::shared_ptr<Decl> dc) {m_bodys.push_back(dc);}
@@ -108,7 +108,7 @@ class LabelDecl final : public NamedDecl
 public:
     LabelDecl()
     : NamedDecl(NK_LabelDecl) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 };
 
 // 带有值类型的声明，具备类型说明符: 比如变量，函数，枚举常量都需要类型信息。
@@ -117,7 +117,7 @@ class ValueDecl : public NamedDecl
 public:
     ValueDecl(NodeKind nk)
     : NamedDecl(nk){}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     QualType getQualType() {return m_type;}
     void setQualType(QualType qt) {m_type = qt;}
@@ -132,7 +132,7 @@ class DeclaratorDecl : public ValueDecl
 public:
     DeclaratorDecl(NodeKind nk)
     : ValueDecl(nk){}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     StorageClass getStorageClass() {return m_storageClass;}
     void setStorageClass(StorageClass sc) {m_storageClass = sc;}
@@ -147,7 +147,7 @@ class VarDecl : public DeclaratorDecl
 public:
     VarDecl(NodeKind nk = NodeKind::NK_VarDecl)
     : DeclaratorDecl(nk){}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     std::shared_ptr<Expr> getInitExpr() {return m_initExpr;}
     void setInitExpr(std::shared_ptr<Expr> ex) {m_initExpr = ex;}
@@ -162,7 +162,7 @@ class ParmVarDecl final : public VarDecl
 public:
     ParmVarDecl()
     : VarDecl(NK_ParmVarDecl) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 };
 
 class FunctionDecl : public DeclaratorDecl
@@ -171,7 +171,7 @@ public:
     using ParamDeclGroup = std::vector<std::shared_ptr<ParmVarDecl>>;
     FunctionDecl()
     : DeclaratorDecl(NK_FunctionDecl), m_isDefinition(false), m_funSpec(N_FSPEC), m_body(nullptr) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     ParamDeclGroup getParmVarDeclList() {return m_parmDeclVars;}
     void setParmVarDeclList(ParamDeclGroup& vars) {m_parmDeclVars = vars;}
@@ -195,7 +195,7 @@ class FieldDecl : public ValueDecl
 public:
     FieldDecl()
     : ValueDecl(NK_FieldDecl), m_parent(), m_offset(nullptr) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     std::shared_ptr<RecordDecl> getParent() {return m_parent.lock();}
     void setParent(std::shared_ptr<RecordDecl>& parent) {m_parent = parent;}
@@ -213,7 +213,7 @@ class EnumConstantDecl : public ValueDecl
 public:
     EnumConstantDecl()
     : ValueDecl(NK_EnumConstantDecl), m_initExpr(nullptr) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     std::shared_ptr<EnumDecl> getParent() {return m_parent.lock();}
     void setParent(std::shared_ptr<EnumDecl>& parent) {m_parent = parent;}
@@ -231,7 +231,7 @@ class TypedefDecl : public ValueDecl
 public:
     TypedefDecl()
     : ValueDecl(NK_TypedefDecl) {}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 };
 
 class TagDecl : public NamedDecl
@@ -252,7 +252,7 @@ public:
     using EnumConstantDeclGroup = std::vector<std::shared_ptr<EnumConstantDecl>>;
     EnumDecl()
     : TagDecl(NK_EnumDecl){}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     void addConstant(std::shared_ptr<EnumConstantDecl> constant) {m_members.push_back(constant); }
     EnumConstantDeclGroup getConstants() {return m_members;}
@@ -268,7 +268,7 @@ public:
     using FieldDeclGroup = std::vector<std::shared_ptr<FieldDecl>>;
     RecordDecl()
     : TagDecl(NK_RecordDecl){}
-    virtual void accept(ASTVisitor* vt) override;
+    virtual std::any accept(ASTVisitor* vt) override;
 
     void addField(std::shared_ptr<FieldDecl> field) {m_filedDecls.push_back(field);}
     FieldDeclGroup getFiledDecls() {return m_filedDecls;}

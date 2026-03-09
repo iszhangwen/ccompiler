@@ -85,6 +85,7 @@ public:
     std::shared_ptr<Symbol> lookup(Symbol::NameSpace, const std::string&);
     bool insert(std::shared_ptr<Symbol>);
     bool isFileScope() {return getScopeType() == ScopeType::FILE;}
+    bool isBlockScope() {return !isFileScope();}
 };
 
 /*符号表管理

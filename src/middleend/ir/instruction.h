@@ -117,8 +117,7 @@ public:
     static std::shared_ptr<BinaryInst> createFMul(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
     static std::shared_ptr<BinaryInst> createFDiv(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
 
-    explicit BinaryInst(BasicBlock* bb)
-    : Instruction(OpCode::add, QualType(), "", 3, bb){}
+    explicit BinaryInst(OpCode opc, std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* bb);
 };
 
 class CmpInst : public Instruction
@@ -164,8 +163,22 @@ public:
 class BranchInst : public TerminatorInst
 {
 public:
-    BranchInst(std::shared_ptr<Value> val, BasicBlock* bb = nullptr)
-    : TerminatorInst(OpCode::ret, QualType(), "ret", 1, bb) {
-        if (val) setOperand(0, val);
+    // 有条件跳转构造: 跳转目标是then块或者else块
+    BranchInst(BasicBlock* parent, std::shared_ptr<Value> cond, BasicBlock* ifThen, BasicBlock* ifElse);
+    // 无条件跳转构造：跳转目标只有一个块
+    BranchInst(BasicBlock* parent, BasicBlock* dest);
+
+    // 判断是否是无条件跳转还是有条件跳转
+    bool isUnconditional() const {return getNumOperands() == 1;}
+    bool isConditional()   const {return getNumOperands() == 3;}
+
+    std::shared_ptr<Value> getCond() {
+        if (isConditional())
+            return getOperand(1);
+        return nullptr;
     }
-}
+    void setCond(std::shared_ptr<Value> val) {
+        if (isConditional())
+            setOperand(0, val);
+    }
+};

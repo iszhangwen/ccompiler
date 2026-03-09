@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <string>
 #include "usedef.h"
 
@@ -12,9 +11,8 @@ class BasicBlock : public Value
 {
 public:
     template<typename T> using PtrList = std::list<std::shared_ptr<T>>;
-    static std::shared_ptr<BasicBlock> create(Module* m, Function* func, const std::string &name) {
-        return std::make_shared<BasicBlock>(m, func, name);
-    }
+    explicit BasicBlock(Module *m, Function *fun, const std::string &name);
+    static std::shared_ptr<BasicBlock> create(Module* m, Function* func, const std::string &name);
 
     // 所属函数块
     void setModule(Module* m) {m_module = m;}
@@ -35,9 +33,6 @@ public:
     std::list<BasicBlock*> getSuccessor() {return m_successor;}
 
 private:
-    BasicBlock(Module *m, Function *fun, const std::string &name)
-    : Value(QualType(), name), m_module(m), m_function(fun){}
-    
     // 模块与函数
     Module* m_module;
     Function* m_function;

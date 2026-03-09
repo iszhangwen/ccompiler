@@ -21,16 +21,14 @@ public:
     explicit Use(Value* val, User* user)
     : m_value(val), m_user(user){}
 
-    friend bool operator==(const Use& a, const Use& b);
+    bool operator==(const Use& other){
+        return (this->m_user == other.m_user) && (this->m_value == other.m_value);
+    }
+
 private:
     Value* m_value;
     User* m_user;
 };
-
-bool operator==(const Use& a, const Use& b)
-{
-    return (a.m_user == b.m_user) && (a.m_value == b.m_value);
-}
 
 class Value
 {
@@ -66,7 +64,7 @@ public:
     }
     ~User() = default;
     unsigned int getNumOperands() const {return m_operandNum;}
-    
+
 protected:
     std::shared_ptr<Value> getOperand(unsigned int index) {
         assert(index < m_operands.size() && "getOperand out of range");

@@ -5,16 +5,19 @@
 #include "decl.h"
 #include "stmt.h"
 #include "expr.h"
+#include "symbol.h"
+
 #include "module.h"
 #include "function.h"
 #include "block.h"
 #include "instruction.h"
+#include "constant.h"
+#include "value.h"
 
 IRBuilder::IRBuilder() 
 {
     m_module = nullptr;
     m_curFuntion = nullptr;
-    m_curBlock = nullptr;
 }
 
 /*-----------------------Declarations node----------------------------------*/
@@ -25,26 +28,26 @@ void IRBuilder::visit(TranslationUnitDecl* ld)
     for (auto decl : ld->getDecls()) {
         decl->accept(this);
     }
+    return std::any();
+    std::any()
 }
-void IRBuilder::visit(LabelDecl* ld)
+std::any IRBuilder::visit(LabelDecl* ld)
 {
-    std::cout << " LabelDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(ValueDecl* vd)
+std::any IRBuilder::visit(ValueDecl* vd)
 {
-    std::cout << " ValueDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(DeclaratorDecl* dd)
+std::any IRBuilder::visit(DeclaratorDecl* dd)
 {
-    std::cout << " DeclaratorDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(VarDecl* var)
+std::any IRBuilder::visit(VarDecl* var)
 {
     auto ty = var->getQualType();
     // 判断是否是全局变量
-    if (var->getScope()->isFileScope()) {
 
-    }
     // 判断变量是否是常量
     
     // 初始值
@@ -52,198 +55,370 @@ void IRBuilder::visit(VarDecl* var)
     if (initExpr) {
         initExpr->accept(this);
     }
+    return std::any();
 }
-void IRBuilder::visit(ParmVarDecl* p)
+std::any IRBuilder::visit(ParmVarDecl* p)
 {
+    auto curBB = m_curFuntion->getInsertBlock();
     auto index = m_curFuntion->getArguments().size();
     auto val = std::make_shared<Argument>(p->getQualType(), p->getName(), index, m_curFuntion.get());
     // 函数栈上分配参数
-    auto addr = std::make_shared<AllocaInst>(p->getQualType(), m_curBlock.get());
-    m_curBlock->addInst(addr);
+    auto addr = std::make_shared<AllocaInst>(p->getQualType(), curBB.get());
+    m_curFuntion->addInst(addr);
     // 将参数值填充到栈内存
-    auto store = std::make_shared<StoreInst>(p->getQualType(), val, addr, m_curBlock.get());
-    m_curBlock->addInst(store);
+    auto store = std::make_shared<StoreInst>(p->getQualType(), val, addr, curBB.get());
+    m_curFuntion->addInst(store);
+    return std::any();
 }
-void IRBuilder::visit(FunctionDecl* fd)
+std::any IRBuilder::visit(FunctionDecl* ptr)
 {   
-    // 创建函数对象
-    m_curFuntion = std::make_shared<Function>(fd->getQualType(), fd->getName(), m_module.get());
+    m_curFuntion = std::make_shared<Function>(ptr->getQualType(), ptr->getName(), m_module.get());
     m_module->addFunction(m_curFuntion);
+    auto entry = BasicBlock::create(m_module.get(), m_curFuntion.get(), "entry");
+    auto exit = BasicBlock::create(m_module.get(), m_curFuntion.get(), "ret");
+
     // 1. 创建起始块
-    auto entry = BasicBlock::create(m_module.get(), "entry", m_curFuntion.get());
-    setInsertPoint(entry);
-    m_curFuntion->addBasicBlock(entry);
+    m_curFuntion->emitBlock(entry);
+     m_curFuntion->setReturnBlock(exit);
 
     // 2. 分配函数返回地址: 返回值的分配必须在函数体执行前完成，因为它是函数逻辑的一部分，可能被多个地方访问，但不是必须的。
-    auto retType = dynamic_cast<FunctionType*>(fd->getQualType().getPtr().get())->getQualType();
+    auto retType = dynamic_cast<FunctionType*>(ptr->getQualType().getPtr().get())->getQualType();
     std::shared_ptr<Instruction> retAddr = nullptr;
     if (!retType->isVoidType()) {
-        retAddr = std::make_shared<AllocaInst>(retType, m_curBlock.get());
-        m_curBlock->addInst(retAddr);
+        retAddr = std::make_shared<AllocaInst>(retType, entry.get());
+        m_curFuntion->addInst(retAddr);
     }
+    m_curFuntion->setReturnAddr(retAddr);
 
     // 3. 将参数插入到entry基本块中并分配地址
-    for (auto param : fd->getParmVarDeclList()) {
+    for (auto param : ptr->getParmVarDeclList()) {
         param->accept(this);
     }
     // 4. 函数体指令生成
-    fd->getBody()->accept(this);
+    ptr->getBody()->accept(this);
 
     // 5. 函数的返回块生成
-    auto exit = BasicBlock::create(m_module.get(), "ret", m_curFuntion.get());
-    setInsertPoint(exit);
-    m_curFuntion->addBasicBlock(exit);
+    m_curFuntion->emitBlock(exit);
 
     std::shared_ptr<Instruction> retVal = nullptr;
     if (!retType->isVoidType()) {
-        retVal = std::make_shared<LoadInst>(retType, retAddr, m_curBlock.get());
-        m_curBlock->addInst(retVal);
+        retVal = std::make_shared<LoadInst>(retType, retAddr);
+        m_curFuntion->addInst(retVal);
     } 
-    auto retInst = std::make_shared<ReturnInst>(retVal, m_curBlock.get());
-    m_curBlock->addInst(retInst);
+    auto retInst = std::make_shared<ReturnInst>(retVal);
+    m_curFuntion->addInst(retInst);
+    return std::any();
 }
-void IRBuilder::visit(FieldDecl* fd)
+std::any IRBuilder::visit(FieldDecl* fd)
 {
-    std::cout << " FieldDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(EnumConstantDecl* ecd)
+std::any  IRBuilder::visit(EnumConstantDecl* ecd)
 {
-    std::cout << " EnumConstantDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(TypedefDecl* tnd)
+std::any IRBuilder::visit(TypedefDecl* tnd)
 {
-    std::cout << " TypedefDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(EnumDecl* ed)
+std::any IRBuilder::visit(EnumDecl* ed)
 {
-    std::cout << " EnumDecl" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(RecordDecl* rd)
+std::any IRBuilder::visit(RecordDecl* rd)
 {
-    std::cout << " RecordDecl" << std::endl;
+    return std::any();
+}
+
+
+/*-----------------------statemnts node----------------------------------*/
+/*
+@brief: 
+*/
+std::any IRBuilder::visit(LabelStmt* ls)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(CaseStmt* cs)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(DefaultStmt* ds)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(CompoundStmt* ptr)
+{
+    assert(ptr && "CompoundStmt is nullptr");
+    for (auto stmt : ptr->getStmts()) {
+        ptr->accept(this);
+    }
+    return std::any();
+}
+std::any IRBuilder::visit(DeclStmt* ptr)
+{
+    assert(ptr && "DeclStmt is nullptr");
+    if (ptr->getDecl())
+        ptr->getDecl()->accept(this);
+    return std::any();
+}
+std::any IRBuilder::visit(ExprStmt* ptr)
+{
+    assert(ptr && "ExprStmt is nullptr");
+    if (ptr->getExpr())
+        ptr->getExpr()->accept(this);
+    return std::any();
+}
+std::any IRBuilder::visit(IfStmt* ptr)
+{
+    assert(ptr && "ExprStmt is nullptr");
+    auto ifThen = BasicBlock::create(m_module.get(), m_curFuntion.get(), "if.then");
+    auto ifEnd = BasicBlock::create(m_module.get(), m_curFuntion.get(), "if.end");
+    auto ifElse = ifEnd;
+    if (ptr->getElse()) {
+       ifElse = BasicBlock::create(m_module.get(), m_curFuntion.get(), "if.else");
+    }
+    // @brief: 条件指令生成 TODO
+    
+
+    // @brief: 解析then块，将当前基本块设置为then块，
+    // 解析then块的指令，解析完成后插入br指令并设置跳转目标是end块，
+    m_curFuntion->emitBlock(ifThen);
+    ptr->getThen()->accept(this);
+    m_curFuntion->emitBranch(ifEnd);
+
+    // @brief: 解析else块
+    if (ptr->getElse()) {
+        m_curFuntion->emitBlock(ifElse);
+        ptr->getElse()->accept(this);
+        m_curFuntion->emitBranch(ifEnd);
+    }
+
+    // @brief: 解析完成后，程序进入到end块
+    m_curFuntion->emitBlock(ifEnd, true);
+    return std::any();
+}
+std::any IRBuilder::visit(SwitchStmt* ptr)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(WhileStmt* ptr)
+{
+    assert(ptr && "WhileStmt、 is nullptr");
+    // @brief: 循环头是单独的block
+    auto loopHeader = BasicBlock::create(m_module.get(), m_curFuntion.get(), "while.cond");
+    auto exit = BasicBlock::create(m_module.get(), m_curFuntion.get(), "while.exit");
+    auto body = BasicBlock::create(m_module.get(), m_curFuntion.get(), "while.body");
+
+    // 循环开始前必须要从loopHeader开始
+    m_curFuntion->emitBlock(loopHeader);
+    //@brief: 计算循环条件表达式的值 TODO
+    std::shared_ptr<Value> cond;
+
+    //@brief: 循环条件块插入br指令
+    auto brInst = std::make_shared<BranchInst>(loopHeader.get(), cond, body.get(), exit.get());
+
+    //@brief: 循环体 针对break和continue存储块
+    m_curFuntion->pushBreakContinueStack(exit, loopHeader);
+    m_curFuntion->emitBlock(body);
+    ptr->getBody()->accept(this);
+    m_curFuntion->popBreakContinueStack();
+
+    // body结束后需要回到loopHeader
+    m_curFuntion->emitBranch(loopHeader);
+    // 退出循环
+    m_curFuntion->emitBlock(exit, true);
+    return std::any();
+}
+std::any IRBuilder::visit(DoStmt* ds)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(ForStmt* fs)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(GotoStmt* gs)
+{
+    return std::any();
+}
+std::any IRBuilder::visit(ContinueStmt* ptr)
+{
+    assert(ptr && "ContinueStmt is nullptr");
+    auto continueBlock = m_curFuntion->getBreakContinueStackBlock().second;
+    m_curFuntion->emitBranch(continueBlock);
+    return std::any();
+}
+std::any IRBuilder::visit(BreakStmt* ptr)
+{
+    assert(ptr && "BreakStmt is nullptr");
+    auto breakBlock = m_curFuntion->getBreakContinueStackBlock().first;
+    m_curFuntion->emitBranch(breakBlock);
+    return std::any();
+}
+std::any IRBuilder::visit(ReturnStmt* ptr)
+{
+    assert(ptr && "ReturnStmt is nullptr");
+    // 获取函数返回块
+    if (!m_curFuntion->hasInsertPoint())
+        return std::any();
+    m_curFuntion->emitBranch(m_curFuntion->getReturnBlock());
+    return std::any();
 }
 
 /*-----------------------expr node----------------------------------*/
+std::any IRBuilder::visit(IntegerLiteral* ptr)
+{
+    assert(ptr && "IntegerLiteral is nullptr");
+    //ConstantInt::get(ptr->getValue());
+    return std::any();
+}
+std::any IRBuilder::visit(FloatingLiteral* ptr)
+{
+    assert(ptr && "FloatingLiteral is nullptr");
+    //ConstantFloat::get(ptr->getValue());
+    return std::any();
+}
+std::any IRBuilder::visit(CharacterLiteral* ptr)
+{
+    assert(ptr && "CharacterLiteral is nullptr");
+    //ConstantChar::get(ptr->getValue());
+    return std::any();
+}
+std::any IRBuilder::visit(StringLiteral* ptr)
+{
+    assert(ptr && "StringLiteral is nullptr");
+   // ConstantString::get(ptr->getValue());
+    return std::any();
+}
+std::any IRBuilder::visit(DeclRefExpr* ptr)
+{
+    assert(ptr && "DeclRefExpr is nullptr");
+    auto var = ptr->getDecl().get();
+    assert(var);
+    // 查找到变量的ssa ir地址
+    if (var && var->getScope()->isFileScope()) {
+        auto addr = m_module->getGlobalDeclAddr(var);
+        assert(addr && "var not record in globalDeclMap");
+        return std::any(addr);
+    }  
+    auto addr = m_curFuntion->getLocalDeclAddr(var);
+    assert(addr && "var not record in localDeclMap");
+    return std::any(addr);
+}
+std::any IRBuilder::visit(ParenExpr* ptr)
+{
+    assert(ptr && "ParenExpr is nullptr");
+    if (ptr->getSubExpr())
+        ptr->getSubExpr()->accept(this);
+    return std::any();
+}
+std::any IRBuilder::visit(BinaryOpExpr* ptr)
+{
+    assert(ptr && "BinaryOpExpr is nullptr");
+    auto lex = ptr->getLExpr();
+    auto rex = ptr->getRExpr();
 
-void IRBuilder::visit(IntegerLiteral* c)
-{
-    std::cout << " IntegerLiteral" << std::endl;
+    // 分别计算左右子表达式的值
+    lex->accept(this);
+    rex->accept(this);
+
+    // 计算结果表达式类型
+    // 暂时都当作整形计算
+    switch (ptr->getOpCode())
+    {
+    case BinaryOpExpr::Multiplication_:
+        break;
+    case BinaryOpExpr::Division_:
+        break;
+    case BinaryOpExpr::Modulus_:
+        break;    
+    case BinaryOpExpr::Addition_:
+        break;
+    case BinaryOpExpr::Subtraction_:
+        break;
+    case BinaryOpExpr::LShift_:
+        break;
+    case BinaryOpExpr::RShift_:
+        break;
+    case BinaryOpExpr::Less_:
+        break;
+    case BinaryOpExpr::Greater_:
+        break;    
+    case BinaryOpExpr::Less_Equal_:
+        break;
+    case BinaryOpExpr::Greater_Equal_:
+        break;
+    case BinaryOpExpr::Equality_:
+        break;
+    case BinaryOpExpr::Inequality_:
+        break;
+    case BinaryOpExpr::BitWise_AND_:
+        break;
+    case BinaryOpExpr::BitWise_XOR_:
+        break;    
+    case BinaryOpExpr::BitWise_OR_:
+        break;
+    case BinaryOpExpr::Logical_AND_:
+        break;
+    case BinaryOpExpr::Logical_OR_:
+        break;
+    case BinaryOpExpr::Assign_:
+        break;
+    case BinaryOpExpr::Mult_Assign_:
+        break;
+    case BinaryOpExpr::Div_Assign_:
+        break;    
+    case BinaryOpExpr::Mod_Assign_:
+        break;
+    case BinaryOpExpr::Add_Assign_:
+        break;
+    case BinaryOpExpr::Sub_Assign_:
+        break;
+    case BinaryOpExpr::LShift_Assign_:
+        break;
+    case BinaryOpExpr::RShift_Assign_:
+        break;
+    case BinaryOpExpr::BitWise_AND_Assign_:
+        break;    
+    case BinaryOpExpr::BitWise_XOR_Assign_:
+        break;
+    case BinaryOpExpr::BitWise_OR_Assign_:
+        break;
+    case BinaryOpExpr::Comma:
+        break;
+    default:
+        break;
+    }
+    return std::any();
 }
-void IRBuilder::visit(FloatingLiteral* c)
+std::any IRBuilder::visit(ConditionalExpr* ce)
 {
-    std::cout << " FloatingLiteral" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(CharacterLiteral* c)
+std::any IRBuilder::visit(CompoundLiteralExpr* cle)
 {
-    std::cout << " CharacterLiteral" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(StringLiteral* c)
+std::any IRBuilder::visit(CastExpr* ce)
 {
-    std::cout << " StringLiteral" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(DeclRefExpr* dre)
+std::any IRBuilder::visit(ArraySubscriptExpr* ase)
 {
-    std::cout << " DeclRefExpr" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(ParenExpr* pe)
+std::any IRBuilder::visit(CallExpr* ce)
 {
-    std::cout << " ParenExpr" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(BinaryOpExpr* boe)
+std::any IRBuilder::visit(MemberExpr* me)
 {
-    std::cout << " BinaryOpExpr" << std::endl;
+    return std::any();
 }
-void IRBuilder::visit(ConditionalExpr* ce)
+std::any IRBuilder::visit(UnaryOpExpr* uoe)
 {
-    std::cout << " ConditionalExpr" << std::endl;
-}
-void IRBuilder::visit(CompoundLiteralExpr* cle)
-{
-    std::cout << " CompoundLiteralExpr" << std::endl;
-}
-void IRBuilder::visit(CastExpr* ce)
-{
-    std::cout << " CastExpr" << std::endl;
-}
-void IRBuilder::visit(ArraySubscriptExpr* ase)
-{
-    std::cout << " ArraySubscriptExpr" << std::endl;
-}
-void IRBuilder::visit(CallExpr* ce)
-{
-    std::cout << " CallExpr" << std::endl;
-}
-void IRBuilder::visit(MemberExpr* me)
-{
-    std::cout << " MemberExpr" << std::endl;
-}
-void IRBuilder::visit(UnaryOpExpr* uoe)
-{
-    std::cout << " UnaryOpExpr" << std::endl;
-}
-/*-----------------------statemnts node----------------------------------*/
-/*
-Label stmt需要先创建一个
-*/
-void IRBuilder::visit(LabelStmt* ls)
-{
-    std::cout << " LabelStmt" << std::endl;
-}
-void IRBuilder::visit(CaseStmt* cs)
-{
-    std::cout << " CaseStmt" << std::endl;
-}
-void IRBuilder::visit(DefaultStmt* ds)
-{
-    std::cout << " DefaultStmt" << std::endl;
-}
-void IRBuilder::visit(CompoundStmt* cs)
-{
-    std::cout << " CompoundStmt" << std::endl;
-}
-void IRBuilder::visit(DeclStmt* ds)
-{
-    std::cout << " DeclStmt" << std::endl;
-}
-void IRBuilder::visit(ExprStmt* es)
-{
-    std::cout << " ExprStmt" << std::endl;
-}
-void IRBuilder::visit(IfStmt* is)
-{
-    std::cout << " IfStmt" << std::endl;
-}
-void IRBuilder::visit(SwitchStmt* ss)
-{
-    std::cout << " SwitchStmt" << std::endl;
-}
-void IRBuilder::visit(WhileStmt* ws)
-{
-    std::cout << " WhileStmt" << std::endl;
-}
-void IRBuilder::visit(DoStmt* ds)
-{
-    std::cout << " DoStmt" << std::endl;
-}
-void IRBuilder::visit(ForStmt* fs)
-{
-    std::cout << " ForStmt" << std::endl;
-}
-void IRBuilder::visit(GotoStmt* gs)
-{
-    std::cout << " GotoStmt" << std::endl;
-}
-void IRBuilder::visit(ContinueStmt* cs)
-{
-    std::cout << " ContinueStmt" << std::endl;
-}
-void IRBuilder::visit(BreakStmt* bs)
-{
-    std::cout << " BreakStmt" << std::endl;
-}
-void IRBuilder::visit(ReturnStmt* rs)
-{
-    std::cout << " ReturnStmt" << std::endl;
+    return std::any();
 }
 
 
@@ -259,14 +434,4 @@ void IRBuilder::dump()
             }
         }
     }
-}
-
-void IRBuilder::emitBlock(std::shared_ptr<BasicBlock> bb, bool isFinished)
-{
-    emitBranch(bb);
-}
-
-void IRBuilder::emitBranch(std::shared_ptr<BasicBlock> bb)
-{
-
 }

@@ -24,3 +24,4 @@ std::shared_ptr<Type> SemaAnalyzer::onActTypeSpec(int ts)
     }  
     return nullptr;
 }
+

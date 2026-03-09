@@ -1,7 +1,9 @@
 #pragma once
 #include <memory>
 #include <vector>
+#include <any>
 
+// AST节点前置声明
 class AstNode;
 using Stmt = AstNode;
 using Decl = AstNode;
@@ -52,55 +54,56 @@ class MemberExpr;
 class UnaryOpExpr;
 class SymbolTableContext;
 
+// 通用访问接口
 class ASTVisitor
 {
 public:
     virtual ~ASTVisitor() = default;
     // 访问翻译单元节点
-    virtual void visit(TranslationUnitDecl* tud) = 0;
+    virtual std::any visit(TranslationUnitDecl*) = 0;
     // 访问声明节点
-    virtual void visit(LabelDecl* ld) = 0;
-    virtual void visit(ValueDecl* vd) = 0;
-    virtual void visit(DeclaratorDecl* dd) = 0;
-    virtual void visit(VarDecl* vd) = 0;
-    virtual void visit(ParmVarDecl* pvd) = 0;
-    virtual void visit(FunctionDecl* fd) = 0;
-    virtual void visit(FieldDecl* fd) = 0;
-    virtual void visit(EnumConstantDecl* ecd) = 0;
-    virtual void visit(TypedefDecl* tnd) = 0;
-    virtual void visit(EnumDecl* ed) = 0;
-    virtual void visit(RecordDecl* rd) = 0;
+    virtual std::any visit(LabelDecl*) = 0;
+    virtual std::any visit(ValueDecl*) = 0;
+    virtual std::any visit(DeclaratorDecl*) = 0;
+    virtual std::any visit(VarDecl*) = 0;
+    virtual std::any visit(ParmVarDecl*) = 0;
+    virtual std::any visit(FunctionDecl*) = 0;
+    virtual std::any visit(FieldDecl*) = 0;
+    virtual std::any visit(EnumConstantDecl*) = 0;
+    virtual std::any visit(TypedefDecl*) = 0;
+    virtual std::any visit(EnumDecl*) = 0;
+    virtual std::any visit(RecordDecl*) = 0;
     // 访问语句节点
-    virtual void visit(LabelStmt* ls) = 0;
-    virtual void visit(CaseStmt* cs) = 0;
-    virtual void visit(DefaultStmt* ds) = 0;
-    virtual void visit(CompoundStmt* cs) = 0;
-    virtual void visit(DeclStmt* ds) = 0;
-    virtual void visit(ExprStmt* es) = 0;
-    virtual void visit(IfStmt* is) = 0;
-    virtual void visit(SwitchStmt* ss) = 0;
-    virtual void visit(WhileStmt* ws) = 0;
-    virtual void visit(DoStmt* ds) = 0;
-    virtual void visit(ForStmt* fs) = 0;
-    virtual void visit(GotoStmt* gs) = 0;
-    virtual void visit(ContinueStmt* cs) = 0;
-    virtual void visit(BreakStmt* bs) = 0;
-    virtual void visit(ReturnStmt* rs) = 0;
+    virtual std::any visit(LabelStmt*) = 0;
+    virtual std::any visit(CaseStmt*) = 0;
+    virtual std::any visit(DefaultStmt*) = 0;
+    virtual std::any visit(CompoundStmt*) = 0;
+    virtual std::any visit(DeclStmt*) = 0;
+    virtual std::any visit(ExprStmt*) = 0;
+    virtual std::any visit(IfStmt*) = 0;
+    virtual std::any visit(SwitchStmt*) = 0;
+    virtual std::any visit(WhileStmt*) = 0;
+    virtual std::any visit(DoStmt*) = 0;
+    virtual std::any visit(ForStmt*) = 0;
+    virtual std::any visit(GotoStmt*) = 0;
+    virtual std::any visit(ContinueStmt*) = 0;
+    virtual std::any visit(BreakStmt*) = 0;
+    virtual std::any visit(ReturnStmt*) = 0;
     // 访问表达式节点
-    virtual void visit(IntegerLiteral* c) = 0;
-    virtual void visit(FloatingLiteral* c) = 0;
-    virtual void visit(CharacterLiteral* c) = 0;
-    virtual void visit(StringLiteral* c) = 0;
-    virtual void visit(DeclRefExpr* dre) = 0;
-    virtual void visit(ParenExpr* pe) = 0;
-    virtual void visit(BinaryOpExpr* boe) = 0;
-    virtual void visit(ConditionalExpr* ce) = 0;
-    virtual void visit(CompoundLiteralExpr* cle) = 0;
-    virtual void visit(CastExpr* ce) = 0;
-    virtual void visit(ArraySubscriptExpr* ase) = 0;
-    virtual void visit(CallExpr* ce) = 0;
-    virtual void visit(MemberExpr* me) = 0;
-    virtual void visit(UnaryOpExpr* uoe) = 0;
+    virtual std::any visit(IntegerLiteral*) = 0;
+    virtual std::any visit(FloatingLiteral*) = 0;
+    virtual std::any visit(CharacterLiteral*) = 0;
+    virtual std::any visit(StringLiteral*) = 0;
+    virtual std::any visit(DeclRefExpr*) = 0;
+    virtual std::any visit(ParenExpr*) = 0;
+    virtual std::any visit(BinaryOpExpr*) = 0;
+    virtual std::any visit(ConditionalExpr*) = 0;
+    virtual std::any visit(CompoundLiteralExpr*) = 0;
+    virtual std::any visit(CastExpr*) = 0;
+    virtual std::any visit(ArraySubscriptExpr*) = 0;
+    virtual std::any visit(CallExpr*) = 0;
+    virtual std::any visit(MemberExpr*) = 0;
+    virtual std::any visit(UnaryOpExpr*) = 0;
 };
 
 class AstNode {
@@ -180,8 +183,13 @@ public:
 
     AstNode(NodeKind nk): m_kind(nk){}
     virtual ~AstNode() = default;
-    virtual void accept(ASTVisitor* vt) {}
     virtual NodeKind getKind() const {return m_kind;}
+
+    // 值估计接口：主要目的是在运行时对 AST 进行求值，得到具体的数值结果。TODO 暂时不实现
+    // 语义分析模块接口
+    // IR生成接口
+    // 通用访问接口: 主要是提供dump等功能
+    virtual std::any accept(ASTVisitor*) = 0;
 
 private:
     NodeKind m_kind;
