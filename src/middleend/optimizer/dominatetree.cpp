@@ -1,11 +1,10 @@
 #include "dominatetree.h"
-#include <cassert>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "module.h"
 #include "function.h"
 #include "block.h"
+
+#include <algorithm>
 
 /*
 该pass计算出每个节点的支配前沿，用于mem2reg算法插入phi节点
@@ -66,7 +65,7 @@ void DominateTree::createIdom(Function* ptr)
     auto entry = ptr->getEntryBlock();
     std::unordered_set<BasicBlock*> isVisited;
     getPostOrder(entry, isVisited);
-    m_postOrder.reserve();
+    std::reverse(m_postOrder.begin(), m_postOrder.end());
 
     // 定义支配数组,并且记录支配深度
     for (auto v : m_postOrder) {

@@ -124,7 +124,7 @@ enum class TokenKind
     #undef X_MACROS
 };
 
-class Token : public ArenaNode<Token>
+class Token 
 {
 public:
     // token kind
@@ -160,7 +160,7 @@ private:
     : Token(type, loc, ""){}
 };
 
-class TokenSequence : public ArenaNode<TokenSequence>
+class TokenSequence 
 {
 private:
     int pos_{-1};

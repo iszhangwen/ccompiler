@@ -17,7 +17,7 @@ private:
     std::vector<AllocaInst*> m_allocas;
 
     // 获取可提升的AllocaInst
-    void getPromotableVars(Fucntion* ptr);
+    void getPromotableVars(Function* ptr);
     // 判断是否是可提升局部变量
     static bool isPromotableVar(AllocaInst* ptr);
 };

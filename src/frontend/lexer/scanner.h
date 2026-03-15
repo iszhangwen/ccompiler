@@ -6,7 +6,7 @@
 #include "ccerror.h"
 
 // 扫描器从SourceBuffer读取字符，返回Token
-class scanner : public ArenaNode<scanner>
+class scanner 
 {
 private:
     Source* m_source;

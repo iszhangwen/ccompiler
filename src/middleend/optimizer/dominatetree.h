@@ -1,6 +1,10 @@
 #pragma once
 
 #include "pass.h"
+#include <cassert>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
 
 class DominateTree : public ModulePass
 {
@@ -28,4 +32,4 @@ private:
     std::unordered_map<BasicBlock*, int> m_bb2int;
     // 存储直接只配者信息
     std::vector<BasicBlock*> m_idoms;
-}
+};

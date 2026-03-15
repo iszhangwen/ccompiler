@@ -46,6 +46,7 @@ how:
 bool Mem2Reg::runOnModule(Module* ptr)
 {
     assert(ptr);
+    return false;
 }
 
 
@@ -72,5 +73,5 @@ void Mem2Reg::getPromotableVars(Function* ptr)
 bool Mem2Reg::isPromotableVar(AllocaInst* ptr)
 {
     if (!ptr) return false;
-    for (auto use : ptr->get)
+    return true;
 }

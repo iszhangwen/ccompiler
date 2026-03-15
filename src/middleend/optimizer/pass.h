@@ -15,7 +15,7 @@ public:
     virtual std::string getName() const = 0;
 
     // 判断是否会更改IR
-    virtual bool isAnalysis() cnst {return false;}
+    virtual bool isAnalysis() const {return false;}
     // 判断pass的执行级别
     virtual bool isModulePass() const = 0;
     virtual bool isFunctionPass() const = 0;
@@ -69,7 +69,7 @@ class PassManager
 {
 public:
     void addPass(Pass* pass) {
-        passes_.push_back(std::move(pass));
+        m_passVec.push_back(std::move(pass));
     }
     void run();
 

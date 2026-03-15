@@ -8,7 +8,7 @@ class Type;
 class Scope;
 class Token;
 
-class Symbol : public ArenaNode<Symbol>
+class Symbol 
 {
 public:
     // 名称空间规定了同一个名称空间的元素不能相同，即同一作用域不同名称空间的标识符名可以相同 
@@ -59,7 +59,7 @@ private:
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 
-class Scope : public ArenaNode<Scope>
+class Scope 
 {
 public:
     // 相同的标识符要么具有不同的名称空间，要么具有不同的作用域。
@@ -90,7 +90,7 @@ public:
 
 /*符号表管理
 */
-class SymbolTableContext : public ArenaNode<SymbolTableContext>
+class SymbolTableContext 
 {
 public:
     SymbolTableContext(): m_curScope(nullptr) {}

@@ -57,7 +57,7 @@ class UnaryOpExpr;
 class SymbolTableContext;
 
 // 通用访问接口
-class ASTVisitor : ArenaNode<ASTVisitor>
+class ASTVisitor 
 {
 public:
     virtual ~ASTVisitor() = default;

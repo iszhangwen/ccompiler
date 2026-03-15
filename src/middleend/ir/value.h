@@ -7,7 +7,7 @@
 // 右值对象
 // 右值对象分为：标量，复杂类型，聚合类型三种
 // 右值返回值
-class RValue : public ArenaNode<RValue>
+class RValue 
 {
 public:
     enum RVType {
@@ -30,7 +30,7 @@ private:
 
 // 左值对象: 简单对象和数组对象
 // 左值返回地址
-class LValue : public ArenaNode<LValue>
+class LValue 
 {
 public:
     enum LVType {
@@ -51,7 +51,7 @@ public:
     bool isSimple() const {return m_type == Simple;}
     bool isArrayElt() const {return m_type == ArrayElt;}
     // simple lvalue
-    Value* *getAddress() const { assert(isSimple()); return m_value;}
+    Value* getAddress() const { assert(isSimple()); return m_value;}
     // vector elt lvalue
     Value* getArrayAddr() const { assert(isArrayElt()); return m_value;}
     Value* getArrayIdx() const { assert(isArrayElt()); return m_ArrayIdx;}

@@ -16,7 +16,7 @@ IR表达是一个graph, 每个node是一个value, 每个edge是一个use
 class Value;
 class User;
 
-class Use : public ArenaNode<Use>
+class Use 
 {
 public:
     explicit Use(Value* val, User* user)
@@ -31,7 +31,7 @@ private:
     User* m_user;
 };
 
-class Value : public ArenaNode<Value>
+class Value 
 {
 public:
     explicit Value(QualType ty, const std::string &name)
@@ -47,7 +47,7 @@ public:
     // use-def维护
     void addUse(Use use) {m_uses.push_back(use);}
     void removeUse(Use use) {m_uses.remove(use);}
-    vid addUse(User* user) {addUse(Use(this, user))}
+    void addUse(User* user) {addUse(Use(this, user));}
     void removeUse(User* user) {removeUse(Use(this, user));}
     void clearUse() {m_uses.clear();}
     std::list<Use> getUses() {return m_uses;}

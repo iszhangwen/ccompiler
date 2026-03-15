@@ -62,7 +62,7 @@ public:
 
 private:
     Module* m_module;
-    Module* m_curFuntion;
+    Function* m_curFuntion;
     std::unordered_map<NamedDecl*, Value*> m_nameDeclAddr;
 };
 

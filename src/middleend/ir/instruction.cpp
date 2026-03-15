@@ -54,5 +54,5 @@ BranchInst::BranchInst(BasicBlock* parent, Value* cond, BasicBlock* ifThen, Basi
 BranchInst::BranchInst(BasicBlock* parent, BasicBlock* target)
 : TerminatorInst(OpCode::branch, QualType(), "br", 1, parent) 
 {
-    setOperand(0, Value*(target));
+    setOperand(0, target);
 }

@@ -21,9 +21,10 @@ public:
     virtual bool isConstantZero() {return false;}
 };
 
-class ConstantInt : public User
+class ConstantInt : public Constant
 {
 public:
+    ConstantInt(QualType ty, int val): Constant(ty, "", 0), m_value(val){}
     static int getValue(ConstantInt* ptr) { return ptr->m_value; }
     int getValue() { return m_value; }
     static ConstantInt* get(int val, Module *m);
@@ -31,63 +32,55 @@ public:
     bool isConstantInt() {return true;}
     
 private:
-    ConstantInt(QualType ty, int val)
-    : Constant(ty, "", 0), m_value(val){}
     int m_value;
 };
 
-class ConstantFloat : public User
+class ConstantFloat : public Constant
 {
 public:
+    ConstantFloat(QualType ty, double val): Constant(ty, "", 0), m_value(val){}
     static double getValue(ConstantFloat* ptr) { return ptr->m_value; }
     double getValue() { return m_value; }
-    static ConstantFloat* get(double val) {return Arena::make<ConstantInt>(nullptr, val);}
+    static ConstantFloat* get(double val) {return Arena::make<ConstantFloat>(nullptr, val);}
     bool isConstantFloat() {return true;}
 
 private:
-    ConstantFloat(QualType ty, double val)
-    : Constant(ty, "", 0), m_value(val){}
     double m_value;
 };
 
-class ConstantString : public User
+class ConstantString : public Constant
 {
 public:
-    static int getValue(ConstantString* ptr) { return ptr->m_value; }
+    ConstantString(QualType ty, std::string val): Constant(ty, "", 0), m_value(val){}
+    static std::string getValue(ConstantString* ptr) { return ptr->m_value; }
     std::string getValue() { return m_value; }
     static ConstantString* get(std::string val) {return Arena::make<ConstantString>(nullptr, val);}
     bool isConstantString() {return true;}
 
 private:
-    ConstantString(QualType ty, std::string val)
-    : Constant(ty, "", 0), m_value(val){}
     std::string m_value;
 
 };
 
-class ConstantChar : public User
+class ConstantChar : public Constant
 {
 public:
-    static int getValue(ConstantChar* ptr) { return ptr->m_value; }
+    ConstantChar(QualType ty, char val): Constant(ty, "", 0), m_value(val){}
+    static char getValue(ConstantChar* ptr) { return ptr->m_value; }
     char getValue() { return m_value; }
     static ConstantChar* get(char val) {return Arena::make<ConstantChar>(nullptr, val);}
     bool isConstantChar() {return true;}
 
 private:
-    ConstantChar(QualType ty, char val)
-    : Constant(ty, "", 0), m_value(val){}
     char m_value;
 };
 
-class ConstantZero : public User
+class ConstantZero : public Constant
 {
 public:
-    staticConstantZero* get(QualType ty) {return Arena::make<ConstantZero>(ty);}
-    bool isConstantZero() {return true;}
-
-private:
-    ConstantZero(QualType ty)
-    : Constant(ty, "", 0){}
+    ConstantZero(QualType ty): Constant(ty, "", 0){}
+    static ConstantZero* get(QualType ty) {return Arena::make<ConstantZero>(ty);}
+    bool isConstantZero() {return true;}    
 };
 
 

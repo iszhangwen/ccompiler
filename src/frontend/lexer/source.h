@@ -6,7 +6,7 @@
 #include "arena.h"
 
 // 源码字符位置
-struct SourceLocation : public ArenaNode<SourceLocation>
+struct SourceLocation 
 {
     SourceLocation()
     : SourceLocation(""){}
@@ -33,7 +33,7 @@ struct SourceLocation : public ArenaNode<SourceLocation>
 /*
 该类将一个文件的源码读入到内存中，并记录每个字符的位置，按照行存储数据。
 */
-class Source : public ArenaNode<Source>
+class Source 
 {
 public:
     // 资源控制函数

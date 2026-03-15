@@ -21,7 +21,7 @@ IRBuilder::IRBuilder()
 }
 
 /*-----------------------Declarations node----------------------------------*/
-void IRBuilder::visit(TranslationUnitDecl* ld)
+std::any IRBuilder::visit(TranslationUnitDecl* ld)
 {
     m_module = Arena::make<Module>("");
     // 遍历所有声明
@@ -29,7 +29,6 @@ void IRBuilder::visit(TranslationUnitDecl* ld)
         decl->accept(this);
     }
     return std::any();
-    std::any()
 }
 std::any IRBuilder::visit(LabelDecl* ld)
 {

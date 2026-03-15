@@ -23,7 +23,7 @@
 
 class Type;
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
-class QualType : public ArenaNode<QualType>
+class QualType 
 {
 public:
     // 构造函数
@@ -67,7 +67,7 @@ private:
 
 // 对类型系统而言：存储限定符是针对变量，类型限定符是针对类型
 // 类型系统基类,存储了规范类型
-class Type : public ArenaNode<Type>
+class Type 
 {
 public:
     enum TypeKind{

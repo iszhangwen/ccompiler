@@ -10,7 +10,7 @@
 class Parser;
 
 // RAII实现作用域管理
-class ScopeManager : public ArenaNode<ScopeManager>
+class ScopeManager 
 {
     Parser* parent_;
 public:
@@ -18,7 +18,7 @@ public:
     ~ScopeManager();
 };
 
-class Parser : public ArenaNode<Parser>
+class Parser 
 {
 private:
     friend ScopeManager;

@@ -14,7 +14,7 @@ class GlobalVariable;
 class Function;
 class LValue;
 
-class Module : public ArenaNode<Module>
+class Module 
 {
 public:
     explicit Module(const std::string& name)
