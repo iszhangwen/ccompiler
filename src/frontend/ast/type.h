@@ -23,12 +23,12 @@
 
 class Type;
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
-class QualType 
+class QualType : public ArenaNode<QualType>
 {
 public:
     // 构造函数
     QualType() {}
-    QualType(std::shared_ptr<Type> ptr, unsigned qual=0x00)
+    QualType(Type* ptr, unsigned qual=0x00)
         :m_type(ptr) {
         // 校验类型限定符的合法性
         assert((qual & ~TypeQualifier::TQ_MASK) == 0);
@@ -37,8 +37,8 @@ public:
 
     // 获取类型指针
     bool isNull() const {return (nullptr == getPtr());}
-    std::shared_ptr<Type> getPtr() {return m_type;}
-    const std::shared_ptr<Type> getPtr() const {return m_type;}
+    Type* getPtr() {return m_type;}
+    const Type* getPtr() const {return m_type;}
     
     // 运算符重载: 
     // 隐式类型转换: 用于在布尔上下文环境中表达
@@ -48,8 +48,8 @@ public:
     const Type &operator*() const {return *getPtr();}
     
     // 箭头运算符重载：箭头运算符是双目运算符
-    std::shared_ptr<Type> operator->() {return getPtr();}
-    const std::shared_ptr<Type> operator->() const{return getPtr();}
+    Type* operator->() {return getPtr();}
+    const Type* operator->() const{return getPtr();}
     // 逻辑运算符重载
     friend bool operator==(const QualType &LHS, const QualType &RHS) {return LHS.operator->() == RHS.operator->();}
     friend bool operator!=(const QualType &LHS, const QualType &RHS) {return !(LHS == RHS);}
@@ -62,12 +62,12 @@ public:
 
 private:
     uint8_t m_qualSpec; // 类型限定符
-    std::shared_ptr<Type> m_type;  // 存储类型指针
+    Type* m_type;  // 存储类型指针
 };
 
 // 对类型系统而言：存储限定符是针对变量，类型限定符是针对类型
 // 类型系统基类,存储了规范类型
-class Type 
+class Type : public ArenaNode<Type>
 {
 public:
     enum TypeKind{
@@ -84,8 +84,9 @@ public:
     };
      
 public:
-    Type(TypeKind tk, QualType canonical, bool isComplete = false){}
-    virtual ~Type() {}
+    Type(TypeKind tk, QualType canonical, bool isComplete = false)
+    : m_kind(tk), m_qualType(canonical), m_isComplete(isComplete){}
+    virtual ~Type() =default;
     // 类型基本属性
 
     TypeKind getKind() const { return m_kind;}
@@ -99,7 +100,7 @@ public:
     const QualType getQualType() const {return m_qualType;}
     void setQualType(QualType ql) {m_qualType = ql;}
     // 判断当前类型是否是规范类型
-    bool isCanonical() { return m_qualType.getPtr().get() == this; }
+    bool isCanonical() { return m_qualType.getPtr() == this; }
 
     /* C语言类型分为三种：对象类型，函数类型，不完整类型
     对象类型：能够完整描述对象存储特征的类型(如int, struct, 数组等)，编译器可以确定大小和内存布局。
@@ -164,6 +165,7 @@ public:
         setName("void");
         setSize(0);
     }
+    ~VoidType() = default;
 };
 
 // bool类型
@@ -290,13 +292,13 @@ public:
     : Type(Type::ARRAY, QualType(), true), m_len(0) {}
     ArrayType(QualType elem, int len)
     : Type(Type::ARRAY, elem, true), m_len(len) {}
-    ArrayType(QualType elem, std::shared_ptr<Expr> lenExpr)
+    ArrayType(QualType elem, Expr* lenExpr)
     : Type(Type::ARRAY, elem, true), m_lenExpr(lenExpr) {}
 
     void setLen(unsigned len) {m_len = len;}
     int getLen() const {return m_len;}
-    void setLenExpr(std::shared_ptr<Expr> ex) {m_lenExpr = ex;}
-    std::shared_ptr<Expr> getLenExpr() const {return m_lenExpr;}
+    void setLenExpr(Expr* ex) {m_lenExpr = ex;}
+    Expr* getLenExpr() const {return m_lenExpr;}
 
     bool isStarArray() const {return m_lenExpr != nullptr;}
     bool isStaticArray() const {return m_len > 0;}
@@ -304,7 +306,7 @@ public:
 
 private:
     int m_len;
-    std::shared_ptr<Expr> m_lenExpr;
+    Expr* m_lenExpr;
 };
 
 class FunctionType : public Type
@@ -334,8 +336,8 @@ public:
         setCompleteType(false);
     }
 
-    std::shared_ptr<RecordDecl> getDecl() {return m_decl;}
-    void setDecl(std::shared_ptr<RecordDecl> dc) {m_decl = dc;}
+    RecordDecl* getDecl() {return m_decl;}
+    void setDecl(RecordDecl* dc) {m_decl = dc;}
 
     bool isStruct() const {return m_isStruct;}
     void setIsStruct(bool val) {m_isStruct = val;}
@@ -344,7 +346,7 @@ public:
 
 private:
     bool m_isStruct;
-    std::shared_ptr<RecordDecl> m_decl;
+    RecordDecl* m_decl;
 };
 
 class EnumType : public Type
@@ -355,12 +357,12 @@ public:
         setCompleteType(false);
     }
 
-    std::shared_ptr<EnumDecl> getDecl() {return m_decl;}
-    void setDecl(std::shared_ptr<EnumDecl> dc) {m_decl = dc;}
+    EnumDecl* getDecl() {return m_decl;}
+    void setDecl(EnumDecl* dc) {m_decl = dc;}
 
     bool isCompleteType() {return m_decl != nullptr;}
 private:
-    std::shared_ptr<EnumDecl> m_decl;
+    EnumDecl* m_decl;
 };
 
 class TypedefType : public Type
@@ -369,10 +371,10 @@ public:
     TypedefType(QualType qt)
     : Type(Type::TYPEDEF, qt), m_decl(nullptr) {}
 
-    std::shared_ptr<TypedefDecl> getDecl() {return m_decl;}
-    void setDecl(std::shared_ptr<TypedefDecl> dc) {m_decl = dc;}
+    TypedefDecl* getDecl() {return m_decl;}
+    void setDecl(TypedefDecl* dc) {m_decl = dc;}
 
     bool isCompleteType() {return m_decl != nullptr;}
 private:
-    std::shared_ptr<TypedefDecl> m_decl;
+    TypedefDecl* m_decl;
 };

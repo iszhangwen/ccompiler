@@ -13,7 +13,6 @@ class Instruction;
 class Function : public Value
 {
 public:
-    template<typename T> using PtrList = std::list<std::shared_ptr<T>>;
     Function(QualType ty, const std::string& name, Module* parent)
     : Value(ty, name), m_module(parent){}
     ~Function(){}
@@ -24,55 +23,60 @@ public:
 
     // 基本块操作
     // 前驱子和后继子只有发生转移时才添加关系。
-    PtrList<BasicBlock> getBasicBlocks() {return m_basicBlocks;}
-    std::shared_ptr<BasicBlock> getInsertBlock() {return m_curBlock;}
+    std::list<BasicBlock*> getBasicBlocks() {return m_basicBlocks;}
+    BasicBlock* getInsertBlock() {return m_curBlock;}
     bool hasInsertPoint() const {return m_curBlock != nullptr;}
-    void setInsertPoint(std::shared_ptr<BasicBlock> bb) {m_curBlock = bb;}
+    void setInsertPoint(BasicBlock* bb) {m_curBlock = bb;}
     void clearInsertPoint() {m_curBlock = nullptr;}
 
     // 函数参数
-    void addArgument(std::shared_ptr<Argument> arg) {m_arguments.push_back(arg);}
-    PtrList<Argument> getArguments() {return m_arguments;}
+    void addArgument(Argument* arg) {m_arguments.push_back(arg);}
+    std::list<Argument*> getArguments() {return m_arguments;}
 
     // 构造辅助函数
-    void emitBlock(std::shared_ptr<BasicBlock> bb, bool isFinihed=false);
-    void emitBranch(std::shared_ptr<BasicBlock> bb);
+    void emitBlock(BasicBlock* bb, bool isFinihed=false);
+    void emitBranch(BasicBlock* bb);
     void ensureInsertPoint();
 
     // 函数指令管理
-    void addInst(std::shared_ptr<Instruction> ins);
+    void addInst(Instruction* ins);
 
     // break和continue栈管理
-    void pushBreakContinueStack(std::shared_ptr<BasicBlock>, std::shared_ptr<BasicBlock>);
+    void pushBreakContinueStack(BasicBlock*, BasicBlock*);
     void popBreakContinueStack();
-    std::pair<std::shared_ptr<BasicBlock>, std::shared_ptr<BasicBlock>> getBreakContinueStackBlock();
+    std::pair<BasicBlock*, BasicBlock*> getBreakContinueStackBlock();
 
     // 函数返回值地址
-    void setReturnAddr(std::shared_ptr<Instruction> ins) {m_returnAddr = ins;}
-    std::shared_ptr<Instruction> getReturnAddr() {return m_returnAddr;}
-    void setReturnBlock(std::shared_ptr<BasicBlock> bb) {m_returnBlock = bb;}
-    std::shared_ptr<BasicBlock> getReturnBlock() {return m_returnBlock;}
+    void setReturnAddr(Instruction* ins) {m_returnAddr = ins;}
+    Instruction* getReturnAddr() {return m_returnAddr;}
+    void setReturnBlock(BasicBlock* bb) {m_returnBlock = bb;}
+    BasicBlock* getReturnBlock() {return m_returnBlock;}
 
     // 局部声明地址获取
-    std::shared_ptr<Value> getLocalDeclAddr(NamedDecl* decl);
-    void setLocalDeclAddr(NamedDecl* decl, std::shared_ptr<Value> val);
+    Value* getLocalDeclAddr(NamedDecl* decl);
+    void setLocalDeclAddr(NamedDecl* decl, Value* val);
+
+    BasicBlock* getEntryBlock() {return m_entrylock;}
+    void setEntryBlock(BasicBlock* bb) {m_entrylock = bb;}
 
 private:
     // 模块
     Module* m_module; 
     // 函数基本块
-    std::shared_ptr<BasicBlock> m_curBlock;
-    PtrList<BasicBlock> m_basicBlocks;
+    BasicBlock* m_curBlock;
+    std::list<BasicBlock*> m_basicBlocks;
     // 函数参数
-    PtrList<Argument> m_arguments; 
+    std::list<Argument*> m_arguments; 
     // 函数返回值地址
-    std::shared_ptr<Instruction> m_returnAddr;
+    Instruction* m_returnAddr;
     // 函数返回块地址
-    std::shared_ptr<BasicBlock> m_returnBlock;
+    BasicBlock* m_returnBlock;
+    // 函数入口块地址
+    BasicBlock* m_entrylock;
     // first: break栈，second: continue栈
-    std::stack<std::pair<std::shared_ptr<BasicBlock>, std::shared_ptr<BasicBlock>>> m_breakContStack;
+    std::stack<std::pair<BasicBlock*, BasicBlock*>> m_breakContStack;
     // 局部变量和ssa ir的对应表
-    std::unordered_map<NamedDecl*, std::shared_ptr<Value>> m_localDeclAddr;
+    std::unordered_map<NamedDecl*, Value*> m_localDeclAddr;
 };
 
 class Argument : public Value

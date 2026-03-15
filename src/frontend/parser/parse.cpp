@@ -2,6 +2,8 @@
 #include <sema.h>
 #include <sstream>
 
+#include "arena.h"
+
 // 状态机模式解析TypeSpecifier
 enum TypeSpecCombine {
     // 符号
@@ -43,10 +45,10 @@ ScopeManager::~ScopeManager()
 
 Parser::Parser(const std::string& filename)
 {
-    m_source = std::make_shared<Source>(filename);
-    m_tokenSeq = std::make_shared<TokenSequence>(scanner(m_source).tokenize());
-    m_systable = std::make_shared<SymbolTableContext>();
-    m_sema = std::make_shared<SemaAnalyzer>();
+    m_source = Arena::make<Source>(filename);
+    m_tokenSeq = Arena::make<TokenSequence>(scanner(m_source).tokenize());
+    m_systable = Arena::make<SymbolTableContext>();
+    m_sema = Arena::make<SemaAnalyzer>();
 }
 
 Parser:: ~Parser()
@@ -128,7 +130,7 @@ void Parser::semaError(Token *tk, const std::string& val)
  ( expression )
   generic-selection
 */
-std::shared_ptr<Expr> Parser::parsePrimaryExpr()
+Expr* Parser::parsePrimaryExpr()
 {
     switch (m_tokenSeq->next()->kind_)
     {
@@ -140,7 +142,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
         else if (!sys->getDecl())
             semaError("symbol declaration undefined!");
         else {
-            auto node = std::make_shared<DeclRefExpr>();
+            auto node = Arena::make<DeclRefExpr>();
             node->setType(sys->getType()->getQualType());
             node->setDecl(sys->getDecl());
             return node;
@@ -149,7 +151,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
 
     case TokenKind::Numeric_Constant_:
     {
-        auto node = std::make_shared<IntegerLiteral>();
+        auto node = Arena::make<IntegerLiteral>();
         node->setValue(std::atoll(m_tokenSeq->cur()->value_.c_str()));
         node->setType(m_systable->getBuiltTypeByTS(TypeSpecifier::LONGLONG));
         return node;
@@ -157,7 +159,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
 
     case TokenKind::Float_Constant:
     {
-        auto node = std::make_shared<FloatingLiteral>();
+        auto node = Arena::make<FloatingLiteral>();
         node->setValue(std::atof(m_tokenSeq->cur()->value_.c_str()));
         node->setType(m_systable->getBuiltTypeByTS(TypeSpecifier::DOUBLE));
         return node;
@@ -165,7 +167,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
 
     case TokenKind::Character_Constant_:
     {
-        auto node = std::make_shared<CharacterLiteral>();
+        auto node = Arena::make<CharacterLiteral>();
         node->setValue(m_tokenSeq->cur()->value_.at(0));
         node->setType(m_systable->getBuiltTypeByTS(TypeSpecifier::CHAR));
         return node;
@@ -173,7 +175,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
 
     case TokenKind::String_Constant_:
     {
-        auto node = std::make_shared<StringLiteral>();
+        auto node = Arena::make<StringLiteral>();
         node->setValue(m_tokenSeq->cur()->value_);
         return node;
     }
@@ -182,7 +184,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
     {
         auto child = parseExpr();
         m_tokenSeq->expect(TokenKind::RParent_);
-        auto node = std::make_shared<ParenExpr>();
+        auto node = Arena::make<ParenExpr>();
         node->setSubExpr(child);
         node->setType(child->getType());
         return node;
@@ -202,7 +204,7 @@ std::shared_ptr<Expr> Parser::parsePrimaryExpr()
  generic-association
  generic-assoc-list , generic-association
 */
-std::shared_ptr<Expr> Parser::parseGenericSelection()
+Expr* Parser::parseGenericSelection()
 {
     m_tokenSeq->expect(TokenKind::T_Generic);
     m_tokenSeq->expect(TokenKind::LParent_);
@@ -218,7 +220,7 @@ std::shared_ptr<Expr> Parser::parseGenericSelection()
  type-name : assignment-expression
  default : assignment-expression
 */
-std::shared_ptr<Expr> Parser::parseGenericAssociation()
+Expr* Parser::parseGenericAssociation()
 {
     if (m_tokenSeq->match(TokenKind::Default)) {
 
@@ -238,9 +240,9 @@ std::shared_ptr<Expr> Parser::parseGenericAssociation()
     解析重点：
     复合字面值和primary都具备 （type-name）(expr)等括号表达式形式
 */
-std::shared_ptr<Expr> Parser::parsePostfixExpr()
+Expr* Parser::parsePostfixExpr()
 {
-    std::shared_ptr<Expr> node = nullptr;
+    Expr* node = nullptr;
     if (m_tokenSeq->test(TokenKind::LParent_)) {
         node = parseParenExpr();
     }
@@ -249,13 +251,13 @@ std::shared_ptr<Expr> Parser::parsePostfixExpr()
     }
     while (true) {
         if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
-            auto array = std::make_shared<ArraySubscriptExpr>();
+            auto array = Arena::make<ArraySubscriptExpr>();
             array->setIndexExpr(parseExpr());
             array->setBaseExpr(node);
             m_tokenSeq->expect(TokenKind::RSquare_Brackets_);
         }
         else if (m_tokenSeq->match(TokenKind::LParent_)) {
-            auto args = std::make_shared<CallExpr>();
+            auto args = Arena::make<CallExpr>();
             args->setParams(parseArgListExpr());
             args->setCallee(node);
             m_tokenSeq->expect(TokenKind::RParent_);
@@ -268,14 +270,14 @@ std::shared_ptr<Expr> Parser::parsePostfixExpr()
         }
         // 自增表达式
         else if (m_tokenSeq->match(TokenKind::Increment_)) {
-            auto inc = std::make_shared<UnaryOpExpr>();
+            auto inc = Arena::make<UnaryOpExpr>();
             inc->setOpCode(UnaryOpExpr::Post_Increment_);
             inc->setSubExpr(node);
             node = inc;
         }
         // 自减表达式
         else if (m_tokenSeq->match(TokenKind::Decrement_)) {
-            auto dec = std::make_shared<UnaryOpExpr>();
+            auto dec = Arena::make<UnaryOpExpr>();
             dec->setOpCode(UnaryOpExpr::Post_Decrement_);
             dec->setSubExpr(node);
             node = dec;
@@ -287,9 +289,9 @@ std::shared_ptr<Expr> Parser::parsePostfixExpr()
     return node;
 }
 
-std::vector<std::shared_ptr<Expr>> Parser::parseArgListExpr()
+std::vector<Expr*> Parser::parseArgListExpr()
 {
-    std::vector<std::shared_ptr<Expr>> res;
+    std::vector<Expr*> res;
     res.push_back(parseAssignExpr());
     while (m_tokenSeq->match(TokenKind::Comma_)) {
         res.push_back(parseAssignExpr());
@@ -309,9 +311,9 @@ std::vector<std::shared_ptr<Expr>> Parser::parseArgListExpr()
 unary-operator: one of
     & * +- ~ !
 */
-std::shared_ptr<Expr> Parser::parseUnaryExpr()
+Expr* Parser::parseUnaryExpr()
 {
-    auto node = std::make_shared<UnaryOpExpr>();
+    auto node = Arena::make<UnaryOpExpr>();
     switch (m_tokenSeq->peek()->kind_)
     {
     case TokenKind::Increment_:
@@ -378,16 +380,16 @@ std::shared_ptr<Expr> Parser::parseUnaryExpr()
  unary-expression
  ( type-name ) cast-expression
 */
-std::shared_ptr<Expr> Parser::parseCastExpr()
+Expr* Parser::parseCastExpr()
 {
     return parseUnaryExpr();
 }
 
-std::shared_ptr<Expr> Parser::parseMultiExpr()
+Expr* Parser::parseMultiExpr()
 {
     auto node = parseCastExpr();
     while (true) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Multiplication_)) {
             rex->setOpCode(BinaryOpExpr::Multiplication_);
         } 
@@ -407,11 +409,11 @@ std::shared_ptr<Expr> Parser::parseMultiExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseAddExpr()
+Expr* Parser::parseAddExpr()
 {
     auto node = parseMultiExpr();
     while (true) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Addition_)) {
             rex->setOpCode(BinaryOpExpr::Addition_);
         } else if (m_tokenSeq->match(TokenKind::Subtraction_)) {
@@ -426,11 +428,11 @@ std::shared_ptr<Expr> Parser::parseAddExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseShiftExpr()
+Expr* Parser::parseShiftExpr()
 {
     auto node = parseAddExpr();
     while (true) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::LShift_)) {
             rex->setOpCode(BinaryOpExpr::LShift_);
         } else if (m_tokenSeq->match(TokenKind::RShift_)) {
@@ -445,11 +447,11 @@ std::shared_ptr<Expr> Parser::parseShiftExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseRelationalExpr()
+Expr* Parser::parseRelationalExpr()
 {
     auto node = parseShiftExpr();
     while (true) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Less_)) {
             rex->setOpCode(BinaryOpExpr::Less_);
         } else if (m_tokenSeq->match(TokenKind::Less_Equal_)) {
@@ -468,11 +470,11 @@ std::shared_ptr<Expr> Parser::parseRelationalExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseEqualExpr()
+Expr* Parser::parseEqualExpr()
 {
     auto node = parseRelationalExpr();
     while (true) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         if (m_tokenSeq->match(TokenKind::Equality_)) {
             rex->setOpCode(BinaryOpExpr::Equality_);
         } else if (m_tokenSeq->match(TokenKind::Inequality_)) {
@@ -487,11 +489,11 @@ std::shared_ptr<Expr> Parser::parseEqualExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseBitANDExpr()
+Expr* Parser::parseBitANDExpr()
 {
     auto node = parseEqualExpr();
     while (m_tokenSeq->match(TokenKind::BitWise_AND_)) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         rex->setOpCode(BinaryOpExpr::BitWise_AND_);
         rex->setLExpr(node);
         rex->setRExpr(parseEqualExpr());
@@ -500,11 +502,11 @@ std::shared_ptr<Expr> Parser::parseBitANDExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseBitXORExpr()
+Expr* Parser::parseBitXORExpr()
 {
     auto node = parseBitANDExpr();
     while (m_tokenSeq->match(TokenKind::BitWise_XOR_)) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         rex->setOpCode(BinaryOpExpr::BitWise_XOR_);
         rex->setLExpr(node);
         rex->setRExpr(parseBitANDExpr());
@@ -513,11 +515,11 @@ std::shared_ptr<Expr> Parser::parseBitXORExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseBitORExpr()
+Expr* Parser::parseBitORExpr()
 {
     auto node = parseBitXORExpr();
     while (m_tokenSeq->match(TokenKind::BitWise_OR_)) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         rex->setOpCode(BinaryOpExpr::BitWise_OR_);
         rex->setLExpr(node);
         rex->setRExpr(parseBitXORExpr());
@@ -526,11 +528,11 @@ std::shared_ptr<Expr> Parser::parseBitORExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseLogicalANDExpr()
+Expr* Parser::parseLogicalANDExpr()
 {
     auto node = parseBitORExpr();
     while (m_tokenSeq->match(TokenKind::Logical_AND_)) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         rex->setOpCode(BinaryOpExpr::Logical_AND_);
         rex->setLExpr(node);
         rex->setRExpr(parseBitORExpr());
@@ -539,11 +541,11 @@ std::shared_ptr<Expr> Parser::parseLogicalANDExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseLogicalORExpr()
+Expr* Parser::parseLogicalORExpr()
 {
     auto node = parseLogicalANDExpr();
     while (m_tokenSeq->match(TokenKind::Logical_OR_)) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         rex->setOpCode(BinaryOpExpr::Logical_OR_);
         rex->setLExpr(node);
         rex->setRExpr(parseLogicalANDExpr());
@@ -552,11 +554,11 @@ std::shared_ptr<Expr> Parser::parseLogicalORExpr()
     return node;
 }
 
-std::shared_ptr<Expr> Parser::parseConditionalExpr()
+Expr* Parser::parseConditionalExpr()
 {
     auto node = parseLogicalORExpr();
     if (m_tokenSeq->match(TokenKind::Conditional_)) {
-        auto rex = std::make_shared<ConditionalExpr>();
+        auto rex = Arena::make<ConditionalExpr>();
         rex->setCond(node);
         rex->setElse(parseExpr());
         m_tokenSeq->expect(TokenKind::Colon_);
@@ -576,7 +578,7 @@ std::shared_ptr<Expr> Parser::parseConditionalExpr()
  (6.5.16) assignment-operator: one of
  = *= /= %= +=-= <<= >>= &= ^= |=
 */
-std::shared_ptr<Expr> Parser::parseAssignExpr()
+Expr* Parser::parseAssignExpr()
 {
     auto node = parseConditionalExpr();
     auto code = BinaryOpExpr::Unknown;
@@ -630,7 +632,7 @@ std::shared_ptr<Expr> Parser::parseAssignExpr()
         return node;
     }
     m_tokenSeq->next();
-    auto rex = std::make_shared<BinaryOpExpr>();
+    auto rex = Arena::make<BinaryOpExpr>();
     rex->setOpCode(code);
     rex->setLExpr(node);
     rex->setRExpr(parseAssignExpr());
@@ -642,11 +644,11 @@ std::shared_ptr<Expr> Parser::parseAssignExpr()
  assignment-expression
  expression , assignment-expression
 */
-std::shared_ptr<Expr> Parser::parseExpr()
+Expr* Parser::parseExpr()
 {
     auto node = parseAssignExpr();
     while (m_tokenSeq->match(TokenKind::Comma_)) {
-        auto rex = std::make_shared<BinaryOpExpr>();
+        auto rex = Arena::make<BinaryOpExpr>();
         rex->setOpCode(BinaryOpExpr::Comma);
         rex->setLExpr(node);
         rex->setRExpr(parseAssignExpr());
@@ -658,7 +660,7 @@ std::shared_ptr<Expr> Parser::parseExpr()
 /*(6.6) constant-expression:
  conditional-expression
 */
-std::shared_ptr<Expr> Parser::parseConstansExpr()
+Expr* Parser::parseConstansExpr()
 {
     return parseConditionalExpr();
 }
@@ -667,7 +669,7 @@ std::shared_ptr<Expr> Parser::parseConstansExpr()
    posftix-expr： （type-name）{...}
    cast-expr: (type-name) cast-expr
 */
-std::shared_ptr<Expr> Parser::parseParenExpr()
+Expr* Parser::parseParenExpr()
 {
     m_tokenSeq->expect(TokenKind::LParent_);
     if (m_systable->isTypeName(m_tokenSeq->peek())) {
@@ -681,7 +683,7 @@ std::shared_ptr<Expr> Parser::parseParenExpr()
         }
     }
     else {
-        auto node = std::make_shared<ParenExpr>();
+        auto node = Arena::make<ParenExpr>();
         node->setSubExpr(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
         return node;
@@ -709,7 +711,7 @@ DeclGroup Parser::parseDeclaration()
     if (decl->getKind() == AstNode::NK_FunctionDecl) {
         // 判断是否是函数定义是，直接返回
         if (m_tokenSeq->test(TokenKind::LCurly_Brackets_)) {
-            dynamic_cast<FunctionDecl*>(decl.get())->setBody(parseCompoundStmt());
+            dynamic_cast<FunctionDecl*>(decl)->setBody(parseCompoundStmt());
             res.push_back(decl);
             return res;
         }
@@ -928,13 +930,13 @@ Declarator Parser::parseDeclarationSpec()
  declarator
  declarator = initializer
 */
-std::shared_ptr<DeclaratorDecl> Parser::parseInitDeclarator(Declarator dc)
+DeclaratorDecl* Parser::parseInitDeclarator(Declarator dc)
 {
     parseDeclarator(dc);
     // 判断当前是否处于函数原型作用域
-    std::shared_ptr<DeclaratorDecl> node = nullptr;
+    DeclaratorDecl* node = nullptr;
     if (dc.getKind() == Declarator::DK_FUNC) {
-        node = std::make_shared<FunctionDecl>();
+        node = Arena::make<FunctionDecl>();
         if (m_systable->LookupNormal(dc.getName())) {
             sytaxError("function redefined!");
         }
@@ -943,7 +945,7 @@ std::shared_ptr<DeclaratorDecl> Parser::parseInitDeclarator(Declarator dc)
 
     }
     else {
-        auto var = std::make_shared<VarDecl>();
+        auto var = Arena::make<VarDecl>();
         if (m_tokenSeq->match(TokenKind::Assign_)) {
             var->setInitExpr(parseInitializer());
         }
@@ -961,7 +963,7 @@ std::shared_ptr<DeclaratorDecl> Parser::parseInitDeclarator(Declarator dc)
     if (m_systable->LookupNormal(node->getName())) {
         sytaxError("variable redefined!");
     }
-    auto sys = std::make_shared<Symbol>();
+    auto sys = Arena::make<Symbol>();
     sys->setName(node->getName());
     sys->setType(node->getQualType());
     sys->setDecl(node);
@@ -986,16 +988,16 @@ void Parser::parseStorageClassSpec(StorageClass val, int* sc)
  struct-or-union identifieropt { struct-declaration-list }
  struct-or-union identifier
 */
-std::shared_ptr<Type> Parser::parseStructOrUnionSpec(bool isStruct)
+Type* Parser::parseStructOrUnionSpec(bool isStruct)
 {
-    auto decl = std::make_shared<RecordDecl>();
+    auto decl = Arena::make<RecordDecl>();
     decl->setIsUnion(!isStruct);
     decl->setScope(m_systable->getCurScope());
 
     if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         // 添加符号到符号表
-        auto sys = std::make_shared<Symbol>();
-        sys->setType(QualType(std::make_shared<RecordType>()));
+        auto sys = Arena::make<Symbol>();
+        sys->setType(QualType(Arena::make<RecordType>()));
         sys->setScope(m_systable->getCurScope());
         sys->setDecl(decl);
         m_systable->insertRecord(sys);
@@ -1011,9 +1013,9 @@ std::shared_ptr<Type> Parser::parseStructOrUnionSpec(bool isStruct)
     // 添加到符号表
     auto sys = m_systable->LookupRecord(decl->getName());
     if (!sys) {
-        sys = std::make_shared<Symbol>();
+        sys = Arena::make<Symbol>();
         sys->setName(decl->getName());
-        sys->setType(QualType(std::make_shared<RecordType>()));
+        sys->setType(QualType(Arena::make<RecordType>()));
         sys->setScope(m_systable->getCurScope());
         sys->setDecl(decl);
         m_systable->insertRecord(sys);
@@ -1027,7 +1029,7 @@ std::shared_ptr<Type> Parser::parseStructOrUnionSpec(bool isStruct)
         parseStructDeclarationList(decl);
         m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
         // 生成类型
-        auto ty = std::make_shared<RecordType>();
+        auto ty = Arena::make<RecordType>();
         ty->setDecl(decl);
         ty->setCompleteType(true);
         sys->setType(QualType(ty));
@@ -1042,7 +1044,7 @@ std::shared_ptr<Type> Parser::parseStructOrUnionSpec(bool isStruct)
  specifier-qualifier-list struct-declarator-list ;
  解析结构体成员
 */
-void Parser::parseStructDeclarationList(std::shared_ptr<RecordDecl> parent)
+void Parser::parseStructDeclarationList(RecordDecl* parent)
 {
     if (!parent) return;
     ScopeManager scm(this, Scope::BLOCK);
@@ -1070,10 +1072,10 @@ QualType Parser::parseSpecQualList()
  declarator
  declaratoropt : constant-expression
 */
-void Parser::parseStructDeclaratorList(std::shared_ptr<RecordDecl> parent, QualType qt)
+void Parser::parseStructDeclaratorList(RecordDecl* parent, QualType qt)
 {
     do {
-        auto decl = std::make_shared<FieldDecl>();
+        auto decl = Arena::make<FieldDecl>();
         decl->setParent(parent);
         decl->setQualType(qt);
         decl->setScope(m_systable->getCurScope());
@@ -1097,17 +1099,17 @@ void Parser::parseStructDeclaratorList(std::shared_ptr<RecordDecl> parent, QualT
  enum identifieropt { enumerator-list ,}
  enum identifier
 */
-std::shared_ptr<Type> Parser::parseEnumSpec()
+Type* Parser::parseEnumSpec()
 {
-    auto decl = std::make_shared<EnumDecl>();
+    auto decl = Arena::make<EnumDecl>();
     decl->setScope(m_systable->getCurScope());
 
     // 枚举类型
     auto memberType = m_systable->getBuiltTypeByTS(TypeSpecifier::INT);
     if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         // 添加符号到符号表
-        auto sys = std::make_shared<Symbol>();
-        sys->setType(QualType(std::make_shared<EnumType>()));
+        auto sys = Arena::make<Symbol>();
+        sys->setType(QualType(Arena::make<EnumType>()));
         sys->setScope(m_systable->getCurScope());
         sys->setDecl(decl);
         m_systable->insertRecord(sys);
@@ -1123,9 +1125,9 @@ std::shared_ptr<Type> Parser::parseEnumSpec()
     // 添加到符号表
     auto sys = m_systable->LookupRecord(decl->getName());
     if (!sys) {
-        sys = std::make_shared<Symbol>();
+        sys = Arena::make<Symbol>();
         sys->setName(decl->getName());
-        sys->setType(QualType(std::make_shared<EnumType>()));
+        sys->setType(QualType(Arena::make<EnumType>()));
         sys->setScope(m_systable->getCurScope());
         sys->setDecl(decl);
         m_systable->insertRecord(sys);
@@ -1139,7 +1141,7 @@ std::shared_ptr<Type> Parser::parseEnumSpec()
         parseEnumeratorList(decl, memberType);
         m_tokenSeq->expect(TokenKind::RCurly_Brackets_);
         // 生成类型
-        auto ty = std::make_shared<EnumType>();
+        auto ty = Arena::make<EnumType>();
         ty->setDecl(decl);
         ty->setCompleteType(true);
         sys->setType(QualType(ty));
@@ -1156,7 +1158,7 @@ std::shared_ptr<Type> Parser::parseEnumSpec()
   (6.4.4.3) enumeration-constant:
  identifier
 */
-void Parser::parseEnumeratorList(std::shared_ptr<EnumDecl> parent, QualType qt)
+void Parser::parseEnumeratorList(EnumDecl* parent, QualType qt)
 {
     if (!parent) return;
     // 打开块作用域
@@ -1164,7 +1166,7 @@ void Parser::parseEnumeratorList(std::shared_ptr<EnumDecl> parent, QualType qt)
     while (true) {
         // 解析枚举常量
         if (m_tokenSeq->match(TokenKind::Identifier)) {
-            auto decl = std::make_shared<EnumConstantDecl>();
+            auto decl = Arena::make<EnumConstantDecl>();
             decl->setName(m_tokenSeq->cur()->value_);
             decl->setScope(m_systable->getCurScope());
             decl->setQualType(qt);
@@ -1174,7 +1176,7 @@ void Parser::parseEnumeratorList(std::shared_ptr<EnumDecl> parent, QualType qt)
             }
             parent->addConstant(decl);
             // 创建符号并加入到符号表
-            auto sys = std::make_shared<Symbol>();
+            auto sys = Arena::make<Symbol>();
             sys->setName(decl->getName());
             sys->setScope(m_systable->getCurScope());
             sys->setType(decl->getQualType());
@@ -1262,14 +1264,14 @@ void Parser::parseDeclarator(Declarator& dc)
             auto paramList = parseParameterList();
             m_systable->exitScope();
             m_tokenSeq->expect(TokenKind::RParent_);
-            auto newBase = std::make_shared<FunctionType>();
+            auto newBase = Arena::make<FunctionType>();
             newBase->setQualType(base);
             dc.setType(QualType(newBase));
             dc.setKind(Declarator::DK_FUNC);
             break;
         }
         else if (m_tokenSeq->match(TokenKind::LSquare_Brackets_)) {
-            auto newBase = std::make_shared<ArrayType>();
+            auto newBase = Arena::make<ArrayType>();
             newBase->setQualType(base);
             dc.setType(QualType(newBase));
             dc.setKind(Declarator::DK_ARRAY);
@@ -1291,7 +1293,7 @@ QualType Parser::modifyBaseType(QualType oldBase, QualType newBase, QualType cur
     return curType;
 }
 
-std::shared_ptr<Expr> Parser::parseArrayLen()
+Expr* Parser::parseArrayLen()
 {
     return nullptr;
 }
@@ -1308,7 +1310,7 @@ QualType Parser::parseFuncOrArrayDeclarator(QualType base)
 QualType Parser::parsePointer(QualType qt)
 { 
     while (m_tokenSeq->match(TokenKind::Multiplication_)) {
-        auto ty = std::make_shared<PointerType>(qt);
+        auto ty = Arena::make<PointerType>(qt);
         qt = QualType(ty, parseTypeQualList());
     }
     return qt;
@@ -1322,13 +1324,13 @@ void Parser::parseParameterTypeList()
     }
 }
 
-std::vector<std::shared_ptr<ParmVarDecl>> Parser::parseParameterList()
+std::vector<ParmVarDecl*> Parser::parseParameterList()
 {/*
     parseParameterDeclaration();
     while (m_tokenSeq->match(TokenKind::Comma_)) {
         parseParameterDeclaration();
     }*/
-    return std::vector<std::shared_ptr<ParmVarDecl>>();
+    return std::vector<ParmVarDecl*>();
 }
 
 /* (6.7.5) parameter-declaration:
@@ -1439,7 +1441,7 @@ void Parser::parseTypedefName()
  { initializer-list }
  { initializer-list , }
 */
-std::shared_ptr<Expr> Parser::parseInitializer()
+Expr* Parser::parseInitializer()
 {
     if (m_tokenSeq->match(TokenKind::LCurly_Brackets_)) {
         parseInitializerList();
@@ -1501,7 +1503,7 @@ void Parser::parseDesignator()
     iteration-statement
     jump-statement
 */
-std::shared_ptr<Stmt> Parser::parseStmt()
+Stmt* Parser::parseStmt()
 {
     switch (m_tokenSeq->peek()->kind_)
     {
@@ -1539,7 +1541,7 @@ std::shared_ptr<Stmt> Parser::parseStmt()
     return nullptr;
 }
 
-std::shared_ptr<Stmt> Parser::parseLabeledStmt()
+Stmt* Parser::parseLabeledStmt()
 {
     switch (m_tokenSeq->next()->kind_)
     {
@@ -1551,7 +1553,7 @@ std::shared_ptr<Stmt> Parser::parseLabeledStmt()
     
     case TokenKind::Case:
     {
-        auto node = std::make_shared<CaseStmt>();
+        auto node = Arena::make<CaseStmt>();
         node->setCond(parseConstansExpr());
         m_tokenSeq->expect(TokenKind::Colon_);
         node->setBody(parseStmt());
@@ -1560,7 +1562,7 @@ std::shared_ptr<Stmt> Parser::parseLabeledStmt()
 
     case TokenKind::Default:
     {
-        auto node = std::make_shared<DefaultStmt>();
+        auto node = Arena::make<DefaultStmt>();
         m_tokenSeq->expect(TokenKind::Colon_);
         node->setBody(parseStmt());
         return node;
@@ -1572,17 +1574,17 @@ std::shared_ptr<Stmt> Parser::parseLabeledStmt()
     return nullptr;
 }
 
-std::shared_ptr<CompoundStmt> Parser::parseCompoundStmt()
+CompoundStmt* Parser::parseCompoundStmt()
 {
     ScopeManager scm(this, Scope::BLOCK);
-    auto node = std::make_shared<CompoundStmt>();
+    auto node = Arena::make<CompoundStmt>();
     m_tokenSeq->expect(TokenKind::LCurly_Brackets_);
     while (!m_tokenSeq->match(TokenKind::RCurly_Brackets_)) {
         if (isDeclarationSpecifier(m_tokenSeq->peek()))
         {
             auto decls = parseDeclaration();
             for (auto decl : decls) {
-                node->addStmt(std::make_shared<DeclStmt>(decl));
+                node->addStmt(Arena::make<DeclStmt>(decl));
             }
         } else {
             auto stmt = parseStmt();
@@ -1594,24 +1596,24 @@ std::shared_ptr<CompoundStmt> Parser::parseCompoundStmt()
     return node;    
 }
 
-std::shared_ptr<ExprStmt> Parser::parseExprStmt()
+ExprStmt* Parser::parseExprStmt()
 {
     auto expr = parseExpr();
     m_tokenSeq->expect(TokenKind::Semicolon_);
     if (expr) {
-        return std::make_shared<ExprStmt>(expr);
+        return Arena::make<ExprStmt>(expr);
     }
     return nullptr;
 }
 
-std::shared_ptr<Stmt> Parser::parseSelectionStmt()
+Stmt* Parser::parseSelectionStmt()
 {
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::If:
     {   
         m_tokenSeq->expect(TokenKind::LParent_);
-        auto node = std::make_shared<IfStmt>();
+        auto node = Arena::make<IfStmt>();
         node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
         node->setThen(parseStmt());
@@ -1624,7 +1626,7 @@ std::shared_ptr<Stmt> Parser::parseSelectionStmt()
     case TokenKind::Switch:
     {
         m_tokenSeq->expect(TokenKind::LParent_);
-        auto node = std::make_shared<SwitchStmt>();
+        auto node = Arena::make<SwitchStmt>();
         node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
         node->setBody(parseStmt());
@@ -1644,13 +1646,13 @@ std::shared_ptr<Stmt> Parser::parseSelectionStmt()
  for ( expressionopt ; expressionopt ; expressionopt ) statement
  for ( declaration expressionopt ; expressionopt ) statement 
 */
-std::shared_ptr<Stmt> Parser::parseIterationStmt()
+Stmt* Parser::parseIterationStmt()
 {
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::While:
     {
-        auto node = std::make_shared<WhileStmt>();
+        auto node = Arena::make<WhileStmt>();
         m_tokenSeq->expect(TokenKind::LParent_);
         node->setCond(parseExpr());
         m_tokenSeq->expect(TokenKind::RParent_);
@@ -1660,7 +1662,7 @@ std::shared_ptr<Stmt> Parser::parseIterationStmt()
 
     case TokenKind::Do:
     {
-        auto node = std::make_shared<DoStmt>();
+        auto node = Arena::make<DoStmt>();
         node->setBody(parseStmt());
         m_tokenSeq->expect(TokenKind::While);
         m_tokenSeq->expect(TokenKind::LParent_);
@@ -1685,13 +1687,13 @@ std::shared_ptr<Stmt> Parser::parseIterationStmt()
  break ;
  return expressionopt ;
 */
-std::shared_ptr<Stmt> Parser::parseJumpStmt()
+Stmt* Parser::parseJumpStmt()
 {
     switch (m_tokenSeq->next()->kind_)
     {
     case TokenKind::Goto:
     {
-        auto node = std::make_shared<GotoStmt>();
+        auto node = Arena::make<GotoStmt>();
         m_tokenSeq->expect(TokenKind::Identifier);
         auto sys = m_systable->LookupLabel(m_tokenSeq->cur()->value_);
         m_tokenSeq->expect(TokenKind::Semicolon_);
@@ -1700,21 +1702,21 @@ std::shared_ptr<Stmt> Parser::parseJumpStmt()
 
     case TokenKind::Continue:
     {
-        auto node = std::make_shared<ContinueStmt>();
+        auto node = Arena::make<ContinueStmt>();
         m_tokenSeq->expect(TokenKind::Semicolon_);
         return node;
     }
 
     case TokenKind::Break:
     {
-        auto node = std::make_shared<BreakStmt>();
+        auto node = Arena::make<BreakStmt>();
         m_tokenSeq->expect(TokenKind::Semicolon_);
         return node;
     }
 
     case TokenKind::Return:
     {
-        auto node = std::make_shared<ReturnStmt>();
+        auto node = Arena::make<ReturnStmt>();
         auto rex = parseExprStmt();
         node->setRetExpr(rex->getExpr());
         return node;
@@ -1799,7 +1801,7 @@ void Parser::parseTranslationUnit()
 {
     ScopeManager scm(this, Scope::FILE);
     m_systable->initBuiltType();
-    m_unit = std::make_shared<TranslationUnitDecl>();
+    m_unit = Arena::make<TranslationUnitDecl>();
     while (!m_tokenSeq->match(TokenKind::EOF_))
     {
         if (m_tokenSeq->match(TokenKind::Semicolon_))

@@ -258,7 +258,7 @@ Token *scanner::makeToken(TokenKind kind)
     return Token::newObj(kind, m_source->loc(), m_source->seg());
 }
 
-scanner::scanner(std::shared_ptr<Source> buf)
+scanner::scanner(Source* buf)
 : m_source(buf)
 {
     if (m_source == nullptr)

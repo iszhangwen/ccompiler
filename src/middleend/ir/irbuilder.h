@@ -61,8 +61,8 @@ public:
     void dump();
 
 private:
-    std::shared_ptr<Module> m_module;
-    std::shared_ptr<Function> m_curFuntion;
-    std::unordered_map<NamedDecl*, std::shared_ptr<Value>> m_nameDeclAddr;
+    Module* m_module;
+    Module* m_curFuntion;
+    std::unordered_map<NamedDecl*, Value*> m_nameDeclAddr;
 };
 

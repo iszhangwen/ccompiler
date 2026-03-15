@@ -3,7 +3,7 @@
 #include "instruction.h"
 
 // @brief：创建一个新块，并将程序控制权从当前块转移到新块
-void Function::emitBlock(std::shared_ptr<BasicBlock> target, bool isFinihed)
+void Function::emitBlock(BasicBlock* target, bool isFinihed)
 {
     // 当前块末尾创建分支指令
     emitBranch(target);
@@ -14,7 +14,7 @@ void Function::emitBlock(std::shared_ptr<BasicBlock> target, bool isFinihed)
 }
 
 // @brief: 当前块末尾插入br指令，br指令跳转目标target
-void Function::emitBranch(std::shared_ptr<BasicBlock> target)
+void Function::emitBranch(BasicBlock* target)
 {
     auto curBlock = getInsertBlock();
     if (!curBlock || curBlock->isTerminator()) {
@@ -23,7 +23,7 @@ void Function::emitBranch(std::shared_ptr<BasicBlock> target)
     } else {
         // 否则再当前块的末尾插入跳转指令
         // 跳转指令的跳转目标是新的基本块
-        m_curBlock->addInst(std::make_shared<BranchInst>(curBlock.get(), target.get()));
+        m_curBlock->addInst(Arena::make<BranchInst>(curBlock, target));
     }
     clearInsertPoint();
 }
@@ -35,16 +35,16 @@ void Function::ensureInsertPoint()
     }
 }
 
-void Function::addInst(std::shared_ptr<Instruction> ins)
+void Function::addInst(Instruction* ins)
 {
     auto curBlock = getInsertBlock();
     if (curBlock && ins) {
-        ins->setParent(curBlock.get());
+        ins->setParent(curBlock);
         curBlock->addInst(ins);
     }
 }
 
-void Function::pushBreakContinueStack(std::shared_ptr<BasicBlock> B, std::shared_ptr<BasicBlock> C)
+void Function::pushBreakContinueStack(BasicBlock* B, BasicBlock* C)
 {
     m_breakContStack.push(std::make_pair(B, C));
 }
@@ -54,17 +54,17 @@ void Function::popBreakContinueStack()
     m_breakContStack.pop();
 }
 
-std::pair<std::shared_ptr<BasicBlock>, std::shared_ptr<BasicBlock>> Function::getBreakContinueStackBlock()
+std::pair<BasicBlock*, BasicBlock*> Function::getBreakContinueStackBlock()
 {
     return m_breakContStack.top();
 }
 
-std::shared_ptr<Value> Function::getLocalDeclAddr(NamedDecl* decl) {
+Value* Function::getLocalDeclAddr(NamedDecl* decl) {
     if (m_localDeclAddr.count(decl)) 
         return m_localDeclAddr[decl];
     return nullptr;
 }
-void Function::setLocalDeclAddr(NamedDecl* decl, std::shared_ptr<Value> val) {
+void Function::setLocalDeclAddr(NamedDecl* decl, Value* val) {
     if (m_localDeclAddr.count(decl)) 
         return;
     m_localDeclAddr[decl] = val;

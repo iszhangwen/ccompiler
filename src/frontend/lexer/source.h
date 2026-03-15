@@ -3,8 +3,11 @@
 #include <vector>
 #include <memory>
 
+#include "arena.h"
+
 // 源码字符位置
-struct SourceLocation {
+struct SourceLocation : public ArenaNode<SourceLocation>
+{
     SourceLocation()
     : SourceLocation(""){}
 
@@ -30,7 +33,7 @@ struct SourceLocation {
 /*
 该类将一个文件的源码读入到内存中，并记录每个字符的位置，按照行存储数据。
 */
-class Source 
+class Source : public ArenaNode<Source>
 {
 public:
     // 资源控制函数
@@ -60,12 +63,11 @@ public:
     std::string seg() const;
 
 private:
-    using Line = std::shared_ptr<std::string>;
     // 缓存当前的Token词
     std::string segment;
     // 当前mark标记的位置，和读取到的位置
     std::pair<SourceLocation, SourceLocation> loc_; 
-    std::vector<Line> src_; // 源码
+    std::vector<std::shared_ptr<std::string>> src_; // 源码
     // 读取当前文件
     bool load(const std::string& filePath);
 };

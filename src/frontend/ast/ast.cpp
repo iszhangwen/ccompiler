@@ -11,7 +11,8 @@ RETURN_TYPE CLASS_NAME::accept(VISITOR_BASE* vt) { \
     if (vt) { \
         return vt->visit(this); \
     } \
-}
+    return RETURN_TYPE(); \
+}\
 
 // 通用访问接口: 主要是提供dump等功能
 DEFINE_ACCEPT_METHOD(TranslationUnitDecl, ASTVisitor, std::any)

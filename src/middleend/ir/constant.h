@@ -24,10 +24,10 @@ public:
 class ConstantInt : public User
 {
 public:
-    static int getValue(std::make_shared<ConstantInt> ptr) { return ptr->m_value; }
+    static int getValue(ConstantInt* ptr) { return ptr->m_value; }
     int getValue() { return m_value; }
-    static std::make_shared<ConstantInt> get(int val, Module *m);
-    static std::make_shared<ConstantInt> get(bool val, Module *m);
+    static ConstantInt* get(int val, Module *m);
+    static ConstantInt* get(bool val, Module *m);
     bool isConstantInt() {return true;}
     
 private:
@@ -39,9 +39,9 @@ private:
 class ConstantFloat : public User
 {
 public:
-    static double getValue(std::make_shared<ConstantFloat> ptr) { return ptr->m_value; }
+    static double getValue(ConstantFloat* ptr) { return ptr->m_value; }
     double getValue() { return m_value; }
-    static std::make_shared<ConstantFloat> get(double val) {return std::make_shared<ConstantInt>(nullptr, val);}
+    static ConstantFloat* get(double val) {return Arena::make<ConstantInt>(nullptr, val);}
     bool isConstantFloat() {return true;}
 
 private:
@@ -53,9 +53,9 @@ private:
 class ConstantString : public User
 {
 public:
-    static int getValue(std::make_shared<ConstantString> ptr) { return ptr->m_value; }
+    static int getValue(ConstantString* ptr) { return ptr->m_value; }
     std::string getValue() { return m_value; }
-    static std::make_shared<ConstantString> get(std::string val) {return std::make_shared<ConstantString>(nullptr, val);}
+    static ConstantString* get(std::string val) {return Arena::make<ConstantString>(nullptr, val);}
     bool isConstantString() {return true;}
 
 private:
@@ -68,9 +68,9 @@ private:
 class ConstantChar : public User
 {
 public:
-    static int getValue(std::make_shared<ConstantChar> ptr) { return ptr->m_value; }
+    static int getValue(ConstantChar* ptr) { return ptr->m_value; }
     char getValue() { return m_value; }
-    static std::make_shared<ConstantChar> get(char val) {return std::make_shared<ConstantChar>(nullptr, val);}
+    static ConstantChar* get(char val) {return Arena::make<ConstantChar>(nullptr, val);}
     bool isConstantChar() {return true;}
 
 private:
@@ -82,7 +82,7 @@ private:
 class ConstantZero : public User
 {
 public:
-    static std::make_shared<ConstantZero> get(QualType ty) {return std::make_shared<ConstantZero>(ty);}
+    staticConstantZero* get(QualType ty) {return Arena::make<ConstantZero>(ty);}
     bool isConstantZero() {return true;}
 
 private:

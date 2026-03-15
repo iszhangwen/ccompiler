@@ -8,7 +8,7 @@ class Type;
 class Scope;
 class Token;
 
-class Symbol
+class Symbol : public ArenaNode<Symbol>
 {
 public:
     // 名称空间规定了同一个名称空间的元素不能相同，即同一作用域不同名称空间的标识符名可以相同 
@@ -38,14 +38,14 @@ public:
     const std::string& getName() const {return m_name;}
     void setName(const std::string& key) {m_name = key;}
 
-    std::shared_ptr<Scope> getScope() {return m_scope;}
-    void setScope(std::shared_ptr<Scope> sc) {m_scope = sc;}
+    Scope* getScope() {return m_scope;}
+    void setScope(Scope* sc) {m_scope = sc;}
 
     QualType getType() { return m_type;}
     void setType(QualType ty) {m_type = ty;}
 
-    std::shared_ptr<NamedDecl> getDecl() { return m_decl;}
-    void setDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
+    NamedDecl* getDecl() { return m_decl;}
+    void setDecl(NamedDecl* dc) {m_decl = dc;}
 
     bool isTypeName() {return m_isType;}
 
@@ -54,12 +54,12 @@ private:
     QualType m_type; // 符号的类型
     NameSpace m_nameSpace;
     std::string m_name;
-    std::shared_ptr<Scope> m_scope;
-    std::shared_ptr<NamedDecl> m_decl;
+    Scope* m_scope;
+    NamedDecl* m_decl;
 };
 
 // 声明上下文，使用声明上下文代替了作用域和符号表 
-class Scope
+class Scope : public ArenaNode<Scope>
 {
 public:
     // 相同的标识符要么具有不同的名称空间，要么具有不同的作用域。
@@ -73,43 +73,43 @@ public:
 
 private:
     int m_level; // 作用域深度
-    std::shared_ptr<Scope> m_parent;
+    Scope* m_parent;
     ScopeType m_scopeType;
-    std::unordered_map<std::string, std::shared_ptr<Symbol>> m_sysbolTable;
+    std::unordered_map<std::string, Symbol*> m_sysbolTable;
 
 public:
-    Scope(ScopeType st, std::shared_ptr<Scope> parent);
-    std::shared_ptr<Scope> getParent() {return m_parent;}
+    Scope(ScopeType st, Scope* parent);
+    Scope* getParent() {return m_parent;}
     ScopeType getScopeType() {return m_scopeType;}
     int getLevel() const {return m_level;}
-    std::shared_ptr<Symbol> lookup(Symbol::NameSpace, const std::string&);
-    bool insert(std::shared_ptr<Symbol>);
+    Symbol* lookup(Symbol::NameSpace, const std::string&);
+    bool insert(Symbol*);
     bool isFileScope() {return getScopeType() == ScopeType::FILE;}
     bool isBlockScope() {return !isFileScope();}
 };
 
 /*符号表管理
 */
-class SymbolTableContext
+class SymbolTableContext : public ArenaNode<SymbolTableContext>
 {
 public:
     SymbolTableContext(): m_curScope(nullptr) {}
     // 符号查询和插入
-    bool insertLabel(std::shared_ptr<Symbol>);
-    bool insertRecord(std::shared_ptr<Symbol>);
-    bool insertMember(std::shared_ptr<Symbol>);
-    bool insertNormal(std::shared_ptr<Symbol>);
-    std::shared_ptr<Symbol> LookupLabel(const std::string&);
-    std::shared_ptr<Symbol> LookupRecord(const std::string&);
-    std::shared_ptr<Symbol> LookupMember(const std::string&);
-    std::shared_ptr<Symbol> LookupNormal(const std::string&);
+    bool insertLabel(Symbol*);
+    bool insertRecord(Symbol*);
+    bool insertMember(Symbol*);
+    bool insertNormal(Symbol*);
+    Symbol* LookupLabel(const std::string&);
+    Symbol* LookupRecord(const std::string&);
+    Symbol* LookupMember(const std::string&);
+    Symbol* LookupNormal(const std::string&);
     // 作用域管理函数
     void enterFileScope();
     void enterFuncScope();
     void enterBlockScope();
     void enterFuncPrototypeScope();
     void exitScope();
-    std::shared_ptr<Scope> getCurScope() {return m_curScope;}
+    Scope* getCurScope() {return m_curScope;}
 
     // 类型检测
     bool isTypeName(Token* tk);
@@ -119,8 +119,8 @@ public:
     // 设置内置类型
     void initBuiltType();
     // 获取内置类型
-    std::shared_ptr<Type> getBuiltTypeByTS(int);
+    Type* getBuiltTypeByTS(int);
 
 private:
-    std::shared_ptr<Scope> m_curScope;
+    Scope* m_curScope;
 };

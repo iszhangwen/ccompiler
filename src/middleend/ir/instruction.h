@@ -83,41 +83,41 @@ public:
 class LoadInst : public Instruction
 {
 public:
-    LoadInst(QualType ty, std::shared_ptr<Value> ptr, BasicBlock* bb = nullptr)
+    LoadInst(QualType ty, Value* ptr, BasicBlock* bb = nullptr)
     : Instruction(OpCode::load, ty, "load", 1, bb) {
         setOperand(0, ptr);
     }
 
-    std::shared_ptr<Value> getValue() {return getOperand(0);}
+    Value* getValue() {return getOperand(0);}
 };
 // 将值存入到地址
 class StoreInst : public Instruction
 {
 public:
-    StoreInst(QualType ty, std::shared_ptr<Value> val, std::shared_ptr<Value> ptr, BasicBlock* bb = nullptr)
+    StoreInst(QualType ty, Value* val, Value* ptr, BasicBlock* bb = nullptr)
     : Instruction(OpCode::store, ty, "store", 2, bb) {
         setOperand(0, val);
         setOperand(0, ptr);
     }
 
-    std::shared_ptr<Value> getValue() {return getOperand(0);}
-    std::shared_ptr<Value> getAddr() {return getOperand(1);}
+    Value* getValue() {return getOperand(0);}
+    Value* getAddr() {return getOperand(1);}
 };
 
 //----------------------BinaryInst------------------------------------------
 class BinaryInst : public Instruction
 {
 public:
-    static std::shared_ptr<BinaryInst> createAdd(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createSub(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createMul(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createDiv(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createFAdd(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createFSub(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createFMul(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
-    static std::shared_ptr<BinaryInst> createFDiv(std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* block);
+    static BinaryInst* createAdd(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createSub(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createMul(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createDiv(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createFAdd(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createFSub(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createFMul(Value* v1, Value* v2, BasicBlock* block);
+    static BinaryInst* createFDiv(Value* v1, Value* v2, BasicBlock* block);
 
-    explicit BinaryInst(OpCode opc, std::shared_ptr<Value> v1, std::shared_ptr<Value> v2, BasicBlock* bb);
+    explicit BinaryInst(OpCode opc, Value* v1, Value* v2, BasicBlock* bb);
 };
 
 class CmpInst : public Instruction
@@ -151,11 +151,11 @@ public:
 class ReturnInst : public TerminatorInst
 {
 public:
-    ReturnInst(std::shared_ptr<Value> val, BasicBlock* bb = nullptr)
+    ReturnInst(Value* val, BasicBlock* bb = nullptr)
     : TerminatorInst(OpCode::ret, QualType(), "ret", 1, bb) {
         if (val) setOperand(0, val);
     }
-    std::shared_ptr<Value> getValue() {
+    Value* getValue() {
         return getOperand(0);
     }
 };
@@ -164,7 +164,7 @@ class BranchInst : public TerminatorInst
 {
 public:
     // 有条件跳转构造: 跳转目标是then块或者else块
-    BranchInst(BasicBlock* parent, std::shared_ptr<Value> cond, BasicBlock* ifThen, BasicBlock* ifElse);
+    BranchInst(BasicBlock* parent, Value* cond, BasicBlock* ifThen, BasicBlock* ifElse);
     // 无条件跳转构造：跳转目标只有一个块
     BranchInst(BasicBlock* parent, BasicBlock* dest);
 
@@ -172,13 +172,26 @@ public:
     bool isUnconditional() const {return getNumOperands() == 1;}
     bool isConditional()   const {return getNumOperands() == 3;}
 
-    std::shared_ptr<Value> getCond() {
+    Value* getCond() {
         if (isConditional())
             return getOperand(1);
         return nullptr;
     }
-    void setCond(std::shared_ptr<Value> val) {
+    void setCond(Value* val) {
         if (isConditional())
             setOperand(0, val);
     }
+};
+
+class PhiInst : public Instruction
+{
+public:
+    //using ValPair = std::pair<Value*, BasicBlock*>;
+    //PhiInst(std::vector<Value*> )
+    // 获取phi节点定义的新值
+    Value* getValue() {return m_value;}
+    void setValue(Value* val) {m_value = val;}
+
+private:
+    Value* m_value;
 };

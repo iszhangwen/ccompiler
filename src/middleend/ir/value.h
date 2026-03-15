@@ -7,7 +7,7 @@
 // 右值对象
 // 右值对象分为：标量，复杂类型，聚合类型三种
 // 右值返回值
-class RValue
+class RValue : public ArenaNode<RValue>
 {
 public:
     enum RVType {
@@ -19,18 +19,18 @@ public:
     bool isComplex() const {return m_type == Complex;}
     bool isAggregate() const {return m_type == Aggregate;} 
 
-    std::shared_ptr<Value> getScalar() {return m_value1;}
+    Value* getScalar() {return m_value1;}
 
 private:
     RVType m_type;
-    std::shared_ptr<Value> m_value1;
-    std::shared_ptr<Value> m_value2;
+    Value* m_value1;
+    Value* m_value2;
 };
 
 
 // 左值对象: 简单对象和数组对象
 // 左值返回地址
-class LValue
+class LValue : public ArenaNode<LValue>
 {
 public:
     enum LVType {
@@ -43,22 +43,22 @@ public:
         unsigned start;
         unsigned size;
     };
-    LValue(std::shared_ptr<Value> addr)
+    LValue(Value* addr)
     : m_type(Simple), m_value(addr), m_ArrayIdx(nullptr){}
-    LValue(std::shared_ptr<Value> addr, std::shared_ptr<Value> idx)
+    LValue(Value* addr, Value* idx)
     : m_type(ArrayElt), m_value(addr), m_ArrayIdx(idx){}
 
     bool isSimple() const {return m_type == Simple;}
     bool isArrayElt() const {return m_type == ArrayElt;}
     // simple lvalue
-    std::shared_ptr<Value> *getAddress() const { assert(isSimple()); return m_value;}
+    Value* *getAddress() const { assert(isSimple()); return m_value;}
     // vector elt lvalue
-    std::shared_ptr<Value> getArrayAddr() const { assert(isArrayElt()); return m_value;}
-    std::shared_ptr<Value> getArrayIdx() const { assert(isArrayElt()); return m_ArrayIdx;}
+    Value* getArrayAddr() const { assert(isArrayElt()); return m_value;}
+    Value* getArrayIdx() const { assert(isArrayElt()); return m_ArrayIdx;}
 
 private:
     LVType m_type;
-    std::shared_ptr<Value> m_value;
-    std::shared_ptr<Value> m_ArrayIdx;
+    Value* m_value;
+    Value* m_ArrayIdx;
     BitFiledData m_bitFiledData;
 };

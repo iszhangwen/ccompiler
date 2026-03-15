@@ -6,9 +6,10 @@
 #include "ccerror.h"
 
 // 扫描器从SourceBuffer读取字符，返回Token
-class scanner {
+class scanner : public ArenaNode<scanner>
+{
 private:
-    std::shared_ptr<Source> m_source;
+    Source* m_source;
     static bool isLetter(char);
     static bool isDecimal(char);
     static bool isHexacimal(char);
@@ -39,7 +40,7 @@ private:
     void error(SourceLocation loc, const std::string& val);
 
 public:
-    explicit scanner(std::shared_ptr<Source> buf);
+    explicit scanner(Source* buf);
     // 核心扫描函数
     Token *scan();
     TokenSequence tokenize();

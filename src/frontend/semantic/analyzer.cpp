@@ -2,7 +2,7 @@
 #include "type.h"
 
 // 根据传入的ts返回内建类型
-std::shared_ptr<Type> SemaAnalyzer::onActTypeSpec(int ts)
+Type* SemaAnalyzer::onActTypeSpec(int ts)
 {
     // 解析符号位
     bool isSigned = (ts & TypeSpecifier::SIGNED);
@@ -20,7 +20,7 @@ std::shared_ptr<Type> SemaAnalyzer::onActTypeSpec(int ts)
     bool isComplex = (ts & TypeSpecifier::_COMPLEX);
     // 空类型
     if (ts & TypeSpecifier::VOID) {    
-        return std::make_shared<VoidType>();
+        return Arena::make<VoidType>();
     }  
     return nullptr;
 }

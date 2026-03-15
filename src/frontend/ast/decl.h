@@ -70,14 +70,14 @@ struct Declarator
 class TranslationUnitDecl final : public Decl
 {
 public:
-    using DeclGroup = std::vector<std::shared_ptr<Decl>>;
+    using DeclGroup = std::vector<Decl*>;
     TranslationUnitDecl()
     : Decl(NK_TranslationUnitDecl){}
 
     virtual std::any accept(ASTVisitor* vt) override;
     // insert new decl
     void addDecl(const DeclGroup& dc) {m_bodys.insert(m_bodys.end(), dc.begin(), dc.end());}
-    void addDecl(std::shared_ptr<Decl> dc) {m_bodys.push_back(dc);}
+    void addDecl(Decl* dc) {m_bodys.push_back(dc);}
     const DeclGroup& getDecls() const {return m_bodys;}
     size_t size() const {return m_bodys.size();}
 
@@ -94,11 +94,11 @@ public:
     std::string getName() {return m_name;}
     void setName(const std::string& name) {m_name = name;}
 
-    std::shared_ptr<Scope> getScope(){return m_scope;}
-    void setScope(std::shared_ptr<Scope> sc) {m_scope = sc;}
+    Scope* getScope(){return m_scope;}
+    void setScope(Scope* sc) {m_scope = sc;}
 
 private:
-    std::shared_ptr<Scope> m_scope;
+    Scope* m_scope;
     std::string m_name;
 };
 
@@ -149,11 +149,11 @@ public:
     : DeclaratorDecl(nk){}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    std::shared_ptr<Expr> getInitExpr() {return m_initExpr;}
-    void setInitExpr(std::shared_ptr<Expr> ex) {m_initExpr = ex;}
+    Expr* getInitExpr() {return m_initExpr;}
+    void setInitExpr(Expr* ex) {m_initExpr = ex;}
 
 private:
-    std::shared_ptr<Expr> m_initExpr; // 初始化表达式
+    Expr* m_initExpr; // 初始化表达式
 };
 
 /// 函数参数声明，需要默认值
@@ -168,7 +168,7 @@ public:
 class FunctionDecl : public DeclaratorDecl
 {
 public:
-    using ParamDeclGroup = std::vector<std::shared_ptr<ParmVarDecl>>;
+    using ParamDeclGroup = std::vector<ParmVarDecl*>;
     FunctionDecl()
     : DeclaratorDecl(NK_FunctionDecl), m_isDefinition(false), m_funSpec(N_FSPEC), m_body(nullptr) {}
     virtual std::any accept(ASTVisitor* vt) override;
@@ -176,8 +176,8 @@ public:
     ParamDeclGroup getParmVarDeclList() {return m_parmDeclVars;}
     void setParmVarDeclList(ParamDeclGroup& vars) {m_parmDeclVars = vars;}
 
-    std::shared_ptr<CompoundStmt> getBody() {return m_body;}
-    void setBody(std::shared_ptr<CompoundStmt> body) {m_body = body;}
+    CompoundStmt* getBody() {return m_body;}
+    void setBody(CompoundStmt* body) {m_body = body;}
 
     bool getIsDefinition() const {return m_isDefinition;}
     void setIsDefinition(bool flag) {m_isDefinition = flag;}
@@ -186,7 +186,7 @@ private:
     bool m_isDefinition;
     FuncSpecifier m_funSpec;
     ParamDeclGroup m_parmDeclVars;
-    std::shared_ptr<CompoundStmt> m_body;
+    CompoundStmt* m_body;
 };
 
 /// Represents a member of a struct/union
@@ -197,15 +197,15 @@ public:
     : ValueDecl(NK_FieldDecl), m_parent(), m_offset(nullptr) {}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    std::shared_ptr<RecordDecl> getParent() {return m_parent.lock();}
-    void setParent(std::shared_ptr<RecordDecl>& parent) {m_parent = parent;}
+    RecordDecl* getParent() {return m_parent;}
+    void setParent(RecordDecl*& parent) {m_parent = parent;}
 
-    std::shared_ptr<Expr> getOffset() {return m_offset;}
-    void setOffset(std::shared_ptr<Expr> offset) {m_offset = offset;}
+    Expr* getOffset() {return m_offset;}
+    void setOffset(Expr* offset) {m_offset = offset;}
 
 private:
-    std::weak_ptr<RecordDecl> m_parent;  // 所属的结构体/联合体
-    std::shared_ptr<Expr> m_offset;     // 字段在内存中的偏移量
+    RecordDecl* m_parent;  // 所属的结构体/联合体
+    Expr* m_offset;     // 字段在内存中的偏移量
 };
 
 class EnumConstantDecl : public ValueDecl
@@ -215,15 +215,15 @@ public:
     : ValueDecl(NK_EnumConstantDecl), m_initExpr(nullptr) {}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    std::shared_ptr<EnumDecl> getParent() {return m_parent.lock();}
-    void setParent(std::shared_ptr<EnumDecl>& parent) {m_parent = parent;}
+    EnumDecl* getParent() {return m_parent;}
+    void setParent(EnumDecl* parent) {m_parent = parent;}
 
-    std::shared_ptr<Expr> getInitExpr() {return m_initExpr;}
-    void setInitExpr(std::shared_ptr<Expr> ex) {m_initExpr = ex;}
+    Expr* getInitExpr() {return m_initExpr;}
+    void setInitExpr(Expr* ex) {m_initExpr = ex;}
 
 private:
-    std::shared_ptr<Expr> m_initExpr;
-    std::weak_ptr<EnumDecl> m_parent;
+    Expr* m_initExpr;
+    EnumDecl* m_parent;
 };
 
 class TypedefDecl : public ValueDecl 
@@ -249,12 +249,12 @@ private:
 class EnumDecl : public TagDecl 
 {
 public:
-    using EnumConstantDeclGroup = std::vector<std::shared_ptr<EnumConstantDecl>>;
+    using EnumConstantDeclGroup = std::vector<EnumConstantDecl*>;
     EnumDecl()
     : TagDecl(NK_EnumDecl){}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    void addConstant(std::shared_ptr<EnumConstantDecl> constant) {m_members.push_back(constant); }
+    void addConstant(EnumConstantDecl* constant) {m_members.push_back(constant); }
     EnumConstantDeclGroup getConstants() {return m_members;}
     void setConstants(EnumConstantDeclGroup& dcs) {m_members = dcs;}
 
@@ -265,12 +265,12 @@ private:
 class RecordDecl : public TagDecl 
 {
 public:
-    using FieldDeclGroup = std::vector<std::shared_ptr<FieldDecl>>;
+    using FieldDeclGroup = std::vector<FieldDecl*>;
     RecordDecl()
     : TagDecl(NK_RecordDecl){}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    void addField(std::shared_ptr<FieldDecl> field) {m_filedDecls.push_back(field);}
+    void addField(FieldDecl* field) {m_filedDecls.push_back(field);}
     FieldDeclGroup getFiledDecls() {return m_filedDecls;}
     void setFiledDecls(FieldDeclGroup& fields) {m_filedDecls = fields;}
 

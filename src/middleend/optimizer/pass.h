@@ -1,0 +1,78 @@
+#pragma once
+
+#include <string>
+#include <vector>
+#include <memory>
+
+class Module;
+class Function;
+class BasicBlock;
+
+class Pass 
+{
+public:
+    virtual ~Pass() = default;
+    virtual std::string getName() const = 0;
+
+    // 判断是否会更改IR
+    virtual bool isAnalysis() cnst {return false;}
+    // 判断pass的执行级别
+    virtual bool isModulePass() const = 0;
+    virtual bool isFunctionPass() const = 0;
+    virtual bool isBasicBlockPass() const = 0;
+
+    // IR执行
+    virtual bool runOnModule(Module* ptr)  = 0;
+    virtual bool runOnFunction(Function* ptr)  = 0;
+    virtual bool runOnBasicBlock(BasicBlock* ptr) = 0;
+
+private:
+};
+
+// 模块级pass
+class ModulePass : public Pass
+{
+public:
+    bool isModulePass() const override final {return true;}
+    bool isFunctionPass() const override final {return false;}
+    bool isBasicBlockPass() const override final {return false;}
+    // pass执行
+    bool runOnFunction(Function* ptr) override final {return false;}
+    bool runOnBasicBlock(BasicBlock* ptr) override final {return false;}
+};
+
+// 函数级pass
+class FunctionPass : public Pass
+{
+public:
+    bool isModulePass() const override final {return false;}
+    bool isFunctionPass() const override final {return true;}
+    bool isBasicBlockPass() const override final {return false;}
+    // pass执行
+    bool runOnModule(Module* ptr)  override final {return false;}
+    bool runOnBasicBlock(BasicBlock* ptr) override final {return false;}
+};
+
+// 基本块级pass
+class BasicBlockPass : public Pass
+{
+public:
+    bool isModulePass() const override final {return false;}
+    bool isFunctionPass() const override final {return false;}
+    bool isBasicBlockPass() const override final {return true;}
+    // pass执行
+    bool runOnModule(Module* ptr)  override final {return false;}
+    bool runOnFunction(Function* ptr) override final {return false;}
+};
+
+class PassManager
+{
+public:
+    void addPass(Pass* pass) {
+        passes_.push_back(std::move(pass));
+    }
+    void run();
+
+private:
+    std::vector<Pass*> m_passVec;
+};

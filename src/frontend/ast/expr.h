@@ -21,10 +21,10 @@ public:
     : Expr(NodeKind::NK_DeclRefExpr, QualType()), m_decl(nullptr) {}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<NamedDecl> getDecl() const {return m_decl;}
-    void setDecl(std::shared_ptr<NamedDecl> dc) {m_decl = dc;}
+    NamedDecl* getDecl() const {return m_decl;}
+    void setDecl(NamedDecl* dc) {m_decl = dc;}
 private:
-    std::shared_ptr<NamedDecl> m_decl;
+    NamedDecl* m_decl;
 };
 
 class IntegerLiteral : public Expr 
@@ -86,10 +86,10 @@ public:
     : Expr(NodeKind::NK_ParenExpr, QualType()), m_expr(nullptr) {}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<Expr> getSubExpr() {return m_expr;}
-    void setSubExpr(std::shared_ptr<Expr> val) {m_expr = val;}
+    Expr* getSubExpr() {return m_expr;}
+    void setSubExpr(Expr* val) {m_expr = val;}
 private:
-    std::shared_ptr<Expr> m_expr;
+    Expr* m_expr;
 };
 
 class UnaryOpExpr : public Expr 
@@ -110,12 +110,12 @@ public:
     virtual std::any accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {return m_opCode;}
     void setOpCode(OpCode op) {m_opCode = op;}
-    std::shared_ptr<Expr> getSubExpr() {return m_expr;}
-    void setSubExpr(std::shared_ptr<Expr> ex) {m_expr = ex;}
+    Expr* getSubExpr() {return m_expr;}
+    void setSubExpr(Expr* ex) {m_expr = ex;}
 
 private:
     OpCode m_opCode;
-    std::shared_ptr<Expr> m_expr;
+    Expr* m_expr;
 };
 
 // 数组索引表达式
@@ -126,31 +126,31 @@ public:
     : Expr(NodeKind::NK_ArraySubscriptExpr, QualType()), m_base(nullptr), m_index(nullptr) {}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<Expr> getBaseExpr() {return m_base;}
-    void setBaseExpr(std::shared_ptr<Expr> ex) {m_base = ex;}
-    std::shared_ptr<Expr> getIndexExpr() {return m_index;}
-    void setIndexExpr(std::shared_ptr<Expr> ex) {m_index = ex;}
+    Expr* getBaseExpr() {return m_base;}
+    void setBaseExpr(Expr* ex) {m_base = ex;}
+    Expr* getIndexExpr() {return m_index;}
+    void setIndexExpr(Expr* ex) {m_index = ex;}
 
 private:
-    std::shared_ptr<Expr> m_base;
-    std::shared_ptr<Expr> m_index;
+    Expr* m_base;
+    Expr* m_index;
 };
 
 class CallExpr : public Expr 
 {
 public:
-    using ParamExprGroup = std::vector<std::shared_ptr<Expr>>;
+    using ParamExprGroup = std::vector<Expr*>;
     CallExpr()
     : Expr(NodeKind::NK_CallExpr, QualType()), m_callee(nullptr){}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<Expr> getCallee() {return m_callee;}
-    void setCallee(std::shared_ptr<Expr> callee) {m_callee = callee;}
+    Expr* getCallee() {return m_callee;}
+    void setCallee(Expr* callee) {m_callee = callee;}
     ParamExprGroup getParams() {return m_paramExprs;}
     void setParams(const ParamExprGroup& params) {m_paramExprs = params;}
 
 private:
-    std::shared_ptr<Expr> m_callee;
+    Expr* m_callee;
     ParamExprGroup m_paramExprs;
 };
 
@@ -163,15 +163,15 @@ public:
     virtual std::any accept(ASTVisitor* vt) override;
     bool getIsArrow() {return m_isArrow;}
     void setIsArrow(bool flag) {m_isArrow = flag;}
-    std::shared_ptr<DeclRefExpr> getParent() {return m_parent;}
-    void setParent(std::shared_ptr<DeclRefExpr> ex) {m_parent = ex;}
-    std::shared_ptr<DeclRefExpr> getMember() {return m_member;}
-    void setMember(std::shared_ptr<DeclRefExpr> ex) {m_member = ex;}
+    DeclRefExpr* getParent() {return m_parent;}
+    void setParent(DeclRefExpr* ex) {m_parent = ex;}
+    DeclRefExpr* getMember() {return m_member;}
+    void setMember(DeclRefExpr* ex) {m_member = ex;}
 
 private:
     bool m_isArrow;
-    std::shared_ptr<DeclRefExpr> m_parent;
-    std::shared_ptr<DeclRefExpr> m_member;
+    DeclRefExpr* m_parent;
+    DeclRefExpr* m_member;
 };
 
 class CompoundLiteralExpr : public Expr 
@@ -181,10 +181,10 @@ public:
     : Expr(NodeKind::NK_CompoundLiteralExpr, QualType()), m_init(nullptr) {}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<Expr> getInitExpr() { return m_init;}
-    void setInitExpr(std::shared_ptr<Expr> ex) { m_init = ex;}
+    Expr* getInitExpr() { return m_init;}
+    void setInitExpr(Expr* ex) { m_init = ex;}
 private:
-    std::shared_ptr<Expr> m_init;
+    Expr* m_init;
 };
 
 class CastExpr : public Expr 
@@ -209,15 +209,15 @@ public:
     : Expr(NodeKind::NK_CastExpr, QualType()), m_castKind(CK_Unknown) {}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<Expr> getCastExpr() { return m_val;}
-    void setCastExpr(std::shared_ptr<Expr> ex) { m_val = ex;}
+    Expr* getCastExpr() { return m_val;}
+    void setCastExpr(Expr* ex) { m_val = ex;}
 
     CastKind getCastKind() { return m_castKind;}
     void setCastKind(CastKind ck) { m_castKind = ck;}
 
 private:
     CastKind m_castKind;
-    std::shared_ptr<Expr> m_val;
+    Expr* m_val;
 };
 
 class BinaryOpExpr : public Expr 
@@ -250,15 +250,15 @@ public:
     virtual std::any accept(ASTVisitor* vt) override;
     OpCode getOpCode() const {return m_opcode;}
     void setOpCode(OpCode op) {m_opcode = op;}
-    std::shared_ptr<Expr> getLExpr() {return m_lexpr;}
-    void setLExpr(std::shared_ptr<Expr> ex) {m_lexpr = ex;}
-    std::shared_ptr<Expr> getRExpr() {return m_rexpr;}
-    void setRExpr(std::shared_ptr<Expr> ex) {m_rexpr = ex;}
+    Expr* getLExpr() {return m_lexpr;}
+    void setLExpr(Expr* ex) {m_lexpr = ex;}
+    Expr* getRExpr() {return m_rexpr;}
+    void setRExpr(Expr* ex) {m_rexpr = ex;}
 
 private:
     OpCode m_opcode;
-    std::shared_ptr<Expr> m_lexpr;
-    std::shared_ptr<Expr> m_rexpr;
+    Expr* m_lexpr;
+    Expr* m_rexpr;
 };
 
 class ConditionalExpr : public Expr 
@@ -268,16 +268,16 @@ public:
     : Expr(NodeKind::NK_ConditionalOperator, QualType()), m_cond(nullptr), m_then(nullptr), m_else(nullptr) {}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    std::shared_ptr<Expr> getCond() {return m_cond;}
-    void setCond(std::shared_ptr<Expr> ex) {m_cond = ex;}
-    std::shared_ptr<Expr> getThen() {return m_then;}
-    void setThen(std::shared_ptr<Expr> ex) {m_then = ex;}
-    std::shared_ptr<Expr> getElse() {return m_else;}
-    void setElse(std::shared_ptr<Expr> ex) {m_else = ex;}
+    Expr* getCond() {return m_cond;}
+    void setCond(Expr* ex) {m_cond = ex;}
+    Expr* getThen() {return m_then;}
+    void setThen(Expr* ex) {m_then = ex;}
+    Expr* getElse() {return m_else;}
+    void setElse(Expr* ex) {m_else = ex;}
 
 private:
-    std::shared_ptr<Expr> m_cond;
-    std::shared_ptr<Expr> m_then;
-    std::shared_ptr<Expr> m_else;
+    Expr* m_cond;
+    Expr* m_then;
+    Expr* m_else;
 };
 

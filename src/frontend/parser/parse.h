@@ -10,22 +10,23 @@
 class Parser;
 
 // RAII实现作用域管理
-class ScopeManager {
+class ScopeManager : public ArenaNode<ScopeManager>
+{
     Parser* parent_;
 public:
     ScopeManager(Parser*, Scope::ScopeType st);
     ~ScopeManager();
 };
 
-class Parser
+class Parser : public ArenaNode<Parser>
 {
 private:
     friend ScopeManager;
-    std::shared_ptr<Source> m_source;
-    std::shared_ptr<TokenSequence> m_tokenSeq;
-    std::shared_ptr<TranslationUnitDecl> m_unit;
-    std::shared_ptr<SemaAnalyzer> m_sema;
-    std::shared_ptr<SymbolTableContext> m_systable;
+    Source* m_source;
+    TokenSequence* m_tokenSeq;
+    TranslationUnitDecl* m_unit;
+    SemaAnalyzer* m_sema;
+    SymbolTableContext* m_systable;
 
     // 语法错误处理策略，遇到错误时中止编译程序
     void sytaxError(const std::string& val);
@@ -35,45 +36,45 @@ private:
     void semaError(Token *tk, const std::string& val);
 
     /*-----------------------------Expressions-----------------------------------------*/
-    std::shared_ptr<Expr> parsePrimaryExpr();
-    std::shared_ptr<Expr> parseGenericSelection();
-    std::shared_ptr<Expr> parseGenericAssociation();
-    std::shared_ptr<Expr> parsePostfixExpr();
-    std::vector<std::shared_ptr<Expr>> parseArgListExpr();
-    std::shared_ptr<Expr> parseUnaryExpr();
-    std::shared_ptr<Expr> parseCastExpr();
-    std::shared_ptr<Expr> parseMultiExpr();
-    std::shared_ptr<Expr> parseAddExpr();
-    std::shared_ptr<Expr> parseShiftExpr();
-    std::shared_ptr<Expr> parseRelationalExpr();
-    std::shared_ptr<Expr> parseEqualExpr();
-    std::shared_ptr<Expr> parseBitANDExpr();
-    std::shared_ptr<Expr> parseBitXORExpr();
-    std::shared_ptr<Expr> parseBitORExpr();
-    std::shared_ptr<Expr> parseLogicalANDExpr();
-    std::shared_ptr<Expr> parseLogicalORExpr();
-    std::shared_ptr<Expr> parseConditionalExpr();
-    std::shared_ptr<Expr> parseAssignExpr();
-    std::shared_ptr<Expr> parseExpr();
-    std::shared_ptr<Expr> parseConstansExpr();
+    Expr* parsePrimaryExpr();
+    Expr* parseGenericSelection();
+    Expr* parseGenericAssociation();
+    Expr* parsePostfixExpr();
+    std::vector<Expr*> parseArgListExpr();
+    Expr* parseUnaryExpr();
+    Expr* parseCastExpr();
+    Expr* parseMultiExpr();
+    Expr* parseAddExpr();
+    Expr* parseShiftExpr();
+    Expr* parseRelationalExpr();
+    Expr* parseEqualExpr();
+    Expr* parseBitANDExpr();
+    Expr* parseBitXORExpr();
+    Expr* parseBitORExpr();
+    Expr* parseLogicalANDExpr();
+    Expr* parseLogicalORExpr();
+    Expr* parseConditionalExpr();
+    Expr* parseAssignExpr();
+    Expr* parseExpr();
+    Expr* parseConstansExpr();
     // 该表达式不是文法符号，是为了简化分析歧义
-    std::shared_ptr<Expr> parseParenExpr();
+    Expr* parseParenExpr();
     /*-------------------------------Declarations--------------------------------------*/
     // 6.7 declaration
     DeclGroup parseDeclaration();
     Declarator parseDeclarationSpec();
-    std::shared_ptr<DeclaratorDecl> parseInitDeclarator(Declarator);
+    DeclaratorDecl* parseInitDeclarator(Declarator);
     //Declarator parseInitDeclarator(QualType qt, int sc, int fs);
     // 6.7.1 storage-class-specifier
     void parseStorageClassSpec(StorageClass val, int* sc);
     // 6.7.2 type-specifier
-    std::shared_ptr<Type> parseStructOrUnionSpec(bool isStruct);
-    void parseStructDeclarationList(std::shared_ptr<RecordDecl>);
+    Type* parseStructOrUnionSpec(bool isStruct);
+    void parseStructDeclarationList(RecordDecl*);
     QualType parseSpecQualList();
-    void parseStructDeclaratorList(std::shared_ptr<RecordDecl>, QualType);
-    std::shared_ptr<Decl> parseStructDeclarator(QualType qt);
-    std::shared_ptr<Type> parseEnumSpec();
-    void parseEnumeratorList(std::shared_ptr<EnumDecl>, QualType);
+    void parseStructDeclaratorList(RecordDecl*, QualType);
+    Decl* parseStructDeclarator(QualType qt);
+    Type* parseEnumSpec();
+    void parseEnumeratorList(EnumDecl*, QualType);
     // 6.7.3 type-qualifier
     int parseTypeQualList();
     // 6.7.4 function-specifier
@@ -82,11 +83,11 @@ private:
     void parseDeclarator(Declarator&);
     // 复杂声明时，由于最后解析函数或数组声明，需要对变量类型做修正。
     QualType modifyBaseType(QualType, QualType, QualType);
-    std::shared_ptr<Expr> parseArrayLen();
+    Expr* parseArrayLen();
     QualType parseFuncOrArrayDeclarator(QualType qt);
     QualType parsePointer(QualType);
     void parseParameterTypeList();
-    std::vector<std::shared_ptr<ParmVarDecl>> parseParameterList();
+    std::vector<ParmVarDecl*> parseParameterList();
     void parseParameterDeclaration();
     void parseIdentifierList();
     // 6.7.6 type-name
@@ -96,18 +97,18 @@ private:
     // 6.7.7 typedef-name
     void parseTypedefName();
     // 6.7.8 initializer
-    std::shared_ptr<Expr> parseInitializer();
+    Expr* parseInitializer();
     void parseInitializerList();
     void parseDesignation();
     void parseDesignator();
     /*--------------------------------Statements---------------------------------------*/
-    std::shared_ptr<Stmt> parseStmt();
-    std::shared_ptr<Stmt> parseLabeledStmt();
-    std::shared_ptr<CompoundStmt> parseCompoundStmt();
-    std::shared_ptr<ExprStmt> parseExprStmt();
-    std::shared_ptr<Stmt> parseSelectionStmt();
-    std::shared_ptr<Stmt> parseIterationStmt();
-    std::shared_ptr<Stmt> parseJumpStmt();
+    Stmt* parseStmt();
+    Stmt* parseLabeledStmt();
+    CompoundStmt* parseCompoundStmt();
+    ExprStmt* parseExprStmt();
+    Stmt* parseSelectionStmt();
+    Stmt* parseIterationStmt();
+    Stmt* parseJumpStmt();
     bool isDeclarationSpecifier(Token*);
     /*-------------------------------External definitions-------------------------------*/
     Decl* parseFunctionDefinitionBody(Decl*);

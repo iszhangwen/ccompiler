@@ -28,13 +28,13 @@ std::string Symbol::getTag(NameSpace st, const std::string& key)
     return res;
 }
 
-Scope::Scope(ScopeType st, std::shared_ptr<Scope> parent)
+Scope::Scope(ScopeType st, Scope* parent)
 : m_scopeType(st), m_parent(parent)
 {
     m_level = parent ? (parent->getLevel() + 1) : 1;
 }
 
-std::shared_ptr<Symbol> Scope::lookup(Symbol::NameSpace st, const std::string& key)
+Symbol* Scope::lookup(Symbol::NameSpace st, const std::string& key)
 {
     auto name = Symbol::getTag(st, key);
     if (m_sysbolTable.count(name)) {
@@ -46,7 +46,7 @@ std::shared_ptr<Symbol> Scope::lookup(Symbol::NameSpace st, const std::string& k
     return nullptr;
 }
 
-bool Scope::insert(std::shared_ptr<Symbol> sys)
+bool Scope::insert(Symbol* sys)
 {
     if (!sys) {
         return false;
@@ -59,7 +59,7 @@ bool Scope::insert(std::shared_ptr<Symbol> sys)
     return false;
 }
 
-bool SymbolTableContext::insertLabel(std::shared_ptr<Symbol> sys)
+bool SymbolTableContext::insertLabel(Symbol* sys)
 {
     if (!sys) {
         return false;
@@ -68,21 +68,21 @@ bool SymbolTableContext::insertLabel(std::shared_ptr<Symbol> sys)
     return m_curScope->insert(sys);
 }
 
-bool SymbolTableContext::insertRecord(std::shared_ptr<Symbol> sys)
+bool SymbolTableContext::insertRecord(Symbol* sys)
 {
     if (!sys) return false;
     sys->setNameSpace(Symbol::RECORD);
     return m_curScope->insert(sys);
 }
 
-bool SymbolTableContext::insertMember(std::shared_ptr<Symbol> sys)
+bool SymbolTableContext::insertMember(Symbol* sys)
 {
     if (!sys) return false;
     sys->setNameSpace(Symbol::MEMBER);
     return m_curScope->insert(sys);
 }
 
-bool SymbolTableContext::insertNormal(std::shared_ptr<Symbol> sys)
+bool SymbolTableContext::insertNormal(Symbol* sys)
 {
     if (!sys) return false;
     sys->setNameSpace(Symbol::NORMAL);
@@ -90,38 +90,38 @@ bool SymbolTableContext::insertNormal(std::shared_ptr<Symbol> sys)
     return m_curScope->insert(sys);
 }
 
-std::shared_ptr<Symbol> SymbolTableContext::LookupLabel(const std::string& name)
+Symbol* SymbolTableContext::LookupLabel(const std::string& name)
 {
     return m_curScope->lookup(Symbol::LABEL, name);
 }
-std::shared_ptr<Symbol> SymbolTableContext::LookupRecord(const std::string& name)
+Symbol* SymbolTableContext::LookupRecord(const std::string& name)
 {
     return m_curScope->lookup(Symbol::RECORD, name);
 }
-std::shared_ptr<Symbol> SymbolTableContext::LookupMember(const std::string& name)
+Symbol* SymbolTableContext::LookupMember(const std::string& name)
 {
     return m_curScope->lookup(Symbol::MEMBER, name);
 }
-std::shared_ptr<Symbol> SymbolTableContext::LookupNormal(const std::string& name)
+Symbol* SymbolTableContext::LookupNormal(const std::string& name)
 {
     return m_curScope->lookup(Symbol::NORMAL, name);
 }
 
 void SymbolTableContext::enterFileScope()
 {
-    m_curScope = std::make_shared<Scope>(Scope::FILE, m_curScope);
+    m_curScope = Arena::make<Scope>(Scope::FILE, m_curScope);
 }
 void SymbolTableContext::enterFuncScope()
 {
-    m_curScope = std::make_shared<Scope>(Scope::FUNC, m_curScope);
+    m_curScope = Arena::make<Scope>(Scope::FUNC, m_curScope);
 }
 void SymbolTableContext::enterBlockScope()
 {
-    m_curScope = std::make_shared<Scope>(Scope::BLOCK, m_curScope);
+    m_curScope = Arena::make<Scope>(Scope::BLOCK, m_curScope);
 }
 void SymbolTableContext::enterFuncPrototypeScope()
 {
-    m_curScope = std::make_shared<Scope>(Scope::FUNC_PROTOTYPE, m_curScope);
+    m_curScope = Arena::make<Scope>(Scope::FUNC_PROTOTYPE, m_curScope);
 }
 void SymbolTableContext::exitScope()
 {
@@ -202,39 +202,39 @@ bool SymbolTableContext::isTypeQualifier(Token* tk)
 
 void SymbolTableContext::initBuiltType()
 {
-    auto insert = [&](const std::string& name, std::shared_ptr<Type> ty){
-        auto sys = std::make_shared<Symbol>();
+    auto insert = [&](const std::string& name, Type* ty){
+        auto sys = Arena::make<Symbol>();
         sys->setName(name);
         sys->setType(QualType(ty));
         insertNormal(sys);
     };
     // void
-    insert("void", std::make_shared<VoidType>());
+    insert("void", Arena::make<VoidType>());
     // bool
-    insert("_Bool", std::make_shared<BoolType>());
+    insert("_Bool", Arena::make<BoolType>());
     // char型
-    insert("signed_char", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::BYTE, IntegerType::CHAR));
-    insert("unsignd_char", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR));
+    insert("signed_char", Arena::make<IntegerType>(IntegerType::SIGNED, IntegerType::BYTE, IntegerType::CHAR));
+    insert("unsignd_char", Arena::make<IntegerType>(IntegerType::UNSIGNED, IntegerType::BYTE, IntegerType::CHAR));
     // 整型
-    insert("signed_short_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT));
-    insert("signed_normal_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT));
-    insert("signed_long_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT));
-    insert("signed_long_long_int", std::make_shared<IntegerType>(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT));
-    insert("unsignd_short_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT));
-    insert("unsignd_normal_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT));
-    insert("unsignd_long_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
-    insert("unsigned_long_long_int", std::make_shared<IntegerType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("signed_short_int", Arena::make<IntegerType>(IntegerType::SIGNED, IntegerType::SHORT, IntegerType::INT));
+    insert("signed_normal_int", Arena::make<IntegerType>(IntegerType::SIGNED, IntegerType::NORMAL, IntegerType::INT));
+    insert("signed_long_int", Arena::make<IntegerType>(IntegerType::SIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("signed_long_long_int", Arena::make<IntegerType>(IntegerType::SIGNED, IntegerType::LONG2, IntegerType::INT));
+    insert("unsignd_short_int", Arena::make<IntegerType>(IntegerType::UNSIGNED, IntegerType::SHORT, IntegerType::INT));
+    insert("unsignd_normal_int", Arena::make<IntegerType>(IntegerType::UNSIGNED, IntegerType::NORMAL, IntegerType::INT));
+    insert("unsignd_long_int", Arena::make<IntegerType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
+    insert("unsigned_long_long_int", Arena::make<IntegerType>(IntegerType::UNSIGNED, IntegerType::LONG, IntegerType::INT));
     // 浮点型
-    insert("float", std::make_shared<RealFloatingType>(RealFloatingType::FLOAT));
-    insert("double", std::make_shared<RealFloatingType>(RealFloatingType::DOUBLE));
-    insert("long_double", std::make_shared<RealFloatingType>(RealFloatingType::LONG_DOUBLE));
+    insert("float", Arena::make<RealFloatingType>(RealFloatingType::FLOAT));
+    insert("double", Arena::make<RealFloatingType>(RealFloatingType::DOUBLE));
+    insert("long_double", Arena::make<RealFloatingType>(RealFloatingType::LONG_DOUBLE));
     // 复数
-    insert("float_complex", std::make_shared<ComplexType>(ComplexType::FLOAT));
-    insert("double_complex", std::make_shared<ComplexType>(ComplexType::DOUBLE));
-    insert("long_double_complex", std::make_shared<ComplexType>(ComplexType::LONG_DOUBLE));
+    insert("float_complex", Arena::make<ComplexType>(ComplexType::FLOAT));
+    insert("double_complex", Arena::make<ComplexType>(ComplexType::DOUBLE));
+    insert("long_double_complex", Arena::make<ComplexType>(ComplexType::LONG_DOUBLE));
 }
 
-std::shared_ptr<Type> SymbolTableContext::getBuiltTypeByTS(int tq)
+Type* SymbolTableContext::getBuiltTypeByTS(int tq)
 {
     std::string key;
     if (tq & VOID) {

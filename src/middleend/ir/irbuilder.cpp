@@ -23,7 +23,7 @@ IRBuilder::IRBuilder()
 /*-----------------------Declarations node----------------------------------*/
 void IRBuilder::visit(TranslationUnitDecl* ld)
 {
-    m_module = std::make_shared<Module>("");
+    m_module = Arena::make<Module>("");
     // 遍历所有声明
     for (auto decl : ld->getDecls()) {
         decl->accept(this);
@@ -61,31 +61,31 @@ std::any IRBuilder::visit(ParmVarDecl* p)
 {
     auto curBB = m_curFuntion->getInsertBlock();
     auto index = m_curFuntion->getArguments().size();
-    auto val = std::make_shared<Argument>(p->getQualType(), p->getName(), index, m_curFuntion.get());
+    auto val = Arena::make<Argument>(p->getQualType(), p->getName(), index, m_curFuntion);
     // 函数栈上分配参数
-    auto addr = std::make_shared<AllocaInst>(p->getQualType(), curBB.get());
+    auto addr = Arena::make<AllocaInst>(p->getQualType(), curBB);
     m_curFuntion->addInst(addr);
     // 将参数值填充到栈内存
-    auto store = std::make_shared<StoreInst>(p->getQualType(), val, addr, curBB.get());
+    auto store = Arena::make<StoreInst>(p->getQualType(), val, addr, curBB);
     m_curFuntion->addInst(store);
     return std::any();
 }
 std::any IRBuilder::visit(FunctionDecl* ptr)
 {   
-    m_curFuntion = std::make_shared<Function>(ptr->getQualType(), ptr->getName(), m_module.get());
+    m_curFuntion = Arena::make<Function>(ptr->getQualType(), ptr->getName(), m_module);
     m_module->addFunction(m_curFuntion);
-    auto entry = BasicBlock::create(m_module.get(), m_curFuntion.get(), "entry");
-    auto exit = BasicBlock::create(m_module.get(), m_curFuntion.get(), "ret");
+    auto entry = BasicBlock::create(m_module, m_curFuntion, "entry");
+    auto exit = BasicBlock::create(m_module, m_curFuntion, "ret");
 
     // 1. 创建起始块
     m_curFuntion->emitBlock(entry);
      m_curFuntion->setReturnBlock(exit);
 
     // 2. 分配函数返回地址: 返回值的分配必须在函数体执行前完成，因为它是函数逻辑的一部分，可能被多个地方访问，但不是必须的。
-    auto retType = dynamic_cast<FunctionType*>(ptr->getQualType().getPtr().get())->getQualType();
-    std::shared_ptr<Instruction> retAddr = nullptr;
+    auto retType = dynamic_cast<FunctionType*>(ptr->getQualType().getPtr())->getQualType();
+    Instruction* retAddr = nullptr;
     if (!retType->isVoidType()) {
-        retAddr = std::make_shared<AllocaInst>(retType, entry.get());
+        retAddr = Arena::make<AllocaInst>(retType, entry);
         m_curFuntion->addInst(retAddr);
     }
     m_curFuntion->setReturnAddr(retAddr);
@@ -100,12 +100,12 @@ std::any IRBuilder::visit(FunctionDecl* ptr)
     // 5. 函数的返回块生成
     m_curFuntion->emitBlock(exit);
 
-    std::shared_ptr<Instruction> retVal = nullptr;
+    Instruction* retVal = nullptr;
     if (!retType->isVoidType()) {
-        retVal = std::make_shared<LoadInst>(retType, retAddr);
+        retVal = Arena::make<LoadInst>(retType, retAddr);
         m_curFuntion->addInst(retVal);
     } 
-    auto retInst = std::make_shared<ReturnInst>(retVal);
+    auto retInst = Arena::make<ReturnInst>(retVal);
     m_curFuntion->addInst(retInst);
     return std::any();
 }
@@ -172,11 +172,11 @@ std::any IRBuilder::visit(ExprStmt* ptr)
 std::any IRBuilder::visit(IfStmt* ptr)
 {
     assert(ptr && "ExprStmt is nullptr");
-    auto ifThen = BasicBlock::create(m_module.get(), m_curFuntion.get(), "if.then");
-    auto ifEnd = BasicBlock::create(m_module.get(), m_curFuntion.get(), "if.end");
+    auto ifThen = BasicBlock::create(m_module, m_curFuntion, "if.then");
+    auto ifEnd = BasicBlock::create(m_module, m_curFuntion, "if.end");
     auto ifElse = ifEnd;
     if (ptr->getElse()) {
-       ifElse = BasicBlock::create(m_module.get(), m_curFuntion.get(), "if.else");
+       ifElse = BasicBlock::create(m_module, m_curFuntion, "if.else");
     }
     // @brief: 条件指令生成 TODO
     
@@ -206,17 +206,17 @@ std::any IRBuilder::visit(WhileStmt* ptr)
 {
     assert(ptr && "WhileStmt、 is nullptr");
     // @brief: 循环头是单独的block
-    auto loopHeader = BasicBlock::create(m_module.get(), m_curFuntion.get(), "while.cond");
-    auto exit = BasicBlock::create(m_module.get(), m_curFuntion.get(), "while.exit");
-    auto body = BasicBlock::create(m_module.get(), m_curFuntion.get(), "while.body");
+    auto loopHeader = BasicBlock::create(m_module, m_curFuntion, "while.cond");
+    auto exit = BasicBlock::create(m_module, m_curFuntion, "while.exit");
+    auto body = BasicBlock::create(m_module, m_curFuntion, "while.body");
 
     // 循环开始前必须要从loopHeader开始
     m_curFuntion->emitBlock(loopHeader);
     //@brief: 计算循环条件表达式的值 TODO
-    std::shared_ptr<Value> cond;
+    Value* cond = nullptr;
 
     //@brief: 循环条件块插入br指令
-    auto brInst = std::make_shared<BranchInst>(loopHeader.get(), cond, body.get(), exit.get());
+    auto brInst = Arena::make<BranchInst>(loopHeader, cond, body, exit);
 
     //@brief: 循环体 针对break和continue存储块
     m_curFuntion->pushBreakContinueStack(exit, loopHeader);
@@ -294,7 +294,7 @@ std::any IRBuilder::visit(StringLiteral* ptr)
 std::any IRBuilder::visit(DeclRefExpr* ptr)
 {
     assert(ptr && "DeclRefExpr is nullptr");
-    auto var = ptr->getDecl().get();
+    auto var = ptr->getDecl();
     assert(var);
     // 查找到变量的ssa ir地址
     if (var && var->getScope()->isFileScope()) {

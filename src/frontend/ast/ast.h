@@ -3,6 +3,8 @@
 #include <vector>
 #include <any>
 
+#include "arena.h"
+
 // AST节点前置声明
 class AstNode;
 using Stmt = AstNode;
@@ -55,7 +57,7 @@ class UnaryOpExpr;
 class SymbolTableContext;
 
 // 通用访问接口
-class ASTVisitor
+class ASTVisitor : ArenaNode<ASTVisitor>
 {
 public:
     virtual ~ASTVisitor() = default;
@@ -241,5 +243,5 @@ enum FuncSpecifier
     FS_MASK = INLINE
 };
 
-using DeclGroup = std::vector<std::shared_ptr<Decl>>;
+using DeclGroup = std::vector<Decl*>;
 
