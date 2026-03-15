@@ -7,13 +7,6 @@
 #include "expr.h"
 #include "symbol.h"
 
-#include "module.h"
-#include "function.h"
-#include "block.h"
-#include "instruction.h"
-#include "constant.h"
-#include "value.h"
-
 IRBuilder::IRBuilder() 
 {
     m_module = nullptr;

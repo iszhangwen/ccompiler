@@ -7,4 +7,4 @@ target_include_directories(backend_interface INTERFACE
 file(GLOB_RECURSE SRC "*.cpp" "*.cc" "*.c")
 add_library(backend ${SRC})
 target_link_libraries(backend PUBLIC backend_interface)
-target_link_libraries(backend PUBLIC frontend support)
+target_link_libraries(backend PUBLIC frontend middleend support)

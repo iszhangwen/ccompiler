@@ -127,6 +127,12 @@ enum class TokenKind
 class Token 
 {
 public:
+    Token(TokenKind type, SourceLocation loc, const std::string& value)
+    : kind_(type), loc_(loc), value_(value){}
+    Token(TokenKind type, SourceLocation loc)
+    : Token(type, loc, ""){}
+    Token(TokenKind type)
+    : Token(type, SourceLocation(), ""){}
     // token kind
     const TokenKind kind_;
 
@@ -135,11 +141,6 @@ public:
 
     // loc
     const SourceLocation loc_;
-
-    // creat a new Token
-    static Token *newObj(TokenKind type);
-    static Token *newObj(TokenKind type, SourceLocation loc);
-    static Token *newObj(TokenKind type, SourceLocation loc, const std::string& value);
 
     // static member 
     static const std::unordered_map<std::string, TokenKind> KeyWordMap;
@@ -153,11 +154,6 @@ public:
     bool isTypeQualifier() const;
 
 private:
-    Token(TokenKind type, SourceLocation loc, const std::string& value)
-    : kind_(type), loc_(loc), value_(value){}
-
-    Token(TokenKind type, SourceLocation loc)
-    : Token(type, loc, ""){}
 };
 
 class TokenSequence 

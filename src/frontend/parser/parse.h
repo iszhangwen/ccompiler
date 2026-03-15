@@ -118,5 +118,9 @@ public:
     virtual ~Parser();
     // 解析根节点
     void parseTranslationUnit();
-    void accept(ASTVisitor* av) {if (av) m_unit->accept(av);}
+
+    // 获取AST树解析单元
+    TranslationUnitDecl* getTranslationUnit() {return m_unit;}
+    // 获取符号表
+    SymbolTableContext* getSymbolContext() {return m_systable;}
 };

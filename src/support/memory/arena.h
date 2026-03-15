@@ -22,6 +22,11 @@ public:
         auto mem = arena.allocate(sizeof(T), alignof(T));
         return new(mem) T(std::forward<Args>(args)...);
     }
+    // 执行析构函数
+    template <typename T>
+    static void destroy(T* obj) {
+        obj->~T();
+    }
 
     // 分配内存，自动对齐
     void* allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t));

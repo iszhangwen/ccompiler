@@ -3,21 +3,6 @@
 #include <sstream>
 #include "error.h"
 
-Token *Token::newObj(TokenKind type, SourceLocation loc, const std::string& value)
-{
-    return new Token(type, loc, value);
-}
-
-Token *Token::newObj(TokenKind type, SourceLocation loc)
-{
-    return Token::newObj(type, loc, "");
-}
-
-Token *Token::newObj(TokenKind type)
-{
-    return Token::newObj(TokenKind::EOF_, SourceLocation());
-}
-
 const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
     {"alignof",       TokenKind::Alignof,	   },
     {"auto",          TokenKind::Auto,	       },
@@ -111,7 +96,7 @@ Token *TokenSequence::peek(size_t n) const
 {
     if (pos_ + n >= size())
     {
-        return Token::newObj(TokenKind::EOF_);
+        return Arena::make<Token>(TokenKind::EOF_);
     }
     return seq_[pos_ + n];
 }

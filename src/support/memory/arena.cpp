@@ -50,7 +50,7 @@ void Arena::allocateNewChunk(std::size_t minSize)
 {
     auto size = std::max(m_chunkSize, minSize);
     auto chunk = new(std::nothrow) char[size];
-    if (chunk) {
+    if (!chunk) {
         throw std::bad_alloc{};
     }
     m_chunks.push_back(chunk);

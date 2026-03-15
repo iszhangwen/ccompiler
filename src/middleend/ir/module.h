@@ -13,6 +13,7 @@
 class GlobalVariable;
 class Function;
 class LValue;
+class IRVisitor;
 
 class Module 
 {
@@ -34,6 +35,8 @@ public:
     // 全局声明地址获取：nameDecl存储作用域和符号表信息
     Value* getGlobalDeclAddr(NamedDecl* decl);
     void setGlobalDeclAddr(NamedDecl* decl, Value* val);
+
+    virtual std::any accept(IRVisitor* viritor);
 
 private:
     std::string m_name;

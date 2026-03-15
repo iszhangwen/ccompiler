@@ -71,7 +71,7 @@ public:
     void addPass(Pass* pass) {
         m_passVec.push_back(std::move(pass));
     }
-    void run();
+    void run(Module*);
 
 private:
     std::vector<Pass*> m_passVec;

@@ -1,8 +1,9 @@
 #include <iostream>
 #include "scanner.h"
 #include "parse.h"
-#include "astvisitor.h"
 #include "irbuilder.h"
+#include "pass.h"
+#include "codegen.h"
 
 int main(int argc, char **argv)
 {
@@ -16,14 +17,19 @@ int main(int argc, char **argv)
         Parser parse(argv[1]);
         // 前端词法语法分析
         parse.parseTranslationUnit();
-        CodegenASTVisitor cg;
-        parse.accept(&cg);
+        auto astUnit = parse.getTranslationUnit();
+        // 语义分析：类型检查        
         // 中间代码生成
         IRBuilder irbuilder;
-        parse.accept(&irbuilder);
+        astUnit->accept(&irbuilder);
+        auto ssaModule = irbuilder.getModule();
         // 执行优化
-        irbuilder.dump();
+        PassManager passm;
+        passm.run(ssaModule);
         // 后端代码生成
+        CodegenAssembler codegen;
+        ssaModule->accept(&codegen);
+
     }
     catch(std::exception& e)
     {

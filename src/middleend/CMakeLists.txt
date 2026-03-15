@@ -1,7 +1,7 @@
 add_library(middleend_interface INTERFACE)
 target_include_directories(middleend_interface INTERFACE
     ir
-    pass
+    optimizer
 )
 
 file(GLOB_RECURSE SRC "*.cpp" "*.cc" "*.c")

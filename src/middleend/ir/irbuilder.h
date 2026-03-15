@@ -6,10 +6,12 @@
 #include <unordered_map>
 #include <any>
 
-class Module;
-class Function;
-class BasicBlock;
-class LValue;
+#include "module.h"
+#include "function.h"
+#include "block.h"
+#include "instruction.h"
+#include "constant.h"
+#include "value.h"
 
 class IRBuilder : public ASTVisitor
 {
@@ -59,6 +61,9 @@ public:
     std::any visit(MemberExpr* ptr);
     std::any visit(UnaryOpExpr* ptr);
     void dump();
+
+    // 获取模块节点
+    Module* getModule() {return m_module;}
 
 private:
     Module* m_module;
