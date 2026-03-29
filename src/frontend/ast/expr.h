@@ -34,10 +34,10 @@ public:
     : Expr(NodeKind::NK_IntegerLiteral, QualType()), m_val(0){}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    void setValue(std::any val) {m_val = val;}
-    int64_t getValue() {return std::any_cast<int64_t>(m_val);}
+    void setValue(int64_t val) {m_val = val;}
+    int64_t getValue() {return m_val;}
 private:
-    std::any m_val;
+    int64_t m_val;
 };
 
 class CharacterLiteral : public Expr 

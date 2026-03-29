@@ -111,16 +111,16 @@ private:
     Stmt* parseJumpStmt();
     bool isDeclarationSpecifier(Token*);
     /*-------------------------------External definitions-------------------------------*/
+    void parseTranslationUnit();
     Decl* parseFunctionDefinitionBody(Decl*);
 
 public:
-    explicit Parser(const std::string& filename);
+    explicit Parser();
     virtual ~Parser();
-    // 解析根节点
-    void parseTranslationUnit();
+
+    // 开始编译
+    void run(const std::string& infile);
 
     // 获取AST树解析单元
-    TranslationUnitDecl* getTranslationUnit() {return m_unit;}
-    // 获取符号表
-    SymbolTableContext* getSymbolContext() {return m_systable;}
+    AstCtx getAstCtx() {return AstCtx(m_unit, m_systable);}
 };

@@ -60,6 +60,19 @@ public:
     bool isRestrictQual() const {return m_qualSpec & TypeQualifier::RESTRICT;}
     bool isVolatileQual() const {return m_qualSpec & TypeQualifier::VOLATILE;}
 
+    // @brief: 获取派生类指针
+    template <typename T>
+    T* as() {
+        auto val = getPtr();
+        if (auto val = getPtr()) {
+            if (!val) return nullptr;
+            if (auto it = dynamic_cast<T*>(val)) {
+                return it;
+            }
+        }
+        return nullptr;
+    }
+
 private:
     uint8_t m_qualSpec; // 类型限定符
     Type* m_type;  // 存储类型指针
@@ -321,6 +334,11 @@ public:
     void setIsNotReturn(bool flag) {m_isNoReturn = flag;}
     std::vector<QualType> getParams() {return m_paramTypes;}
     void setParams(std::vector<QualType> params) {m_paramTypes = params;}
+
+    // @brief: 设置返回值类型
+    void setRetType(QualType type) {setQualType(type);}
+    // @brief: 获取返回值类型
+    QualType getRetType() {return getQualType();}
 
 private:
     bool m_isInline; // 是否是内联函数

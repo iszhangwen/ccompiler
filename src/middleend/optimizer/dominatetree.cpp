@@ -107,6 +107,7 @@ void DominateTree::createIdom(Function* ptr)
     // 计算出每个基本块的idom后，将idom设置到基本块中
     for (auto node : m_postOrder) {
         node->setIdom(m_idoms[m_bb2int[node]]);
+        m_idoms[m_bb2int[node]]->addDomChildren(node);
     }
 }
 

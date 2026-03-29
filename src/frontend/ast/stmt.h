@@ -58,7 +58,6 @@ private:
 class CompoundStmt : public Stmt
 {
 public:
-    using StmtGroup = std::vector<Stmt*>;
     CompoundStmt()
     : Stmt(NodeKind::NK_CompoundStmt) {}
 
@@ -66,14 +65,14 @@ public:
     : Stmt(NodeKind::NK_CompoundStmt){}
 
     virtual std::any accept(ASTVisitor* vt) override;
-    StmtGroup getStmts() const {return m_bodys;}
-    void setStmts(const StmtGroup& vals) {m_bodys = vals;}
+    std::vector<Stmt*> getStmts() {return m_bodys;}
+    void setStmts(const std::vector<Stmt*>& vals) {m_bodys = vals;}
     void addStmt(Stmt* st) {m_bodys.push_back(st);}
     void clearStmts() {m_bodys.clear();}
     size_t size() const {return m_bodys.size();}
 
 private:
-    StmtGroup m_bodys;
+    std::vector<Stmt*> m_bodys;
 };
 
 class DeclStmt : public Stmt
@@ -259,6 +258,8 @@ public:
     Expr* getRetExpr() {return m_retExpr;}
     void setRetExpr(Expr* retVal) {m_retExpr = retVal;}
 
+    // @brief: 是否无返回值
+    bool isNotRetVal() const {return m_retExpr == nullptr;}
 private:
     Expr* m_retExpr; // 返回值表达式
 };

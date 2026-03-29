@@ -1,9 +1,35 @@
 #include <iostream>
 #include "scanner.h"
 #include "parse.h"
-#include "irbuilder.h"
+#include "builder/irbuilder.h"
 #include "pass.h"
+#include "dominatetree.h"
+#include "mem2reg.h"
 #include "codegen.h"
+#include "module.h"
+
+bool compile(const std::string& infile, const std::string& outfile)
+{
+    // 前端词法语法分析器
+    Parser parse;
+    parse.run(infile);
+
+    // 中间代码生成
+    auto astIR = parse.getAstCtx();
+    IRBuilder irbuilder;
+    irbuilder.run(astIR);
+
+    // 打印ir
+    auto ssaIR = irbuilder.getModule();
+    ssaIR->toStringPrint();
+    // 执行代码优化
+    //auto ssaIR = irbuilder.getModule();
+    //PassManager passes;
+    //passes.run(ssaIR);
+
+    // 发射代码生成汇编
+    return false;
+}
 
 int main(int argc, char **argv)
 {
@@ -12,24 +38,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "%s: invalid number of arguments\n", argv[0]);
         return 1;
     }
-    // 开始解析
-    try {
-        Parser parse(argv[1]);
-        // 前端词法语法分析
-        parse.parseTranslationUnit();
-        auto astUnit = parse.getTranslationUnit();
-        // 语义分析：类型检查        
-        // 中间代码生成
-        IRBuilder irbuilder;
-        astUnit->accept(&irbuilder);
-        auto ssaModule = irbuilder.getModule();
-        // 执行优化
-        PassManager passm;
-        passm.run(ssaModule);
-        // 后端代码生成
-        CodegenAssembler codegen;
-        ssaModule->accept(&codegen);
 
+    try {
+        compile(argv[1], "");
     }
     catch(std::exception& e)
     {

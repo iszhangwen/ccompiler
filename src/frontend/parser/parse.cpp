@@ -43,15 +43,12 @@ ScopeManager::~ScopeManager()
     parent_->m_systable->exitScope();
 }
 
-Parser::Parser(const std::string& filename)
+Parser::Parser()
 {
-    m_source = Arena::make<Source>(filename);
-    m_tokenSeq = Arena::make<TokenSequence>(scanner(m_source).tokenize());
-    m_systable = Arena::make<SymbolTableContext>();
-    m_sema = Arena::make<SemaAnalyzer>();
+
 }
 
-Parser:: ~Parser()
+Parser::~Parser()
 {
 
 }
@@ -143,7 +140,7 @@ Expr* Parser::parsePrimaryExpr()
             semaError("symbol declaration undefined!");
         else {
             auto node = Arena::make<DeclRefExpr>();
-            node->setType(sys->getType()->getQualType());
+            node->setType(sys->getType());
             node->setDecl(sys->getDecl());
             return node;
         }
@@ -709,15 +706,17 @@ DeclGroup Parser::parseDeclaration()
     auto decl = parseInitDeclarator(declarator);
     // 检测是否是函数
     if (decl->getKind() == AstNode::NK_FunctionDecl) {
+        auto func = dynamic_cast<FunctionDecl*>(decl);
         // 判断是否是函数定义是，直接返回
         if (m_tokenSeq->test(TokenKind::LCurly_Brackets_)) {
-            dynamic_cast<FunctionDecl*>(decl)->setBody(parseCompoundStmt());
+            func->setBody(parseCompoundStmt());
+            func->setIsDefinition(true);
             res.push_back(decl);
             return res;
-        }
-        // 不是函数定义时，添加到res
-        res.push_back(decl);
+        } 
     }
+    // 不是函数定义时，添加到res
+    res.push_back(decl);
     // 解析后续的变量声明
     while (m_tokenSeq->match(TokenKind::Comma_)) {
             res.push_back(parseInitDeclarator(declarator));
@@ -955,7 +954,7 @@ DeclaratorDecl* Parser::parseInitDeclarator(Declarator dc)
         node = var;
     }
     node->setName(dc.getName());
-    node->setQualType(dc.getType());
+    node->setType(dc.getType());
     node->setScope(m_systable->getCurScope());
     node->setStorageClass(dc.getStorageClass());
 
@@ -965,7 +964,7 @@ DeclaratorDecl* Parser::parseInitDeclarator(Declarator dc)
     }
     auto sys = Arena::make<Symbol>();
     sys->setName(node->getName());
-    sys->setType(node->getQualType());
+    sys->setType(node->getType());
     sys->setDecl(node);
     m_systable->insertNormal(sys);
     return node;
@@ -1077,7 +1076,7 @@ void Parser::parseStructDeclaratorList(RecordDecl* parent, QualType qt)
     do {
         auto decl = Arena::make<FieldDecl>();
         decl->setParent(parent);
-        decl->setQualType(qt);
+        decl->setType(qt);
         decl->setScope(m_systable->getCurScope());
         if (m_tokenSeq->match(TokenKind::Colon_)) {
             decl->setOffset(parseConstansExpr());
@@ -1086,7 +1085,7 @@ void Parser::parseStructDeclaratorList(RecordDecl* parent, QualType qt)
             Declarator dc;
             parseDeclarator(dc);
             decl->setName(dc.getName());
-            decl->setQualType(dc.getType());
+            decl->setType(dc.getType());
             if (m_tokenSeq->match(TokenKind::Colon_)) {
                 decl->setOffset(parseConstansExpr());
             }
@@ -1169,7 +1168,7 @@ void Parser::parseEnumeratorList(EnumDecl* parent, QualType qt)
             auto decl = Arena::make<EnumConstantDecl>();
             decl->setName(m_tokenSeq->cur()->value_);
             decl->setScope(m_systable->getCurScope());
-            decl->setQualType(qt);
+            decl->setType(qt);
             decl->setParent(parent);
             if (m_tokenSeq->match(TokenKind::Assign_)) {
                 decl->setInitExpr(parseConstansExpr());
@@ -1179,7 +1178,7 @@ void Parser::parseEnumeratorList(EnumDecl* parent, QualType qt)
             auto sys = Arena::make<Symbol>();
             sys->setName(decl->getName());
             sys->setScope(m_systable->getCurScope());
-            sys->setType(decl->getQualType());
+            sys->setType(decl->getType());
             sys->setDecl(decl);
             m_systable->insertMember(sys);
         }
@@ -1779,20 +1778,6 @@ bool Parser::isDeclarationSpecifier(Token* tk)
 }
 
 //---------------------------------------------------------External definitions------------------------------------------------------------------------
-/*(6.9.1) function-definition:
- declaration-specifiers declarator declaration-listopt compound-statement
- 已经解析过了declaration-specifiers declarator， declaration-listopt不支持， 只解析 compound-statement
-*/
-Decl* Parser::parseFunctionDefinitionBody(Decl* dc)
-{/*
-    FunctionDecl* fd= dynamic_cast<FunctionDecl*>(dc);
-    Stmt* body = parseCompoundStmt();
-    fd->setBody(body);
-    return fd;*/
-    return nullptr;
-}
-
-
 /*(6.9) translation-unit:
  external-declaration
  translation-unit external-declaration
@@ -1811,3 +1796,26 @@ void Parser::parseTranslationUnit()
         m_unit->addDecl(parseDeclaration());
     }
 }
+/*(6.9.1) function-definition:
+ declaration-specifiers declarator declaration-listopt compound-statement
+ 已经解析过了declaration-specifiers declarator， declaration-listopt不支持， 只解析 compound-statement
+*/
+Decl* Parser::parseFunctionDefinitionBody(Decl* dc)
+{/*
+    FunctionDecl* fd= dynamic_cast<FunctionDecl*>(dc);
+    Stmt* body = parseCompoundStmt();
+    fd->setBody(body);
+    return fd;*/
+    return nullptr;
+}
+
+void Parser::run(const std::string& infile)
+{
+    m_source = Arena::make<Source>(infile);
+    m_tokenSeq = Arena::make<TokenSequence>(scanner(m_source).tokenize());
+    m_systable = Arena::make<SymbolTableContext>();
+    m_sema = Arena::make<SemaAnalyzer>();
+    // 从根节点开始解析
+    parseTranslationUnit();
+}
+

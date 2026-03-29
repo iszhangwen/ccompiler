@@ -2,13 +2,25 @@
 #include "block.h"
 #include "instruction.h"
 
+#include <iostream>
+#include <algorithm>
+
+Function::Function(QualType ty, const std::string& name, Module* parent)
+    : GlobalValue(ty, name, parent)
+{
+    m_curBlock = nullptr;
+}
+
+Function::~Function()
+{
+
+}
+
 // @brief：创建一个新块，并将程序控制权从当前块转移到新块
-void Function::emitBlock(BasicBlock* target, bool isFinihed)
+void Function::emitBlock(BasicBlock* target)
 {
     // 当前块末尾创建分支指令
     emitBranch(target);
-    // 基本块插入到block中
-    m_basicBlocks.push_back(target);
     // 将程序转移到当前块
     setInsertPoint(target);
 }
@@ -23,7 +35,7 @@ void Function::emitBranch(BasicBlock* target)
     } else {
         // 否则再当前块的末尾插入跳转指令
         // 跳转指令的跳转目标是新的基本块
-        m_curBlock->addInst(Arena::make<BranchInst>(curBlock, target));
+        curBlock->createBr(target);
     }
     clearInsertPoint();
 }
@@ -31,31 +43,24 @@ void Function::emitBranch(BasicBlock* target)
 void Function::ensureInsertPoint()
 {
     if (!hasInsertPoint()) {
-        emitBlock(BasicBlock::create(m_module, this, ""));
+        emitBlock(Arena::make<BasicBlock>(this, ""));
     }
 }
 
-void Function::addInst(Instruction* ins)
-{
-    auto curBlock = getInsertBlock();
-    if (curBlock && ins) {
-        ins->setParent(curBlock);
-        curBlock->addInst(ins);
-    }
-}
-
-void Function::pushBreakContinueStack(BasicBlock* B, BasicBlock* C)
+void Function::pushBCStack(BasicBlock* B, BasicBlock* C)
 {
     m_breakContStack.push(std::make_pair(B, C));
 }
 
-void Function::popBreakContinueStack()
+void Function::popBCStack()
 {
     m_breakContStack.pop();
 }
 
-std::pair<BasicBlock*, BasicBlock*> Function::getBreakContinueStackBlock()
+std::pair<BasicBlock*, BasicBlock*> Function::getBCBlock()
 {
+    if (m_breakContStack.empty())
+        return std::make_pair(nullptr, nullptr);
     return m_breakContStack.top();
 }
 
@@ -64,8 +69,23 @@ Value* Function::getLocalDeclAddr(NamedDecl* decl) {
         return m_localDeclAddr[decl];
     return nullptr;
 }
-void Function::setLocalDeclAddr(NamedDecl* decl, Value* val) {
+void Function::addLocalDeclAddr(NamedDecl* decl, Value* val) {
     if (m_localDeclAddr.count(decl)) 
         return;
     m_localDeclAddr[decl] = val;
+}
+
+BasicBlock* Function::createAndInsertBlock(const std::string& name)
+{
+    auto block = Arena::make<BasicBlock>(this, name);
+    addBasicBlock(block);
+    return block;
+}
+
+void Function::toStringPrint()
+{
+    for (auto block : getBasicBlocks()) {
+        std::cout << "entry block: " << block->getName() << "\n";
+        block->toStringPrint();
+    }
 }

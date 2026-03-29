@@ -56,6 +56,15 @@ class MemberExpr;
 class UnaryOpExpr;
 class SymbolTableContext;
 
+// ast ir上下文
+struct AstCtx {
+    TranslationUnitDecl* ir;
+    SymbolTableContext* symbol;
+    AstCtx(): ir(nullptr), symbol(nullptr){}
+    AstCtx(TranslationUnitDecl* i, SymbolTableContext* s): ir(i), symbol(s){}
+    AstCtx(const AstCtx& obj): AstCtx(obj.ir, obj.symbol){}
+};
+
 // 通用访问接口
 class ASTVisitor 
 {

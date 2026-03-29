@@ -119,8 +119,8 @@ public:
     : NamedDecl(nk){}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    QualType getQualType() {return m_type;}
-    void setQualType(QualType qt) {m_type = qt;}
+    QualType getType() {return m_type;}
+    void setType(QualType qt) {m_type = qt;}
 
 private:
     QualType m_type;
@@ -173,13 +173,13 @@ public:
     : DeclaratorDecl(NK_FunctionDecl), m_isDefinition(false), m_funSpec(N_FSPEC), m_body(nullptr) {}
     virtual std::any accept(ASTVisitor* vt) override;
 
-    ParamDeclGroup getParmVarDeclList() {return m_parmDeclVars;}
-    void setParmVarDeclList(ParamDeclGroup& vars) {m_parmDeclVars = vars;}
+    ParamDeclGroup getParamVarDecls() {return m_parmDeclVars;}
+    void setParamVarDecls(ParamDeclGroup& vars) {m_parmDeclVars = vars;}
 
     CompoundStmt* getBody() {return m_body;}
     void setBody(CompoundStmt* body) {m_body = body;}
 
-    bool getIsDefinition() const {return m_isDefinition;}
+    bool isDefinition() const {return m_isDefinition;}
     void setIsDefinition(bool flag) {m_isDefinition = flag;}
 
 private:
