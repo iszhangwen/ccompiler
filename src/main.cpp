@@ -5,7 +5,6 @@
 #include "pass.h"
 #include "dominatetree.h"
 #include "mem2reg.h"
-#include "codegen.h"
 #include "module.h"
 
 bool compile(const std::string& infile, const std::string& outfile)
@@ -14,7 +13,11 @@ bool compile(const std::string& infile, const std::string& outfile)
     Parser parse;
     parse.run(infile);
 
-    // 中间代码生成
+    /*
+    * 中间代码生成,构建pipeline: 
+    * 1. 生成ssa ir
+    * 2. 执行优化pass
+    */
     auto astIR = parse.getAstCtx();
     IRBuilder irbuilder;
     irbuilder.run(astIR);
@@ -27,7 +30,16 @@ bool compile(const std::string& infile, const std::string& outfile)
     //PassManager passes;
     //passes.run(ssaIR);
 
-    // 发射代码生成汇编
+    /*
+    * 后端代码生成,构建pipeline: 
+    * 1. 选择TargetMachine
+    * 2. 指令选择pass
+    * 3. 寄存器分配pass
+    * 4. 指令调度pass
+    * 5. 组装生成汇编pass
+    */
+    PassManager passes;
+    passes.run(ssaIR);
     return false;
 }
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <new>
+#include <algorithm>
 
 Arena::Arena(std::size_t chunkSize)
 : m_chunkSize(chunkSize), m_current(nullptr), m_end(nullptr)

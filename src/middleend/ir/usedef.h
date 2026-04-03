@@ -46,13 +46,13 @@ public:
     : m_type(ty), m_name(name){}
     virtual ~Value() = default;
 
-    // 属性设置
+    // @brief: 属性设置
     std::string getName() const {return m_name;}
     void setName(const std::string& name) {m_name = name;}
     QualType getType() const {return m_type;}
     void setType(QualType ty) {m_type = ty;}
 
-    // use-def维护
+    // @brief: use-def维护
     void addUse(Use use) {m_uses.push_back(use);}
     void removeUse(Use use) {m_uses.remove(use);}
     void addUse(User* user) {addUse(Use(this, user));}
@@ -60,7 +60,7 @@ public:
     void clearUse() {m_uses.clear();}
     std::list<Use> getUses() {return m_uses;}
 
-    // 常量判断
+    // @brief: 常量判断
     virtual bool isConstant() {return false;}
     virtual bool isGlobal() {return false;}
     virtual bool isArgument() {return false;}
@@ -69,17 +69,23 @@ public:
     // @brief:将当前所有使用该value的地方全部使用val进行替换，并断开use
     void replaceAllUseWith(Value* val);
 
-    // 使用类型判断
+    // @brief: 使用类型判断
     template<typename T>
     T* isa() {return dynamic_cast<T*>(this);}
 
     // @brief: 打印出IR
     virtual void toStringPrint(){}
 
+    // @brief: 虚拟寄存器访问
+    int getVReg() {return m_vreg;}
+    void setVReg(int reg) {m_vreg = reg;}
+
 private:
     std::string m_name;
     QualType m_type;
     std::list<Use> m_uses;
+    // 虚拟寄存器编号
+    int m_vreg{-1};
 };
 
 //@brief: user代表所有使用value的元素：包括指令，常量，全局变量等。

@@ -11,22 +11,23 @@ class BasicBlock;
 class Pass 
 {
 public:
+    Pass(){}
     virtual ~Pass() = default;
     virtual std::string getName() const = 0;
 
-    // 判断是否会更改IR
+    // @brief: 判断是否会更改IR ir分为analysis型， transform类型
     virtual bool isAnalysis() const {return false;}
-    // 判断pass的执行级别
+
+    // @brief: 判断pass的执行级别
     virtual bool isModulePass() const = 0;
     virtual bool isFunctionPass() const = 0;
     virtual bool isBasicBlockPass() const = 0;
 
-    // IR执行
+    // @brief: IR执行
     virtual bool runOnModule(Module* ptr)  = 0;
     virtual bool runOnFunction(Function* ptr)  = 0;
     virtual bool runOnBasicBlock(BasicBlock* ptr) = 0;
 
-private:
 };
 
 // 模块级pass
@@ -36,7 +37,7 @@ public:
     bool isModulePass() const override final {return true;}
     bool isFunctionPass() const override final {return false;}
     bool isBasicBlockPass() const override final {return false;}
-    // pass执行
+    // @brief: pass执行
     bool runOnFunction(Function* ptr) override final {return false;}
     bool runOnBasicBlock(BasicBlock* ptr) override final {return false;}
 };
@@ -48,7 +49,7 @@ public:
     bool isModulePass() const override final {return false;}
     bool isFunctionPass() const override final {return true;}
     bool isBasicBlockPass() const override final {return false;}
-    // pass执行
+    // @brief: pass执行
     bool runOnModule(Module* ptr)  override final {return false;}
     bool runOnBasicBlock(BasicBlock* ptr) override final {return false;}
 };
@@ -60,7 +61,7 @@ public:
     bool isModulePass() const override final {return false;}
     bool isFunctionPass() const override final {return false;}
     bool isBasicBlockPass() const override final {return true;}
-    // pass执行
+    // @brief: pass执行
     bool runOnModule(Module* ptr)  override final {return false;}
     bool runOnFunction(Function* ptr) override final {return false;}
 };
