@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include "../targetframeinfo.h"
 
+namespace ccompiler {
+
 // RISC-V ABI寄存器编号
 namespace RiscvReg {
     enum {
@@ -98,3 +100,5 @@ private:
     std::vector<int> m_argRegs;
     std::unordered_map<int, std::string> m_reg2Str;
 };
+
+} // namespace ccompiler

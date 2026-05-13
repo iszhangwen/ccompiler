@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+using namespace ccompiler;
+
 Value* Module::getGlobalDeclAddr(NamedDecl* decl)
 {
     if (m_globalDeclAddr.count(decl)) 

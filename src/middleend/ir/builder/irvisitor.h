@@ -2,6 +2,8 @@
 
 #include <any>
 
+namespace ccompiler {
+
 class Module;
 class Function;
 class BasicBlock;
@@ -37,3 +39,5 @@ public:
     virtual std::any visit(LoadInst*) = 0;
     virtual std::any visit(StoreInst*) = 0;
 };
+
+} // namespace ccompiler

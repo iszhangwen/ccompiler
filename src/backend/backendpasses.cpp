@@ -3,6 +3,8 @@
 #include "module.h"
 #include "function.h"
 
+using namespace ccompiler;
+
 void BackendPassManager::run(Module* ssaModule)
 {
     if (!m_targetMachine || !ssaModule) return;

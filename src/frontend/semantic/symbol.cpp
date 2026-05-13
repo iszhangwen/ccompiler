@@ -1,6 +1,8 @@
 #include "symbol.h"
 #include "decl.h"
 
+using namespace ccompiler;
+
 std::string Symbol::getTag() 
 {
     return getTag(m_nameSpace, m_name);

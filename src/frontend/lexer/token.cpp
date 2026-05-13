@@ -1,7 +1,9 @@
 #include "token.h"
 #include "scanner.h"
 #include <sstream>
-#include "error.h"
+#include "ccerror.h"
+
+using namespace ccompiler;
 
 const std::unordered_map<std::string, TokenKind> Token::KeyWordMap = {
     {"alignof",       TokenKind::Alignof,	   },

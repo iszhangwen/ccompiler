@@ -6,6 +6,8 @@
 #include "../target/risc_v/riscvtargetmachine.h"
 #include <string>
 
+namespace ccompiler {
+
 // RISC-V 汇编发射器
 class RiscVAsmEmitter
 {
@@ -46,3 +48,5 @@ private:
     // @brief: 指令到汇编字符串
     std::string instToString(MachineInst* inst);
 };
+
+} // namespace ccompiler

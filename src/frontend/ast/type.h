@@ -21,6 +21,8 @@
 #include <assert.h>
 #include "ast.h"
 
+namespace ccompiler {
+
 class Type;
 // QualType存储了包装的类型限定符:主要作用了为了规范类型，维护类型系统的稳定性
 class QualType 
@@ -219,7 +221,17 @@ public:
     : Type(Type::INTEGER, QualType(), true)
     , m_signed(sig)
     , m_width(wid)
-    , m_category(cate) {}
+    , m_category(cate) {
+        // 设置整型大小
+        switch (wid) {
+            case BYTE: setSize(1); break;
+            case SHORT: setSize(2); break;
+            case NORMAL: setSize(4); break;
+            case LONG: setSize(4); break;   // RV32下long为4字节
+            case LONG2: setSize(8); break;
+            default: setSize(4); break;
+        }
+    }
 
     // 判断是否是整数类型
     bool isSigned() const {return (Sign::SIGNED == m_signed);}
@@ -396,3 +408,4 @@ public:
 private:
     TypedefDecl* m_decl;
 };
+} // namespace ccompiler

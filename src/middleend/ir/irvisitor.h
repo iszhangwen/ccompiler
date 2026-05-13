@@ -2,6 +2,8 @@
 
 #include "instruction.h"
 
+namespace ccompiler {
+
 class SSAIRVisitor
 {
 public:
@@ -13,3 +15,5 @@ public:
     virtual void visit(PhiInst*) = 0;
     virtual void visit(BinaryInst*) = 0;
 };
+
+} // namespace ccompiler

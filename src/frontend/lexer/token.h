@@ -5,6 +5,8 @@
 #include <iostream>
 #include "source.h"
 
+namespace ccompiler {
+
 // token 类型
 #define MACROS_TABLE \
     X_MACROS(Alignof, "alignof")\
@@ -177,3 +179,4 @@ public:
     bool test(TokenKind);
     void reset();
 };
+} // namespace ccompiler

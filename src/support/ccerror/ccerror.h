@@ -2,6 +2,8 @@
 #include <string>
 #include <exception>
 
+namespace ccompiler {
+
 class CCError : public std::exception
 {
 public:
@@ -18,3 +20,5 @@ public:
 private:
     std::string err_;
 };
+
+} // namespace ccompiler

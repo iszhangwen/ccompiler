@@ -3,6 +3,8 @@
 #include <string>
 #include "usedef.h"
 
+namespace ccompiler {
+
 class Instruction;
 class Function;
 class Module;
@@ -93,3 +95,5 @@ private:
     // 该基本块直接支配的基本块
     std::list<BasicBlock*> m_domChildren;
 };
+
+} // namespace ccompiler

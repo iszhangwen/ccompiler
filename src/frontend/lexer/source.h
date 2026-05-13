@@ -5,6 +5,8 @@
 
 #include "arena.h"
 
+namespace ccompiler {
+
 // 源码字符位置
 struct SourceLocation 
 {
@@ -71,3 +73,4 @@ private:
     // 读取当前文件
     bool load(const std::string& filePath);
 };
+} // namespace ccompiler

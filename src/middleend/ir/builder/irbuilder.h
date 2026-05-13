@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <any>
 
+namespace ccompiler {
+
 class Module;
 class Function;
 
@@ -115,4 +117,5 @@ private:
     AstCtx m_astCtx;
     
 };
+} // namespace ccompiler
 

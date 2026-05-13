@@ -1,6 +1,8 @@
 #include "baseinst.h"
 #include "block.h"
 
+using namespace ccompiler;
+
 const std::unordered_map<Instruction::OpCode, std::string> Instruction::Opcode2NameMap = 
 {
     #define X_MACROS(a, b) {OpCode::a, b},

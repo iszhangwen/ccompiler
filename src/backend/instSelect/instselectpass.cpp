@@ -15,6 +15,8 @@
 #include "usedef.h"
 #include "arena.h"
 
+using namespace ccompiler;
+
 #include <unordered_map>
 
 // 下一个虚拟寄存器编号
@@ -46,12 +48,25 @@ void InstSelectPass::selectBlock(MachineBlock* mblock, BasicBlock* block)
 {
     // 处理基本块中的所有指令
     for (auto inst : block->getInsts()) {
-        selectInstruction(mblock, inst);
+        if (inst) {
+            selectInstruction(mblock, inst);
+        }
     }
 }
 
 void InstSelectPass::selectReturnInst(MachineBlock* mblock, ReturnInst* inst)
 {
+    // 如果有返回值，将返回值移动到 a0
+    if (!inst->isVoid() && inst->getValue()) {
+        Value* retVal = inst->getValue();
+        int retVReg = getValueVReg(retVal);
+        (void)retVReg;
+        // mv a0, retVal
+        auto* mvInst = createInst(RiscvInstOpcode::MV);
+        mvInst->addOperand(MachineOperand::createPReg(RiscvReg::A0));
+        mvInst->addOperand(MachineOperand::createVReg(retVal));
+        addInst(mblock, mvInst);
+    }
     // ret指令
     auto* retInst = createInst(RiscvInstOpcode::RET);
     addInst(mblock, retInst);
@@ -137,8 +152,23 @@ void InstSelectPass::selectStoreInst(MachineBlock* mblock, StoreInst* inst)
 
 void InstSelectPass::selectAllocaInst(MachineBlock* mblock, AllocaInst* inst)
 {
-    // alloca在函数 prologue 处理，这里只是记录
-    // 实际的栈分配在帧信息中处理
+    // 为 alloca 分配栈偏移并生成地址计算
+    int vreg = getValueVReg(inst);
+    (void)vreg;
+    int allocaSize = inst->getType()->getSize();
+    if (allocaSize <= 0) allocaSize = 4; // 未知类型默认4字节
+
+    // 栈帧从sp开始向上增长（正偏移）
+    int offset = m_stackOffset;
+    m_stackOffset += allocaSize;
+    m_allocaOffsets[inst] = offset;
+
+    // addi reg, sp, offset  (offset is positive, within the frame)
+    auto* addrInst = createInst(RiscvInstOpcode::ADDI);
+    addrInst->addOperand(MachineOperand::createVReg(inst));  // dest
+    addrInst->addOperand(MachineOperand::createPReg(RiscvReg::SP));  // base = sp
+    addrInst->addOperand(MachineOperand::createImm(offset)); // offset (positive)
+    addInst(mblock, addrInst);
 }
 
 void InstSelectPass::selectPhiInst(MachineBlock* mblock, PhiInst* inst)
@@ -152,8 +182,13 @@ void InstSelectPass::selectPhiInst(MachineBlock* mblock, PhiInst* inst)
 void InstSelectPass::selectBinaryInst(MachineBlock* mblock, BinaryInst* inst)
 {
     int destVReg = getValueVReg(inst);
+    (void)destVReg;
 
     RiscvInstOpcode opc = RiscvInstOpcode::ADD;  // 默认
+
+    // 获取 lhs 和 rhs 的操作数
+    Value* lhs = inst->getOperand(0);
+    Value* rhs = inst->getOperand(1);
 
     switch (inst->getOpCode()) {
     case Instruction::Add:
@@ -189,25 +224,77 @@ void InstSelectPass::selectBinaryInst(MachineBlock* mblock, BinaryInst* inst)
     case Instruction::Xor:
         opc = RiscvInstOpcode::XOR;
         break;
-    case Instruction::Eq:
-        // sgt/slt + seqz 实现
-        opc = RiscvInstOpcode::SLTU;
-        break;
-    case Instruction::Ne:
-        opc = RiscvInstOpcode::SLTU;
-        break;
+    case Instruction::Eq: {
+        // xor rd, lhs, rhs;  seqz rd, rd
+        // => rd = (lhs == rhs) ? 1 : 0
+        auto* xorI = createInst(RiscvInstOpcode::XOR);
+        xorI->addOperand(MachineOperand::createVReg(inst));
+        xorI->addOperand(MachineOperand::createVReg(lhs));
+        xorI->addOperand(MachineOperand::createVReg(rhs));
+        addInst(mblock, xorI);
+        auto* seqzI = createInst(RiscvInstOpcode::SEQZ);
+        seqzI->addOperand(MachineOperand::createVReg(inst));
+        seqzI->addOperand(MachineOperand::createVReg(inst));
+        addInst(mblock, seqzI);
+        return;
+    }
+    case Instruction::Ne: {
+        // xor rd, lhs, rhs;  snez rd, rd
+        // => rd = (lhs != rhs) ? 1 : 0
+        auto* xorI = createInst(RiscvInstOpcode::XOR);
+        xorI->addOperand(MachineOperand::createVReg(inst));
+        xorI->addOperand(MachineOperand::createVReg(lhs));
+        xorI->addOperand(MachineOperand::createVReg(rhs));
+        addInst(mblock, xorI);
+        auto* snezI = createInst(RiscvInstOpcode::SNEZ);
+        snezI->addOperand(MachineOperand::createVReg(inst));
+        snezI->addOperand(MachineOperand::createVReg(inst));
+        addInst(mblock, snezI);
+        return;
+    }
     case Instruction::Lt:
+        // slt rd, lhs, rhs  => rd = (lhs < rhs) ? 1 : 0
         opc = RiscvInstOpcode::SLT;
         break;
-    case Instruction::Le:
-        opc = RiscvInstOpcode::SLT;
-        break;
-    case Instruction::Gt:
-        opc = RiscvInstOpcode::SLT;
-        break;
-    case Instruction::Ge:
-        opc = RiscvInstOpcode::SLT;
-        break;
+    case Instruction::Le: {
+        // slt rd, rhs, lhs;  xori rd, rd, 1
+        // => rd = (rhs < lhs) ? 1 : 0  then  rd = !rd  => rd = (lhs <= rhs) ? 1 : 0
+        auto* sltI = createInst(RiscvInstOpcode::SLT);
+        sltI->addOperand(MachineOperand::createVReg(inst));
+        sltI->addOperand(MachineOperand::createVReg(rhs));  // 交换操作数
+        sltI->addOperand(MachineOperand::createVReg(lhs));
+        addInst(mblock, sltI);
+        auto* xoriI = createInst(RiscvInstOpcode::XORI);
+        xoriI->addOperand(MachineOperand::createVReg(inst));
+        xoriI->addOperand(MachineOperand::createVReg(inst));
+        xoriI->addOperand(MachineOperand::createImm(1));
+        addInst(mblock, xoriI);
+        return;
+    }
+    case Instruction::Gt: {
+        // slt rd, rhs, lhs  => rd = (rhs < lhs) = (lhs > rhs)
+        auto* sltI = createInst(RiscvInstOpcode::SLT);
+        sltI->addOperand(MachineOperand::createVReg(inst));
+        sltI->addOperand(MachineOperand::createVReg(rhs));  // 交换操作数
+        sltI->addOperand(MachineOperand::createVReg(lhs));
+        addInst(mblock, sltI);
+        return;
+    }
+    case Instruction::Ge: {
+        // slt rd, lhs, rhs;  xori rd, rd, 1
+        // => rd = (lhs < rhs) ? 1 : 0  then  rd = !rd  => rd = (lhs >= rhs) ? 1 : 0
+        auto* sltI = createInst(RiscvInstOpcode::SLT);
+        sltI->addOperand(MachineOperand::createVReg(inst));
+        sltI->addOperand(MachineOperand::createVReg(lhs));
+        sltI->addOperand(MachineOperand::createVReg(rhs));
+        addInst(mblock, sltI);
+        auto* xoriI = createInst(RiscvInstOpcode::XORI);
+        xoriI->addOperand(MachineOperand::createVReg(inst));
+        xoriI->addOperand(MachineOperand::createVReg(inst));
+        xoriI->addOperand(MachineOperand::createImm(1));
+        addInst(mblock, xoriI);
+        return;
+    }
     default:
         opc = RiscvInstOpcode::ADD;
         break;
@@ -215,8 +302,8 @@ void InstSelectPass::selectBinaryInst(MachineBlock* mblock, BinaryInst* inst)
 
     auto* binInst = createInst(opc);
     binInst->addOperand(MachineOperand::createVReg(inst));          // dest
-    binInst->addOperand(MachineOperand::createVReg(inst->getOperand(0))); // lhs
-    binInst->addOperand(MachineOperand::createVReg(inst->getOperand(1))); // rhs
+    binInst->addOperand(MachineOperand::createVReg(lhs));          // lhs
+    binInst->addOperand(MachineOperand::createVReg(rhs));          // rhs
     addInst(mblock, binInst);
 }
 
@@ -285,7 +372,11 @@ void InstSelectPass::selectInstruction(MachineBlock* mblock, Instruction* inst)
 
 bool InstSelectPass::runOnFunction(Function* node)
 {
-    // 1. 构建机器级表示
+    // 1. 初始化栈偏移跟踪（从0开始，正值向上增长）
+    m_stackOffset = 0;
+    m_allocaOffsets.clear();
+
+    // 2. 构建机器级表示
     m_function = Arena::make<MachineFunction>(node);
     m_function->setName(node->getName());
     m_function->setFrameInfo(m_targetMachine->getRISCFrameInfo());
@@ -307,6 +398,12 @@ bool InstSelectPass::runOnFunction(Function* node)
     for (; ssaIt != ssaBlocks.end() && mIt != mBlocks.end(); ++ssaIt, ++mIt) {
         selectBlock(*mIt, *ssaIt);
     }
+
+    // 设置栈帧大小（至少16字节用于保存ra和s0，16字节对齐）
+    int frameSize = m_stackOffset;
+    if (frameSize < 16) frameSize = 16;
+    frameSize = (frameSize + 15) & ~15;
+    m_function->setFrameSize(frameSize);
 
     return true;
 }

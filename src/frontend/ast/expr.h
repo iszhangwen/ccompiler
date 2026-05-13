@@ -2,6 +2,8 @@
 #include "stmt.h"
 #include <any>
 
+namespace ccompiler {
+
 class Expr : public Stmt
 {
 public:
@@ -280,4 +282,5 @@ private:
     Expr* m_then;
     Expr* m_else;
 };
+} // namespace ccompiler
 

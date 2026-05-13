@@ -2,6 +2,8 @@
 #include "machineblock.h"
 #include "../../middleend/ir/inst/baseinst.h"
 
+using namespace ccompiler;
+
 // RISC-V 寄存器名称
 static const char* const RiscvRegNames[] = {
     "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2",

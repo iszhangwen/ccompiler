@@ -1,6 +1,8 @@
 #include "linearscan.h"
 #include "../target/risc_v/riscvframeinfo.h"
 
+using namespace ccompiler;
+
 // RISC-V 可用的整数寄存器 (排除 zero, sp, gp, tp)
 const int LinearScanAllocPass::AVAIL_REGS[] = {
     RiscvReg::T0, RiscvReg::T1, RiscvReg::T2,

@@ -6,6 +6,8 @@
 
 #include "analyzer.h"
 
+using namespace ccompiler;
+
 #define DEFINE_ACCEPT_METHOD(CLASS_NAME, VISITOR_BASE, RETURN_TYPE) \
 RETURN_TYPE CLASS_NAME::accept(VISITOR_BASE* vt) { \
     if (vt) { \
@@ -14,7 +16,7 @@ RETURN_TYPE CLASS_NAME::accept(VISITOR_BASE* vt) { \
     return RETURN_TYPE(); \
 }\
 
-// Í¨ÓÃ·ÃÎÊ½Ó¿Ú: Ö÷ÒªÊÇÌá¹©dumpµÈ¹¦ÄÜ
+// é€šç”¨è®¿é—®æ¥å£: ä¸»è¦æ˜¯æä¾›dumpç­‰åŠŸèƒ½
 DEFINE_ACCEPT_METHOD(TranslationUnitDecl, ASTVisitor, std::any)
 DEFINE_ACCEPT_METHOD(LabelDecl, ASTVisitor, std::any)
 DEFINE_ACCEPT_METHOD(ValueDecl, ASTVisitor, std::any)

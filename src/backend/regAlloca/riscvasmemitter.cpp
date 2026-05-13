@@ -2,6 +2,8 @@
 #include "../target/risc_v/riscvframeinfo.h"
 #include <sstream>
 
+using namespace ccompiler;
+
 std::string RiscVAsmEmitter::operandToString(const MachineOperand& op)
 {
     if (op.isVirtualReg()) {
@@ -379,27 +381,32 @@ void RiscVAsmEmitter::emitBlock(MachineBlock* block)
 
 void RiscVAsmEmitter::emitFunctionHeader()
 {
-    emitLine(".text");
     emitLine(".align 2");
     emitLine(".global " + m_function->getName());
     emitLine(".type " + m_function->getName() + ", @function");
     emitLine(m_function->getName() + ":");
 
     // 函数 prologue
+    int frameSize = m_function->getFrameSize();
+    if (frameSize < 16) frameSize = 16;  // 至少16字节（保存ra和s0）
+
     emitLine("    # prologue");
-    emitLine("    addi sp, sp, -16");  // 分配栈帧 (简化)
-    emitLine("    sw ra, 12(sp)");    // 保存返回地址
-    emitLine("    sw s0, 8(sp)");     // 保存帧指针
-    emitLine("    addi s0, sp, 16");  // 设置帧指针
+    emitLine("    addi sp, sp, -" + std::to_string(frameSize));
+    emitLine("    sw ra, " + std::to_string(frameSize - 4) + "(sp)");  // 保存返回地址
+    emitLine("    sw s0, " + std::to_string(frameSize - 8) + "(sp)");  // 保存帧指针
+    emitLine("    addi s0, sp, " + std::to_string(frameSize));         // 设置帧指针
 }
 
 void RiscVAsmEmitter::emitFunctionFooter()
 {
+    int frameSize = m_function->getFrameSize();
+    if (frameSize < 16) frameSize = 16;
+
     // 函数 epilogue
     emitLine("    # epilogue");
-    emitLine("    lw ra, 12(sp)");    // 恢复返回地址
-    emitLine("    lw s0, 8(sp)");     // 恢复帧指针
-    emitLine("    addi sp, sp, 16");  // 释放栈帧
+    emitLine("    lw ra, " + std::to_string(frameSize - 4) + "(sp)");
+    emitLine("    lw s0, " + std::to_string(frameSize - 8) + "(sp)");
+    emitLine("    addi sp, sp, " + std::to_string(frameSize));
     emitLine("    ret");
 
     emitLine(".size " + m_function->getName() + ", .-" + m_function->getName());

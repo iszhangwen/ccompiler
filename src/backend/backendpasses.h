@@ -6,6 +6,8 @@
 #include "regAlloca/linearscan.h"
 #include <string>
 
+namespace ccompiler {
+
 class Module;
 
 // 后端Pass管理器
@@ -37,3 +39,5 @@ private:
     // @brief: 发射汇编
     void emitAsm();
 };
+
+} // namespace ccompiler

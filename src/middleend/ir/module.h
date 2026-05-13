@@ -10,6 +10,8 @@
 #include <list>
 #include <unordered_map>
 
+namespace ccompiler {
+
 class GlobalVariable;
 class Function;
 class LValue;
@@ -60,3 +62,4 @@ private:
     std::list<GlobalVariable*> m_globalVars;
     std::unordered_map<NamedDecl*, Value*> m_globalDeclAddr;
 };
+} // namespace ccompiler

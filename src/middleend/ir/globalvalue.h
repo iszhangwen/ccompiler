@@ -2,6 +2,8 @@
 
 #include "usedef.h"
 
+namespace ccompiler {
+
 class Module;
 /*
  * @brief: 为什么会有GlobalValue
@@ -49,3 +51,4 @@ private:
     Visibility m_visibility;
     Module* m_parent;
 };
+} // namespace ccompiler

@@ -1,6 +1,8 @@
 #include "usedef.h"
 #include "arena.h"
 
+using namespace ccompiler;
+
 void Value::replaceAllUseWith(Value* val)
 {
     for (auto use: m_uses) {

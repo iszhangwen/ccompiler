@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include "type.h"
 
+namespace ccompiler {
+
 class NamedDecl;
 class Type;
 class Scope;
@@ -124,3 +126,4 @@ public:
 private:
     Scope* m_curScope;
 };
+} // namespace ccompiler

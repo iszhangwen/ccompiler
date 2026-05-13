@@ -2,6 +2,8 @@
 
 #include "usedef.h"
 
+namespace ccompiler {
+
 class Function;
 class BasicBlock;
 
@@ -33,3 +35,4 @@ private:
     Function* m_function;
     unsigned int m_index;
 };
+} // namespace ccompiler

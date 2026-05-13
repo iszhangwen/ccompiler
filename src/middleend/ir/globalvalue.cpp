@@ -2,6 +2,8 @@
 #include "function.h"
 #include "values/globalvariable.h"
 
+using namespace ccompiler;
+
 GlobalValue::GlobalValue(QualType ty, const std::string& name, Module* parent)
     : User(ty, name), m_parent(parent)
 {

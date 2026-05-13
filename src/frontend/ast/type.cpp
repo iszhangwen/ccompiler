@@ -1,6 +1,8 @@
 #include "type.h"
 #include "decl.h"
 
+using namespace ccompiler;
+
 bool Type::isObjectType()
 {
     return !isFunctionType();

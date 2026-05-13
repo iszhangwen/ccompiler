@@ -2,6 +2,8 @@
 #include <sstream>
 #include "ccerror.h"
 
+using namespace ccompiler;
+
 bool scanner::isLetter(char ch)
 {
     if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_') {
@@ -276,15 +278,19 @@ Token *scanner::scan()
 
     m_source->mark();
     char ch = m_source->curch();
+
+    // 标识符起始字符: 字母或下划线
+    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_') {
+        return scanIdentifier();
+    }
+
+    // 数字起始
+    if (ch >= '0' && ch <= '9') {
+        return scanNumberLiteral();
+    }
+
     switch (ch)
     {
-    case 'a'...'z': 
-    case 'A'...'Z': 
-    case '_':    
-        return scanIdentifier();
-
-    case '0'...'9':
-        return scanNumberLiteral();
 
     case '\"':
         return scanStringLiteral();

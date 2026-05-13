@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace ccompiler {
+
 struct SNNode
 {
     enum Kind {
@@ -22,4 +24,6 @@ class SelectionDAG
 {
 
 };
+
+} // namespace ccompiler
 

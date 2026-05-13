@@ -5,6 +5,8 @@
 #include "source.h"
 #include "ccerror.h"
 
+namespace ccompiler {
+
 // 扫描器从SourceBuffer读取字符，返回Token
 class scanner 
 {
@@ -45,3 +47,4 @@ public:
     Token *scan();
     TokenSequence tokenize();
 };
+} // namespace ccompiler

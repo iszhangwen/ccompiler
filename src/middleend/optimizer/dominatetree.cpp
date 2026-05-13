@@ -6,6 +6,8 @@
 
 #include <algorithm>
 
+using namespace ccompiler;
+
 /*
 该pass计算出每个节点的支配前沿，用于mem2reg算法插入phi节点
 计算过程：
@@ -107,7 +109,10 @@ void DominateTree::createIdom(Function* ptr)
     // 计算出每个基本块的idom后，将idom设置到基本块中
     for (auto node : m_postOrder) {
         node->setIdom(m_idoms[m_bb2int[node]]);
-        m_idoms[m_bb2int[node]]->addDomChildren(node);
+        // 根节点不添加自己为子节点
+        if (node != entry) {
+            m_idoms[m_bb2int[node]]->addDomChildren(node);
+        }
     }
 }
 

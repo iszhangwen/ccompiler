@@ -3,6 +3,8 @@
 #include "type.h"
 #include "token.h"
 
+namespace ccompiler {
+
 class LabelStmt : public Stmt
 {
 public:
@@ -263,3 +265,4 @@ public:
 private:
     Expr* m_retExpr; // 返回值表达式
 };
+} // namespace ccompiler

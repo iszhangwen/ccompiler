@@ -2,6 +2,8 @@
 
 #include "baseinst.h"
 
+namespace ccompiler {
+
 class BinaryInst : public Instruction
 {
 public:
@@ -23,4 +25,5 @@ public:
     // @brief: 打印出IR
     void toStringPrint() override;
 };
+} // namespace ccompiler
 

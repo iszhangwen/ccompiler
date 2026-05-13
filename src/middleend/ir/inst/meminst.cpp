@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+using namespace ccompiler;
+
 AllocaInst::AllocaInst(QualType ty, BasicBlock* bb)
 : Instruction(OpCode::Alloca, ty, bb) {
     setName("Alloca_" + std::to_string(uint64_t(this)));

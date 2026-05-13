@@ -4,6 +4,8 @@
 
 #include "arena.h"
 
+using namespace ccompiler;
+
 // 状态机模式解析TypeSpecifier
 enum TypeSpecCombine {
     // 符号
@@ -1814,8 +1816,18 @@ void Parser::run(const std::string& infile)
     m_source = Arena::make<Source>(infile);
     m_tokenSeq = Arena::make<TokenSequence>(scanner(m_source).tokenize());
     m_systable = Arena::make<SymbolTableContext>();
-    m_sema = Arena::make<SemaAnalyzer>();
+    m_diag = Arena::make<DiagnosticEngine>();
+    m_sema = Arena::make<SemaAnalyzer>(m_diag, m_systable);
     // 从根节点开始解析
     parseTranslationUnit();
+
+    // 执行语义分析（后处理 pass）
+    m_sema->run(m_unit);
+
+    // 输出诊断信息
+    if (m_diag->hasErrors()) {
+        m_diag->printAll(std::cerr);
+        throw CCError("compilation terminated due to semantic errors");
+    }
 }
 

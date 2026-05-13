@@ -3,6 +3,8 @@
 #include <vector>
 #include "targetframeinfo.h"
 
+namespace ccompiler {
+
 // @brief: 抽象目标机器
 class TargetMachine
 {
@@ -17,4 +19,6 @@ public:
     // @brief: 返回栈帧信息对象
     virtual class TargetFrameInfo* getFrameInfo() = 0;
 };
+
+} // namespace ccompiler
 

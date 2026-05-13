@@ -4,6 +4,8 @@
 #include <new>
 #include <algorithm>
 
+using namespace ccompiler;
+
 Arena::Arena(std::size_t chunkSize)
 : m_chunkSize(chunkSize), m_current(nullptr), m_end(nullptr)
 {

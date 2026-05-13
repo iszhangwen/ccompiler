@@ -7,6 +7,8 @@
 #include <stack>
 #include <unordered_map>
 
+namespace ccompiler {
+
 class Module;
 class BasicBlock;
 class Argument;
@@ -94,5 +96,7 @@ private:
     // 局部变量和ssa ir的对应表
     std::unordered_map<NamedDecl*, Value*> m_localDeclAddr;
 };
+
+} // namespace ccompiler
 
 

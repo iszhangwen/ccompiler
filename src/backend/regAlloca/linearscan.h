@@ -8,6 +8,8 @@
 #include <map>
 #include <set>
 
+namespace ccompiler {
+
 // 线性扫描寄存器分配
 class LinearScanAllocPass
 {
@@ -45,3 +47,5 @@ private:
     // @brief: 为指令操作数分配寄存器
     void allocateForInst(MachineInst* inst);
 };
+
+} // namespace ccompiler

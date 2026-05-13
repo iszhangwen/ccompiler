@@ -18,6 +18,8 @@
 #include "type.h"
 #include "token.h"
 
+namespace ccompiler {
+
 class Scope;
 struct Declarator
 {
@@ -281,3 +283,4 @@ private:
     bool m_isUnion;      // 是否是 union
     FieldDeclGroup m_filedDecls; // 字段列表
 };
+} // namespace ccompiler

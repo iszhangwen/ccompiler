@@ -2,6 +2,7 @@ add_library(support_interface INTERFACE)
 target_include_directories(support_interface INTERFACE 
     ccerror
     memory
+    diag
 )
 
 file(GLOB_RECURSE SRC "*.cpp" "*.cc")

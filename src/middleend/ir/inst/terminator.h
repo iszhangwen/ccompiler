@@ -2,6 +2,8 @@
 
 #include "baseinst.h"
 
+namespace ccompiler {
+
 class TerminatorInst : public Instruction
 {
 public:
@@ -45,3 +47,5 @@ public:
     // @brief: 打印出IR
     void toStringPrint() override;
 };
+} // namespace ccompiler
+

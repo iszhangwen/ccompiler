@@ -2,6 +2,8 @@
 
 #include <vector>
 
+namespace ccompiler {
+
 // @brief: 抽象的栈帧信息
 class TargetFrameInfo
 {
@@ -22,3 +24,5 @@ public:
     // @brief: 返回栈指针寄存器
     virtual int getStackPointer() const = 0;
 };
+
+} // namespace ccompiler

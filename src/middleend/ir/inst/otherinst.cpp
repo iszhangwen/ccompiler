@@ -1,6 +1,8 @@
 #include "otherinst.h"
 #include "block.h"
 
+using namespace ccompiler;
+
 void PhiInst::addIncoming(Value* val, BasicBlock* bb)
 {
     addOperand(val);

@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <iostream>
 
+using namespace ccompiler;
+
 bool Constant::isConstantZero()
 {
     if (auto obj = dynamic_cast<ConstantBool*>(this)) {

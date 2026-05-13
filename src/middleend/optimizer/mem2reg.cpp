@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <algorithm>
 
+using namespace ccompiler;
+
 /*
 内存模型与寄存器模型的对比
 ---------------------------------------------------------
@@ -52,6 +54,7 @@ bool Mem2Reg::runOnModule(Module* ptr)
     for (auto func: ptr->getFunctions()) {
         // 1. 筛选可提升的局部变量
         auto promotableVar = getPromotableVars(func);
+        m_allocas.insert(m_allocas.end(), promotableVar.begin(), promotableVar.end());
         // 2. Phi节点插入
         for (auto var : promotableVar) {
             // a. 收集每个变量的定义点和使用点
@@ -216,10 +219,32 @@ void Mem2Reg::rename(BasicBlock* block)
 
 void Mem2Reg::replaceAllUseWith(Value* oldVal, Value* newVal)
 {
-
+    // 遍历 oldVal 的所有使用者，将使用 oldVal 的地方替换为 newVal
+    auto uses = oldVal->getUses();
+    for (auto use : uses) {
+        auto user = use.getUser();
+        if (auto* inst = dynamic_cast<Instruction*>(user)) {
+            int n = inst->getOperandsNumber();
+            for (int i = 0; i < n; ++i) {
+                if (inst->getOperand(i) == oldVal) {
+                    inst->setOperand(i, newVal);
+                }
+            }
+        }
+    }
+    // 清空 oldVal 的使用记录
+    oldVal->clearUse();
 }
 
 void Mem2Reg::removeAllocas()
 {
-    
+    // 删除所有已提升的 alloca 指令
+    for (auto* alloca : m_allocas) {
+        if (!alloca) continue;
+        auto* parent = alloca->getParent();
+        if (parent) {
+            parent->removeAllocInst(alloca);
+        }
+    }
+    m_allocas.clear();
 }

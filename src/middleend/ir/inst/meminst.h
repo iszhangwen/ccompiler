@@ -2,6 +2,8 @@
 
 #include "baseinst.h"
 
+namespace ccompiler {
+
 // 从栈上分配一段内存，大小依据type决定
 class AllocaInst : public Instruction
 {
@@ -31,3 +33,4 @@ public:
     // @brief: 打印出IR
     void toStringPrint() override;
 };
+} // namespace ccompiler

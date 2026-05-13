@@ -2,6 +2,8 @@
 #include <vector>
 #include <cstddef>
 
+namespace ccompiler {
+
 class Arena 
 {
 public:
@@ -18,8 +20,8 @@ public:
     // 方便创建对象
     template<typename T, typename... Args>
     static T* make(Args&&... args) {
-        static thread_local Arena arena;
-        auto mem = arena.allocate(sizeof(T), alignof(T));
+        static thread_local Arena m_arena;
+        auto mem = m_arena.allocate(sizeof(T), alignof(T));
         return new(mem) T(std::forward<Args>(args)...);
     }
     // 执行析构函数
@@ -29,7 +31,7 @@ public:
     }
 
     // 分配内存，自动对齐
-    void* allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t));
+    void* allocate(std::size_t bytes, std::size_t alignment);
     // 释放内存
     void release();
 
@@ -45,3 +47,5 @@ private:
         // 分配新的chunk
     void allocateNewChunk(std::size_t minSize = 0);
 };
+
+} // namespace ccompiler

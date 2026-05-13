@@ -11,6 +11,8 @@ IR表达是一个graph, 每个node是一个value, 每个edge是一个use
 
 #include "type.h"
 
+namespace ccompiler {
+
 // 前向声明
 class Value;
 class User;
@@ -21,7 +23,7 @@ public:
     explicit Use(Value* val, User* user)
     : m_value(val), m_user(user){}
 
-    bool operator==(const Use& other){
+    bool operator==(const Use& other) const {
         return (this->m_user == other.m_user) && (this->m_value == other.m_value);
     }
     void setValue(Value* val) {m_value = val;}
@@ -106,3 +108,5 @@ public:
 private:
     std::vector<Value*> m_operands;
 };
+
+} // namespace ccompiler

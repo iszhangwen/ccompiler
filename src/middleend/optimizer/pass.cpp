@@ -4,6 +4,8 @@
 #include "function.h"
 #include "block.h"
 
+using namespace ccompiler;
+
 void PassManager::run(Module* obj)
 {
     if (!obj) return;

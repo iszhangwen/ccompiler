@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+using namespace ccompiler;
+
 BranchInst::BranchInst(BasicBlock* parent, Value* cond, BasicBlock* ifThen, BasicBlock* ifElse)
 : TerminatorInst(OpCode::Branch, QualType(), parent)
 {

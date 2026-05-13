@@ -7,6 +7,8 @@
 
 #include "pass.h"
 
+namespace ccompiler {
+
 class AllocaInst;
 class Value;
 
@@ -35,3 +37,4 @@ private:
     // 删除alloca
     void removeAllocas();
 };
+} // namespace ccompiler

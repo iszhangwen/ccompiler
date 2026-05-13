@@ -5,6 +5,8 @@
 
 #include "arena.h"
 
+namespace ccompiler {
+
 // AST节点前置声明
 class AstNode;
 using Stmt = AstNode;
@@ -253,4 +255,6 @@ enum FuncSpecifier
 };
 
 using DeclGroup = std::vector<Decl*>;
+
+} // namespace ccompiler
 

@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+using namespace ccompiler;
+
 BasicBlock::BasicBlock(Function* fun, const std::string &name)
 : Value(QualType(), name), m_parent(fun)
 {

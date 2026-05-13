@@ -5,3 +5,7 @@
 #include "inst/terminator.h"
 #include "inst/otherinst.h"
 #include "inst/binaryinst.h"
+
+namespace ccompiler {
+} // namespace ccompiler
+

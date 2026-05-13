@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+using namespace ccompiler;
+
 BinaryInst::BinaryInst(OpCode opc, Value* v1, Value* v2, BasicBlock* bb)
 : Instruction(opc, QualType(), bb)
 {

@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+namespace ccompiler {
+
 class DominateTree : public ModulePass
 {
 public:
@@ -33,3 +35,4 @@ private:
     // 存储直接只配者信息
     std::vector<BasicBlock*> m_idoms;
 };
+} // namespace ccompiler

@@ -13,6 +13,8 @@ ssa ir指令系统包含一下几个方面：
 #include <string>
 #include <unordered_map>
 
+namespace ccompiler {
+
 class BasicBlock;
 
 #ifdef INST_MACROS_TABLE
@@ -105,6 +107,8 @@ private:
     OpCode m_opcode;
     BasicBlock* m_parent;
 };
+
+} // namespace ccompiler
 
 
 

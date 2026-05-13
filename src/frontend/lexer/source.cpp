@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 
+using namespace ccompiler;
+
 Source::Source(const std::string& fileName)
 {
     segment.clear();

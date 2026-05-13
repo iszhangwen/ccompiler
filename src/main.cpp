@@ -1,42 +1,36 @@
 #include <iostream>
 #include <fstream>
+#include <string>
 #include "scanner.h"
 #include "parse.h"
 #include "builder/irbuilder.h"
-#include "pass.h"
-#include "dominatetree.h"
-#include "mem2reg.h"
 #include "module.h"
 #include "backend/backendpasses.h"
 #include "backend/target/risc_v/riscvtargetmachine.h"
 
+using namespace ccompiler;
+
 bool compile(const std::string& infile, const std::string& outfile)
 {
-    // 前端词法语法分析器
+    // 前端词法语法分析器 + 语义分析
     Parser parse;
     parse.run(infile);
 
-    /*
-    * 中间代码生成,构建pipeline:
-    * 1. 生成ssa ir
-    * 2. 执行优化pass
-    */
+    // 检查语义错误
+    auto diag = parse.getDiagnostic();
+    if (diag && diag->hasErrors()) {
+        return false;
+    }
+
+    // 中间代码生成
     auto astIR = parse.getAstCtx();
     IRBuilder irbuilder;
     irbuilder.run(astIR);
 
     // 获取SSA IR
     auto ssaIR = irbuilder.getModule();
-    //ssaIR->toStringPrint();
 
-    /*
-    * 后端代码生成,构建pipeline:
-    * 1. 选择TargetMachine
-    * 2. 指令选择pass
-    * 3. 寄存器分配pass
-    * 4. 指令调度pass
-    * 5. 组装生成汇编pass
-    */
+    // 后端代码生成
     RISCVTargetMachine targetMachine;
     BackendPassManager backend;
     backend.setTargetMachine(&targetMachine);
@@ -70,7 +64,7 @@ int main(int argc, char **argv)
     }
     catch(std::exception& e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error: " << e.what() << '\n';
         exit(-1);
     }
     catch(...)

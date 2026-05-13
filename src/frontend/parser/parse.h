@@ -6,6 +6,9 @@
 #include <type.h>
 #include <scanner.h>
 #include <sema.h>
+#include "diag.h">
+
+namespace ccompiler {
 
 class Parser;
 
@@ -27,6 +30,7 @@ private:
     TranslationUnitDecl* m_unit;
     SemaAnalyzer* m_sema;
     SymbolTableContext* m_systable;
+    DiagnosticEngine* m_diag;
 
     // 语法错误处理策略，遇到错误时中止编译程序
     void sytaxError(const std::string& val);
@@ -123,4 +127,8 @@ public:
 
     // 获取AST树解析单元
     AstCtx getAstCtx() {return AstCtx(m_unit, m_systable);}
+
+    // 获取诊断引擎
+    DiagnosticEngine* getDiagnostic() {return m_diag;}
 };
+} // namespace ccompiler

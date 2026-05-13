@@ -6,6 +6,8 @@
 
 #include "machinefunction.h"
 
+namespace ccompiler {
+
 class MachineModule
 {
 public:
@@ -38,3 +40,5 @@ private:
     std::unordered_map<std::string, MachineFunction*> m_name2Func;
     MachineFunction* m_curFunc;
 };
+
+} // namespace ccompiler

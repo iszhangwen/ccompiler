@@ -12,6 +12,8 @@
 #include "inst/terminator.h"
 #include "inst/otherinst.h"
 
+namespace ccompiler {
+
 class InstSelectPass : public FunctionPass
 {
 public:
@@ -36,6 +38,10 @@ private:
     MachineFunction* m_function;
     MachineModule m_machineModule;
     std::string m_passName = "Instruction Selection Pass";
+
+    // 栈偏移跟踪
+    int m_stackOffset;
+    std::unordered_map<Value*, int> m_allocaOffsets;
 
     // @brief: 机器基本块指令选择
     void selectBlock(MachineBlock* mblock, BasicBlock* block);
@@ -75,3 +81,5 @@ private:
         mblock->addInst(inst);
     }
 };
+
+} // namespace ccompiler

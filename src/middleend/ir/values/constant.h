@@ -6,6 +6,8 @@
 
 #include "usedef.h"
 
+namespace ccompiler {
+
 /*
  * @brief: 为什么常量要继承于User
  * 常量可能属于常量表达式，因此会使用其他值
@@ -74,6 +76,6 @@ public:
 private:
     float m_value;
 };
-
+} // namespace ccompiler
 
 

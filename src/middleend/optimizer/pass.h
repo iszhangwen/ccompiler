@@ -4,6 +4,8 @@
 #include <vector>
 #include <memory>
 
+namespace ccompiler {
+
 class Module;
 class Function;
 class BasicBlock;
@@ -77,3 +79,4 @@ public:
 private:
     std::vector<Pass*> m_passVec;
 };
+} // namespace ccompiler

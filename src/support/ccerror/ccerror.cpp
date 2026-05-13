@@ -1,5 +1,7 @@
 #include "ccerror.h"
 
+using namespace ccompiler;
+
 CCError::CCError(CCError&& obj)
 {
     err_ = obj.err_;

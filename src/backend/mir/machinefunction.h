@@ -7,6 +7,8 @@
 
 #include "machineblock.h"
 
+namespace ccompiler {
+
 class Function;
 class RISCVFrameInfo;
 
@@ -49,6 +51,10 @@ public:
     void setCalleeSaved(const std::vector<int>& regs) { m_calleeSaved = regs; }
     const std::vector<int>& getCalleeSaved() const { return m_calleeSaved; }
 
+    // @brief: 栈帧大小
+    void setFrameSize(int size) { m_frameSize = size; }
+    int getFrameSize() const { return m_frameSize; }
+
 private:
     std::string m_name;
     std::list<MachineBlock*> m_blocks;
@@ -57,4 +63,7 @@ private:
     std::unordered_map<int, int> m_vreg2preg;
     std::vector<int> m_virtualRegs;
     std::vector<int> m_calleeSaved;
+    int m_frameSize{0};
 };
+
+} // namespace ccompiler

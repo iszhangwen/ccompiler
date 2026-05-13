@@ -1,9 +1,12 @@
 #include "function.h"
 #include "block.h"
 #include "instruction.h"
+#include "type.h"
 
 #include <iostream>
 #include <algorithm>
+
+using namespace ccompiler;
 
 Function::Function(QualType ty, const std::string& name, Module* parent)
     : GlobalValue(ty, name, parent)
@@ -73,6 +76,15 @@ void Function::addLocalDeclAddr(NamedDecl* decl, Value* val) {
     if (m_localDeclAddr.count(decl)) 
         return;
     m_localDeclAddr[decl] = val;
+}
+
+QualType Function::getRetType()
+{
+    auto ft = getType().as<FunctionType>();
+    if (ft) {
+        return ft->getRetType();
+    }
+    return QualType();
 }
 
 BasicBlock* Function::createAndInsertBlock(const std::string& name)

@@ -8,9 +8,20 @@
 #include "function.h"
 #include "block.h"
 #include "instruction.h"
+#include "inst/baseinst.h"
+#include "inst/meminst.h"
+#include "inst/binaryinst.h"
+#include "inst/terminator.h"
+#include "inst/otherinst.h"
 #include "values/constant.h"
 #include "values/argument.h"
 #include "values/globalvariable.h"
+
+using namespace ccompiler;
+
+// 前向声明辅助函数
+static bool isAddressValue(Value* val);
+static Value* ensureRValue(BasicBlock* block, Value* val);
 
 IRBuilder::IRBuilder() 
 {
@@ -57,7 +68,8 @@ std::any IRBuilder::visit(VarDecl* var)
     // 解析初始化表达式
     auto valExpr = var->getInitExpr();
     if (valExpr) {
-        varVal = anyPtr<Value>(valExpr->accept(this));
+        auto valAny = valExpr->accept(this);
+        varVal = anyPtr<Value>(valAny);
     }
 
     // 解析变量声明：若是全局变量
@@ -202,21 +214,21 @@ std::any IRBuilder::visit(IfStmt* node)
     curBlock->createBr(val, ifthen, ifelse);
 
     // 解析then块的指令
-    m_curFuntion->emitBlock(ifthen);
+    func->emitBlock(ifthen);
     thEx->accept(this);
     // 解析完成后插入无条件br指令并设置跳转目标是end块，
-    m_curFuntion->emitBranch(ifend);
+    func->emitBranch(ifend);
 
     if (elEx) {
         // 解析else块的指令
-        m_curFuntion->emitBlock(ifelse);
+        func->emitBlock(ifelse);
         elEx->accept(this);
         // 解析完成后插入无条件br指令并设置跳转目标是end块，
-        m_curFuntion->emitBranch(ifend);
+        func->emitBranch(ifend);
     }
 
     // @brief: 解析完成后，程序进入到end块
-    m_curFuntion->emitBlock(ifend);
+    func->emitBlock(ifend);
     return makeAny<Value>();
 }
 std::any IRBuilder::visit(SwitchStmt* ptr)
@@ -259,10 +271,92 @@ std::any IRBuilder::visit(WhileStmt* node)
 }
 std::any IRBuilder::visit(DoStmt* ds)
 {
+    auto func = m_module->getCurFunction();
+    assert(func && "not current function");
+
+    // 创建循环体块和条件块
+    auto body = func->createAndInsertBlock("do.body");
+    auto cond = func->createAndInsertBlock("do.cond");
+    auto exit = func->createAndInsertBlock("do.exit");
+
+    // 无条件跳转到循环体
+    auto curBlock = func->getInsertBlock();
+    if (curBlock) {
+        curBlock->createBr(body);
+    }
+
+    // 进入循环体
+    func->pushBCStack(exit, cond);
+    func->emitBlock(body);
+    ds->getBody()->accept(this);
+    // 循环体结束后跳转到条件块
+    func->getInsertBlock()->createBr(cond);
+
+    // 条件块：计算条件表达式
+    func->emitBlock(cond);
+    auto condVal = anyPtr<Value>(ds->getCond()->accept(this));
+    condVal = ensureRValue(func->getInsertBlock(), condVal);
+    cond->createBr(condVal, body, exit);
+
+    func->popBCStack();
+
+    // 退出循环
+    func->emitBlock(exit);
     return makeAny<Value>();
 }
+
 std::any IRBuilder::visit(ForStmt* fs)
 {
+    auto func = m_module->getCurFunction();
+    assert(func && "not current function");
+
+    // 初始化表达式
+    if (auto init = fs->getInit()) {
+        init->accept(this);
+    }
+
+    // 创建循环头、循环体和退出块
+    auto condBlock = func->createAndInsertBlock("for.cond");
+    auto body = func->createAndInsertBlock("for.body");
+    // If there's no update expr, for.update is the same as for.cond
+    auto update = func->createAndInsertBlock("for.update");
+    auto exit = func->createAndInsertBlock("for.exit");
+
+    // 无条件跳转到条件块
+    auto curBlock = func->getInsertBlock();
+    if (curBlock) {
+        curBlock->createBr(condBlock);
+    }
+
+    // 条件块
+    func->emitBlock(condBlock);
+    if (auto cond = fs->getCond()) {
+        auto condVal = anyPtr<Value>(cond->accept(this));
+        condVal = ensureRValue(func->getInsertBlock(), condVal);
+        condBlock->createBr(condVal, body, exit);
+    } else {
+        // 无条件循环
+        condBlock->createBr(body);
+    }
+
+    // 循环体
+    func->pushBCStack(exit, update);
+    func->emitBlock(body);
+    fs->getBody()->accept(this);
+    // 循环体结束后跳转到更新块
+    func->getInsertBlock()->createBr(update);
+
+    // 更新表达式
+    func->emitBlock(update);
+    if (auto upd = fs->getUpdate()) {
+        upd->accept(this);
+    }
+    update->createBr(condBlock);
+
+    func->popBCStack();
+
+    // 退出循环
+    func->emitBlock(exit);
     return makeAny<Value>();
 }
 std::any IRBuilder::visit(GotoStmt* gs)
@@ -306,6 +400,11 @@ std::any IRBuilder::visit(ReturnStmt* node)
     if (auto expr = node->getRetExpr()) {
         // 计算返回值
         auto val = anyPtr<Value>(expr->accept(this));
+        // 如果val是地址（DeclRefExpr返回的），加载为值
+        auto curBlock = func->getInsertBlock();
+        if (curBlock && isAddressValue(val)) {
+            val = curBlock->createLoad(val);
+        }
         // 获取返回值地址
         auto addr = func->getReturnAddr();
         // 将返回值写入到返回值地址
@@ -344,6 +443,20 @@ std::any IRBuilder::visit(StringLiteral* ptr)
    // ConstantString::get(ptr->getValue());
     return makeAny<Value>();
 }
+// 辅助函数：判断Value是否是需要加载的地址类型
+static bool isAddressValue(Value* val) {
+    return dynamic_cast<AllocaInst*>(val) != nullptr
+        || dynamic_cast<GlobalVariable*>(val) != nullptr;
+}
+
+// 辅助函数：确保Value是右值（如果是地址则加载）
+static Value* ensureRValue(BasicBlock* block, Value* val) {
+    if (isAddressValue(val)) {
+        return block->createLoad(val);
+    }
+    return val;
+}
+
 std::any IRBuilder::visit(DeclRefExpr* node)
 {
     // 获取当前函数
@@ -358,12 +471,12 @@ std::any IRBuilder::visit(DeclRefExpr* node)
     if (varDecl->getScope()->isFileScope()) {
         auto addr = m_module->getGlobalDeclAddr(varDecl);
         assert(addr && "var not record in globalDeclMap");
-        return addr;
+        return makeAny<Value>(addr);
     }  
 
-    // 函数局部变量查找变量地址
-    auto val = func->getLocalDeclAddr(varDecl);
-    return makeAny<Value>(val);
+    // 函数局部变量：返回地址（由调用者决定是否加载为右值）
+    auto addr = func->getLocalDeclAddr(varDecl);
+    return makeAny<Value>(addr);
 }
 std::any IRBuilder::visit(ParenExpr* node)
 {
@@ -398,7 +511,20 @@ std::any IRBuilder::visit(BinaryOpExpr* node)
 
     // 计算表达式运算结果
     Value* retVal = nullptr;
-    switch (node->getOpCode())
+
+    // 对于赋值类操作：左值为地址，右值需要加载为值
+    // 对于其他二元操作：左右值都需要加载为值（lvalue-to-rvalue转换）
+    auto opc = node->getOpCode();
+    if (opc == BinaryOpExpr::Assign_) {
+        rval = ensureRValue(curBlock, rval);
+        retVal = curBlock->createStore(rval, lval);
+        return makeAny<Value>(retVal);
+    } else if (opc != BinaryOpExpr::Comma) {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+    }
+
+    switch (opc)
     {
     case BinaryOpExpr::Multiplication_:
         retVal = curBlock->createBinary(Instruction::Mul, lval, rval);
@@ -416,8 +542,10 @@ std::any IRBuilder::visit(BinaryOpExpr* node)
         retVal = curBlock->createBinary(Instruction::Sub, lval, rval);
         break;
     case BinaryOpExpr::LShift_:
+        retVal = curBlock->createBinary(Instruction::Shl, lval, rval);
         break;
     case BinaryOpExpr::RShift_:
+        retVal = curBlock->createBinary(Instruction::Ashr, lval, rval);
         break;
     case BinaryOpExpr::Less_:
         retVal = curBlock->createBinary(Instruction::Lt, lval, rval);
@@ -450,50 +578,88 @@ std::any IRBuilder::visit(BinaryOpExpr* node)
         break;
     case BinaryOpExpr::Logical_OR_:
         break;
-    case BinaryOpExpr::Assign_:
-        // 从右表达式获取值 存储到左式地址
-        return curBlock->createStore(rval, lval);
     case BinaryOpExpr::Mult_Assign_:
     {
-        auto val = curBlock->createBinary(Instruction::Add, lval, rval);
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+        auto val = curBlock->createBinary(Instruction::Mul, lval, rval);
         retVal = curBlock->createStore(val, lval);
         break;
     }
     case BinaryOpExpr::Div_Assign_:
     {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
         auto val = curBlock->createBinary(Instruction::Div, lval, rval);
         retVal = curBlock->createStore(val, lval);
         break;
     }
     case BinaryOpExpr::Mod_Assign_:
     {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
         auto val = curBlock->createBinary(Instruction::Mod, lval, rval);
         retVal = curBlock->createStore(val, lval);
         break;
     }
     case BinaryOpExpr::Add_Assign_:
     {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
         auto val = curBlock->createBinary(Instruction::Add, lval, rval);
         retVal = curBlock->createStore(val, lval);
         break;
     }
     case BinaryOpExpr::Sub_Assign_:
     {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
         auto val = curBlock->createBinary(Instruction::Sub, lval, rval);
         retVal = curBlock->createStore(val, lval);
         break;
     }
     case BinaryOpExpr::LShift_Assign_:
+    {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+        auto val = curBlock->createBinary(Instruction::Shl, lval, rval);
+        retVal = curBlock->createStore(val, lval);
         break;
+    }
     case BinaryOpExpr::RShift_Assign_:
+    {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+        auto val = curBlock->createBinary(Instruction::Ashr, lval, rval);
+        retVal = curBlock->createStore(val, lval);
         break;
+    }
     case BinaryOpExpr::BitWise_AND_Assign_:
-        break;    
+    {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+        auto val = curBlock->createBinary(Instruction::And, lval, rval);
+        retVal = curBlock->createStore(val, lval);
+        break;
+    }
     case BinaryOpExpr::BitWise_XOR_Assign_:
+    {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+        auto val = curBlock->createBinary(Instruction::Xor, lval, rval);
+        retVal = curBlock->createStore(val, lval);
         break;
+    }
     case BinaryOpExpr::BitWise_OR_Assign_:
+    {
+        lval = ensureRValue(curBlock, lval);
+        rval = ensureRValue(curBlock, rval);
+        auto val = curBlock->createBinary(Instruction::Or, lval, rval);
+        retVal = curBlock->createStore(val, lval);
         break;
+    }
     case BinaryOpExpr::Comma:
+        retVal = rval;
         break;
     default:
         assert("BinaryOpExpr error");
@@ -515,22 +681,160 @@ std::any IRBuilder::visit(CompoundLiteralExpr* node)
 }
 std::any IRBuilder::visit(CastExpr* node)
 {
+    // 类型转换：直接返回子表达式的值（隐式转换通常不改变位的表示）
+    auto subExpr = node->getCastExpr();
+    if (subExpr) {
+        auto val = anyPtr<Value>(subExpr->accept(this));
+        return makeAny<Value>(val);
+    }
     return makeAny<Value>();
 }
+
 std::any IRBuilder::visit(ArraySubscriptExpr* node)
 {
     return makeAny<Value>();
 }
+
 std::any IRBuilder::visit(CallExpr* node)
 {
-    return makeAny<Value>();
+    auto func = m_module->getCurFunction();
+    assert(func && "not current function");
+
+    auto callee = node->getCallee();
+    if (!callee) return makeAny<Value>();
+
+    // 解析被调用者表达式（函数名等）
+    auto calleeVal = anyPtr<Value>(callee->accept(this));
+    assert(calleeVal && "callee is nullptr");
+
+    // 获取函数名
+    std::string calleeName;
+    if (auto* declRef = dynamic_cast<DeclRefExpr*>(callee)) {
+        calleeName = declRef->getDecl()->getName();
+    }
+
+    // 获取函数返回类型
+    QualType retType;
+    if (auto calleeType = callee->getType()) {
+        if (auto ft = calleeType.as<FunctionType>()) {
+            retType = ft->getRetType();
+        }
+    }
+
+    // 创建CallInst
+    auto curBlock = func->getInsertBlock();
+    CallInst* callInst = Arena::make<CallInst>(retType, calleeVal, curBlock);
+
+    // 处理参数
+    for (auto param : node->getParams()) {
+        auto paramVal = anyPtr<Value>(param->accept(this));
+        if (paramVal) {
+            paramVal = ensureRValue(curBlock, paramVal);
+            callInst->addArg(paramVal);
+        }
+    }
+
+    curBlock->addInst(callInst);
+    return makeAny<Value>(callInst);
 }
+
 std::any IRBuilder::visit(MemberExpr* node)
 {
     return makeAny<Value>();
 }
+
 std::any IRBuilder::visit(UnaryOpExpr* node)
 {
+    auto func = m_module->getCurFunction();
+    assert(func && "not current function");
+
+    auto subExpr = node->getSubExpr();
+    if (!subExpr) return makeAny<Value>();
+
+    auto curBlock = func->getInsertBlock();
+
+    switch (node->getOpCode()) {
+    case UnaryOpExpr::Addition_:
+        // +x: 无操作，直接返回子表达式的值
+        return subExpr->accept(this);
+
+    case UnaryOpExpr::Subtraction_:
+    {
+        // -x: 取负，0 - x
+        auto val = anyPtr<Value>(subExpr->accept(this));
+        val = ensureRValue(curBlock, val);
+        auto zero = ConstantInt::get(val->getType(), 0);
+        auto neg = curBlock->createBinary(Instruction::Sub, zero, val);
+        return makeAny<Value>(neg);
+    }
+
+    case UnaryOpExpr::Logical_NOT_:
+    {
+        // !x: 逻辑非
+        auto val = anyPtr<Value>(subExpr->accept(this));
+        val = ensureRValue(curBlock, val);
+        // x == 0
+        auto zero = ConstantInt::get(val->getType(), 0);
+        auto cmp = curBlock->createBinary(Instruction::Eq, val, zero);
+        return makeAny<Value>(cmp);
+    }
+
+    case UnaryOpExpr::BitWise_NOT_:
+    {
+        // ~x: 按位取反
+        auto val = anyPtr<Value>(subExpr->accept(this));
+        val = ensureRValue(curBlock, val);
+        auto negOne = ConstantInt::get(val->getType(), -1);
+        auto notVal = curBlock->createBinary(Instruction::Xor, val, negOne);
+        return makeAny<Value>(notVal);
+    }
+
+    case UnaryOpExpr::Pre_Increment_:
+    case UnaryOpExpr::Pre_Decrement_:
+    {
+        // ++x 或 --x: 先修改值再返回
+        int delta = (node->getOpCode() == UnaryOpExpr::Pre_Increment_) ? 1 : -1;
+        auto addr = anyPtr<Value>(subExpr->accept(this));
+        auto one = ConstantInt::get(QualType(), delta);
+        auto oldVal = curBlock->createLoad(addr);
+        auto newVal = curBlock->createBinary(
+            (delta > 0) ? Instruction::Add : Instruction::Sub, oldVal, one);
+        curBlock->createStore(newVal, addr);
+        return makeAny<Value>(newVal);
+    }
+
+    case UnaryOpExpr::Post_Increment_:
+    case UnaryOpExpr::Post_Decrement_:
+    {
+        // x++ 或 x--: 先返回旧值再修改
+        int delta = (node->getOpCode() == UnaryOpExpr::Post_Increment_) ? 1 : -1;
+        auto addr = anyPtr<Value>(subExpr->accept(this));
+        auto oldVal = curBlock->createLoad(addr);
+        auto one = ConstantInt::get(QualType(), delta);
+        auto newVal = curBlock->createBinary(
+            (delta > 0) ? Instruction::Add : Instruction::Sub, oldVal, one);
+        curBlock->createStore(newVal, addr);
+        return makeAny<Value>(oldVal);
+    }
+
+    case UnaryOpExpr::BitWise_AND_:
+        // &x: 取地址 - 返回变量的地址
+        return subExpr->accept(this);
+
+    case UnaryOpExpr::Multiplication_:
+        // *x: 解引用 - 从地址加载值
+    {
+        auto addr = anyPtr<Value>(subExpr->accept(this));
+        if (addr) {
+            auto loaded = curBlock->createLoad(addr);
+            return makeAny<Value>(loaded);
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
     return makeAny<Value>();
 }
 
@@ -554,6 +858,7 @@ Function* IRBuilder::startFunction(FunctionDecl* node)
         return nullptr;
     }
     m_module->setCurFunction(newFunc);
+    m_curFuntion = newFunc;
 
     // 创建entry块
     auto entry = newFunc->createAndInsertBlock("entry");
@@ -599,11 +904,13 @@ void IRBuilder::endFunction(Function* func)
 
     // 将值从返回值地址读取出来,并插入ret val指令
     auto retAddr = func->getReturnAddr();
+    auto retType = func->getRetType();
     if (retAddr) {
         auto retVal = retBlock->createLoad(retAddr);
-        retBlock->createReturn(retAddr->getType(), retVal);
+        retBlock->createReturn(retType, retVal);
     } else {
-        retBlock->createReturn(retAddr->getType(), 0);
+        // void 函数：直接创建void返回
+        retBlock->createReturn(retType, nullptr);
     }
 
     // 模块级清空当前函数

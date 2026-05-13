@@ -3,6 +3,8 @@
 #include <list>
 #include <string>
 
+namespace ccompiler {
+
 class MachineFunction;
 class MachineInst;
 class BasicBlock;
@@ -47,3 +49,5 @@ private:
     std::list<MachineBlock*> m_predecessors;
     std::list<MachineBlock*> m_successors;
 };
+
+} // namespace ccompiler

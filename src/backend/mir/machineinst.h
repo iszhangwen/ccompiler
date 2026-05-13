@@ -6,6 +6,8 @@
 
 #include "usedef.h"
 
+namespace ccompiler {
+
 class MachineBlock;
 class Instruction;
 
@@ -161,3 +163,5 @@ private:
     Instruction* m_ssaInst;
     std::vector<MachineOperand> m_operands;
 };
+
+} // namespace ccompiler
